@@ -19,6 +19,7 @@ import net.minecraftforge.oredict.OreDictionary;
 
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
+import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
@@ -39,7 +40,7 @@ import net.thermaladd.mod.network.PacketHandler;
  * one job at a time), has 6 schematic slots that are all evaluated - and can all
  * craft - every single tick, so several schematics run truly in parallel.
  */
-public class TileImprovedAssembler extends TileEntity implements ISidedInventory, IEnergyReceiver {
+public class TileImprovedAssembler extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl {
 
     public static final int SCHEMATIC_SLOTS = 6;
     public static final int INPUT_SLOTS = 18;
@@ -90,6 +91,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public boolean augmentAutoOutput = false;
     public boolean augmentReconfigSides = false;
     public boolean augmentRedstoneControl = false;
+    /** Matches real Thermal Expansion's own default - a freshly installed augment starts on "Low" (paused while powered). */
+    private ControlMode rsMode = ControlMode.LOW;
+    private boolean rsPowered = false;
 
     private byte[] sideCache = new byte[6];
     private int autoIOTimer = 0;
@@ -165,6 +169,34 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         energyPerTick = value;
     }
 
+    // ---------------------------------------------------------------- redstone control (TE-compatible)
+
+    @Override
+    public void setControl(ControlMode mode) {
+        rsMode = mode;
+        markDirty();
+    }
+
+    @Override
+    public ControlMode getControl() {
+        return rsMode;
+    }
+
+    @Override
+    public void setPowered(boolean powered) {
+        rsPowered = powered;
+    }
+
+    @Override
+    public boolean isPowered() {
+        return rsPowered;
+    }
+
+    /** Client-side only: applies a control-mode ordinal received via the container's progress bar sync. */
+    public void setControlClient(int ordinal) {
+        rsMode = ControlMode.values()[ordinal];
+    }
+
     // ---------------------------------------------------------------- tick
 
     @Override
@@ -176,10 +208,10 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         boolean dirty = false;
         energyPerTick = 0;
 
-        // Same "lever to mute the machine" behavior as the Pulverizer/Furnace: an indirect
-        // redstone signal simply pauses crafting while the Redstone Control augment is in.
-        boolean redstonePaused = augmentRedstoneControl && worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord);
-        if (!redstonePaused) {
+        // Same 3-way control real TE uses - see TileAdvancedPulverizer#updateEntity for details.
+        setPowered(worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord));
+        boolean redstoneAllows = !augmentRedstoneControl || rsMode.isDisabled() || rsMode.isHigh() == isPowered();
+        if (redstoneAllows) {
             for (int slot = 0; slot < SCHEMATIC_SLOTS; slot++) {
                 if (energyStored < PROCESS_ENERGY) {
                     break;
@@ -250,6 +282,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
                 sideCache[i] = SIDE_MODE_AUTO;
             }
         }
+        if (!redstoneControl) {
+            rsMode = ControlMode.DISABLED;
+        }
 
         augmentAutoInput = autoInput;
         augmentAutoOutput = autoOutput;
@@ -280,6 +315,38 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         setInventorySlotContents(AUGMENT_START, TEAugments.generalAutoOutput.copy());
         setInventorySlotContents(AUGMENT_START + 1, TEAugments.generalRedstoneControl.copy());
         setInventorySlotContents(AUGMENT_START + 2, TEAugments.generalReconfigSides.copy());
+    }
+
+    /**
+     * Serializes the 3 augment slots (relative index 0-2) so they can travel inside the dropped
+     * block item's NBT - see {@code BlockImprovedAssembler#breakBlock/getDrops}. See
+     * {@link TileAdvancedPulverizer#writeAugmentsToNBT} for why this exists.
+     */
+    public NBTTagCompound writeAugmentsToNBT(NBTTagCompound tag) {
+        NBTTagList list = new NBTTagList();
+        for (int i = 0; i < AUGMENT_SLOTS; i++) {
+            ItemStack stack = inventory[AUGMENT_START + i];
+            if (stack != null) {
+                NBTTagCompound itemTag = new NBTTagCompound();
+                itemTag.setByte("Slot", (byte) i);
+                stack.writeToNBT(itemTag);
+                list.appendTag(itemTag);
+            }
+        }
+        tag.setTag("Augments", list);
+        return tag;
+    }
+
+    public void readAugmentsFromNBT(NBTTagCompound tag) {
+        NBTTagList list = tag.getTagList("Augments", 10);
+        for (int i = 0; i < list.tagCount(); i++) {
+            NBTTagCompound itemTag = list.getCompoundTagAt(i);
+            int slot = itemTag.getByte("Slot") & 255;
+            if (slot >= 0 && slot < AUGMENT_SLOTS) {
+                inventory[AUGMENT_START + slot] = ItemStack.loadItemStackFromNBT(itemTag);
+            }
+        }
+        installAugments();
     }
 
     public int getSideMode(int side) {
@@ -812,6 +879,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         super.writeToNBT(tag);
         tag.setInteger("Energy", energyStored);
         tag.setByteArray("Sides", sideCache);
+        tag.setByte("RSControl", (byte) rsMode.ordinal());
 
         NBTTagList items = new NBTTagList();
         for (int i = 0; i < inventory.length; i++) {
@@ -829,6 +897,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
         energyStored = tag.getInteger("Energy");
+        if (tag.hasKey("RSControl")) {
+            rsMode = ControlMode.values()[tag.getByte("RSControl") & 0xFF];
+        }
 
         if (tag.hasKey("Sides")) {
             byte[] sides = tag.getByteArray("Sides");

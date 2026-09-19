@@ -39,6 +39,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
     private final TileAdvancedFurnace tile;
     private final TabAugmentsFurnace augmentsTab;
     private final TabConfigFurnace configTab;
+    private final TabRedstoneControl redstoneTab;
 
     public GuiAdvancedFurnace(InventoryPlayer playerInv, TileAdvancedFurnace tile) {
         super(new ContainerAdvancedFurnace(playerInv, tile));
@@ -47,8 +48,10 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         ySize = BASE_HEIGHT;
         this.augmentsTab = new TabAugmentsFurnace(this, (ContainerAdvancedFurnace) inventorySlots);
         this.configTab = new TabConfigFurnace(this, tile);
+        this.redstoneTab = new TabRedstoneControl(this, tile.xCoord, tile.yCoord, tile.zCoord, tile);
         augmentsTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y);
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
+        redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
     }
 
     @Override
@@ -59,6 +62,10 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
             configTab.setOpen(false);
         }
         configTab.update();
+        if (!tile.augmentRedstoneControl) {
+            redstoneTab.setOpen(false);
+        }
+        redstoneTab.update();
     }
 
     @Override
@@ -93,6 +100,9 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         augmentsTab.drawBackground(left, top);
         if (tile.augmentReconfigSides) {
             configTab.drawBackground(left, top);
+        }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.drawBackground(left, top);
         }
     }
 
@@ -150,6 +160,9 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         if (tile.augmentReconfigSides) {
             configTab.drawForeground(0, 0);
         }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.drawForeground(0, 0);
+        }
     }
 
     @Override
@@ -164,6 +177,9 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         if (tile.augmentReconfigSides && handleTabClick(configTab, mouseX, mouseY, left, top, mouseButton, shift)) {
             return;
         }
+        if (tile.augmentRedstoneControl && handleTabClick(redstoneTab, mouseX, mouseY, left, top, mouseButton, shift)) {
+            return;
+        }
 
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
@@ -173,6 +189,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
             boolean wasOpen = tab.open;
             augmentsTab.setOpen(false);
             configTab.setOpen(false);
+            redstoneTab.setOpen(false);
             tab.setOpen(!wasOpen);
             return true;
         }
@@ -202,6 +219,9 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         if (tile.augmentReconfigSides) {
             configTab.addTooltip(mouseX, mouseY, left, top, tooltip);
+        }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         }
         if (!tooltip.isEmpty()) {
             drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);

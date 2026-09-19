@@ -1,5 +1,7 @@
 package net.thermaladd.mod.block;
 
+import java.util.ArrayList;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
@@ -7,7 +9,9 @@ import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
 import net.minecraft.util.MathHelper;
@@ -18,6 +22,7 @@ import cofh.api.item.IToolHammer;
 import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.init.ModCreativeTab;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
+import net.thermaladd.mod.util.PendingAugmentDrops;
 
 /** Same design as {@link BlockAdvancedPulverizer}: real Thermal Expansion casing/face textures, Crescent Hammer support, Active/Inactive face swap. */
 public class BlockAdvancedFurnace extends BlockContainer {
@@ -112,7 +117,11 @@ public class BlockAdvancedFurnace extends BlockContainer {
             TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
             tile.setFacing(meta);
             if (!world.isRemote) {
-                tile.installDefaultAugments();
+                if (stack.hasTagCompound() && stack.getTagCompound().hasKey("Augments")) {
+                    tile.readAugmentsFromNBT(stack.getTagCompound());
+                } else {
+                    tile.installDefaultAugments();
+                }
             }
         }
     }
@@ -179,7 +188,15 @@ public class BlockAdvancedFurnace extends BlockContainer {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileAdvancedFurnace) {
             TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
+
+            NBTTagCompound augNbt = tile.writeAugmentsToNBT(new NBTTagCompound());
+            PendingAugmentDrops.put(x, y, z, augNbt);
+
             for (int i = 0; i < tile.getSizeInventory(); i++) {
+                if (i >= TileAdvancedFurnace.AUGMENT_START
+                        && i < TileAdvancedFurnace.AUGMENT_START + TileAdvancedFurnace.AUGMENT_SLOTS) {
+                    continue;
+                }
                 ItemStack stack = tile.getStackInSlot(i);
                 if (stack != null) {
                     float rx = world.rand.nextFloat() * 0.8F + 0.1F;
@@ -191,5 +208,19 @@ public class BlockAdvancedFurnace extends BlockContainer {
             }
         }
         super.breakBlock(world, x, y, z, block, meta);
+    }
+
+    @Override
+    public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
+        ItemStack drop = new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata));
+        NBTTagCompound augNbt = PendingAugmentDrops.take(x, y, z);
+        if (augNbt != null && augNbt.hasKey("Augments")) {
+            NBTTagCompound tag = new NBTTagCompound();
+            tag.setTag("Augments", augNbt.getTag("Augments"));
+            drop.setTagCompound(tag);
+        }
+        ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
+        drops.add(drop);
+        return drops;
     }
 }

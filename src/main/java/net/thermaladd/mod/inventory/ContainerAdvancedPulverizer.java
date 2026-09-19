@@ -58,6 +58,7 @@ public class ContainerAdvancedPulverizer extends Container {
     private int lastRedstoneControl = -1;
     private int lastEnergyPerTick = -1;
     private int lastMaxEnergyPerTick = -1;
+    private int lastControlMode = -1;
 
     public ContainerAdvancedPulverizer(InventoryPlayer playerInv, TileAdvancedPulverizer tile) {
         this.tile = tile;
@@ -194,6 +195,10 @@ public class ContainerAdvancedPulverizer extends Container {
             if (lastMaxEnergyPerTick != maxEnergyPerTick) {
                 crafter.sendProgressBarUpdate(this, 19, maxEnergyPerTick);
             }
+            int controlMode = tile.getControl().ordinal();
+            if (lastControlMode != controlMode) {
+                crafter.sendProgressBarUpdate(this, 20, controlMode);
+            }
         }
 
         lastEnergy = energyScaled;
@@ -211,6 +216,7 @@ public class ContainerAdvancedPulverizer extends Container {
         lastRedstoneControl = redstoneControl;
         lastEnergyPerTick = tile.getEnergyPerTick();
         lastMaxEnergyPerTick = tile.getMaxEnergyPerTick();
+        lastControlMode = tile.getControl().ordinal();
     }
 
     @Override
@@ -237,6 +243,8 @@ public class ContainerAdvancedPulverizer extends Container {
             tile.setEnergyPerTickClient(value);
         } else if (id == 19) {
             tile.setMaxEnergyPerTickClient(value);
+        } else if (id == 20) {
+            tile.setControlClient(value);
         }
     }
 }

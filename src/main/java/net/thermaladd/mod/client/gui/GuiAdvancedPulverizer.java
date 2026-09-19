@@ -46,6 +46,7 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
     private final TileAdvancedPulverizer tile;
     private final TabAugments augmentsTab;
     private final TabConfig configTab;
+    private final TabRedstoneControl redstoneTab;
 
     public GuiAdvancedPulverizer(InventoryPlayer playerInv, TileAdvancedPulverizer tile) {
         super(new ContainerAdvancedPulverizer(playerInv, tile));
@@ -64,8 +65,10 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         ySize = BASE_HEIGHT;
         this.augmentsTab = new TabAugments(this, (ContainerAdvancedPulverizer) inventorySlots);
         this.configTab = new TabConfig(this, tile);
+        this.redstoneTab = new TabRedstoneControl(this, tile.xCoord, tile.yCoord, tile.zCoord, tile);
         augmentsTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y);
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
+        redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
     }
 
     @Override
@@ -76,6 +79,10 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
             configTab.setOpen(false);
         }
         configTab.update();
+        if (!tile.augmentRedstoneControl) {
+            redstoneTab.setOpen(false);
+        }
+        redstoneTab.update();
     }
 
     @Override
@@ -116,6 +123,9 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         augmentsTab.drawBackground(left, top);
         if (tile.augmentReconfigSides) {
             configTab.drawBackground(left, top);
+        }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.drawBackground(left, top);
         }
     }
 
@@ -173,6 +183,9 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         if (tile.augmentReconfigSides) {
             configTab.drawForeground(0, 0);
         }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.drawForeground(0, 0);
+        }
     }
 
     @Override
@@ -187,22 +200,26 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         if (tile.augmentReconfigSides && handleTabClick(configTab, mouseX, mouseY, left, top, mouseButton, shift)) {
             return;
         }
+        if (tile.augmentRedstoneControl && handleTabClick(redstoneTab, mouseX, mouseY, left, top, mouseButton, shift)) {
+            return;
+        }
 
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
     /**
-     * Clicking a tab's own icon always toggles it (open/closed), closing the other tab first.
+     * Clicking a tab's own icon always toggles it (open/closed), closing the other tabs first.
      * Otherwise, while fully open, a click inside its flap is offered to its content (the
-     * Configuration cross-buttons); if nothing there claims it - notably for the Augments
-     * tab, which has no custom content, only real vanilla Slots - the click falls through to
-     * normal slot handling via super.mouseClicked().
+     * Configuration cross-buttons, the Redstone Control buttons); if nothing there claims it -
+     * notably for the Augments tab, which has no custom content, only real vanilla Slots - the
+     * click falls through to normal slot handling via super.mouseClicked().
      */
     private boolean handleTabClick(GuiSideTab tab, int mouseX, int mouseY, int left, int top, int mouseButton, boolean shift) {
         if (mouseButton == 0 && tab.isMouseOverIcon(mouseX, mouseY, left, top)) {
             boolean wasOpen = tab.open;
             augmentsTab.setOpen(false);
             configTab.setOpen(false);
+            redstoneTab.setOpen(false);
             tab.setOpen(!wasOpen);
             return true;
         }
@@ -232,6 +249,9 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         if (tile.augmentReconfigSides) {
             configTab.addTooltip(mouseX, mouseY, left, top, tooltip);
+        }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         }
         if (!tooltip.isEmpty()) {
             drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);

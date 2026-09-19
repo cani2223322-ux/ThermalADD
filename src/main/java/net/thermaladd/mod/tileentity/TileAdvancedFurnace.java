@@ -14,6 +14,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import cofh.api.energy.EnergyStorage;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
+import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.util.crafting.FurnaceManager;
 import cofh.thermalexpansion.util.crafting.FurnaceManager.RecipeFurnace;
@@ -33,7 +34,7 @@ import net.thermaladd.mod.network.PacketHandler;
  * augment to support - those augment types are simply not recognized as valid here (they
  * would have zero effect on this machine).
  */
-public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, IEnergyReceiver {
+public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl {
 
     public static final int INPUT_SLOTS = 3;
     public static final int OUTPUT_SLOTS = 2;
@@ -76,6 +77,9 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     public boolean augmentAutoOutput = false;
     public boolean augmentReconfigSides = false;
     public boolean augmentRedstoneControl = false;
+    /** Matches real Thermal Expansion's own default - a freshly installed augment starts on "Low" (paused while powered). */
+    private ControlMode rsMode = ControlMode.LOW;
+    private boolean rsPowered = false;
 
     private int speedProcessMod = 1;
     private int speedEnergyMod = 1;
@@ -212,6 +216,9 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
                 sideCache[i] = SIDE_MODE_AUTO;
             }
         }
+        if (!redstoneControl) {
+            rsMode = ControlMode.DISABLED;
+        }
 
         augmentAutoInput = autoInput;
         augmentAutoOutput = autoOutput;
@@ -238,6 +245,38 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         setInventorySlotContents(AUGMENT_START, TEAugments.generalAutoOutput.copy());
         setInventorySlotContents(AUGMENT_START + 1, TEAugments.generalRedstoneControl.copy());
         setInventorySlotContents(AUGMENT_START + 2, TEAugments.generalReconfigSides.copy());
+    }
+
+    /**
+     * Serializes the 9 augment slots (relative index 0-8) so they can travel inside the dropped
+     * block item's NBT - see {@code BlockAdvancedFurnace#breakBlock/getDrops}. See
+     * {@link TileAdvancedPulverizer#writeAugmentsToNBT} for why this exists.
+     */
+    public NBTTagCompound writeAugmentsToNBT(NBTTagCompound tag) {
+        NBTTagList list = new NBTTagList();
+        for (int i = 0; i < AUGMENT_SLOTS; i++) {
+            ItemStack stack = inventory[AUGMENT_START + i];
+            if (stack != null) {
+                NBTTagCompound itemTag = new NBTTagCompound();
+                itemTag.setByte("Slot", (byte) i);
+                stack.writeToNBT(itemTag);
+                list.appendTag(itemTag);
+            }
+        }
+        tag.setTag("Augments", list);
+        return tag;
+    }
+
+    public void readAugmentsFromNBT(NBTTagCompound tag) {
+        NBTTagList list = tag.getTagList("Augments", 10);
+        for (int i = 0; i < list.tagCount(); i++) {
+            NBTTagCompound itemTag = list.getCompoundTagAt(i);
+            int slot = itemTag.getByte("Slot") & 255;
+            if (slot >= 0 && slot < AUGMENT_SLOTS) {
+                inventory[AUGMENT_START + slot] = ItemStack.loadItemStackFromNBT(itemTag);
+            }
+        }
+        installAugments();
     }
 
     private static int clampLevel(int level) {
@@ -338,6 +377,34 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         maxEnergyPerTick = value;
     }
 
+    // ---------------------------------------------------------------- redstone control (TE-compatible)
+
+    @Override
+    public void setControl(ControlMode mode) {
+        rsMode = mode;
+        markDirty();
+    }
+
+    @Override
+    public ControlMode getControl() {
+        return rsMode;
+    }
+
+    @Override
+    public void setPowered(boolean powered) {
+        rsPowered = powered;
+    }
+
+    @Override
+    public boolean isPowered() {
+        return rsPowered;
+    }
+
+    /** Client-side only: applies a control-mode ordinal received via the container's progress bar sync. */
+    public void setControlClient(int ordinal) {
+        rsMode = ControlMode.values()[ordinal];
+    }
+
     // ---------------------------------------------------------------- tick
 
     @Override
@@ -349,8 +416,9 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         boolean dirty = false;
         energyPerTick = 0;
 
-        boolean redstonePaused = augmentRedstoneControl && worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord);
-        if (!redstonePaused) {
+        setPowered(worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord));
+        boolean redstoneAllows = !augmentRedstoneControl || rsMode.isDisabled() || rsMode.isHigh() == isPowered();
+        if (redstoneAllows) {
             for (int line = 0; line < INPUT_SLOTS; line++) {
                 if (tryProcess(line)) {
                     dirty = true;
@@ -744,6 +812,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         tag.setByteArray("Sides", sideCache);
         tag.setIntArray("Progress", progress);
         tag.setIntArray("ProgressMax", progressMax);
+        tag.setByte("RSControl", (byte) rsMode.ordinal());
 
         NBTTagList items = new NBTTagList();
         for (int i = 0; i < inventory.length; i++) {
@@ -762,6 +831,9 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         super.readFromNBT(tag);
         energyStorage.readFromNBT(tag);
         facing = tag.getByte("Facing");
+        if (tag.hasKey("RSControl")) {
+            rsMode = ControlMode.values()[tag.getByte("RSControl") & 0xFF];
+        }
 
         if (tag.hasKey("Sides")) {
             byte[] sides = tag.getByteArray("Sides");

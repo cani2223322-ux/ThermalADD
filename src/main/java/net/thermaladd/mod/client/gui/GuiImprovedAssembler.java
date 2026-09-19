@@ -39,6 +39,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
     private final TileImprovedAssembler tile;
     private final TabAugmentsAssembler augmentsTab;
     private final TabConfigAssembler configTab;
+    private final TabRedstoneControl redstoneTab;
 
     public GuiImprovedAssembler(InventoryPlayer playerInv, TileImprovedAssembler tile) {
         super(new ContainerImprovedAssembler(playerInv, tile));
@@ -52,8 +53,10 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         ySize = BASE_HEIGHT;
         this.augmentsTab = new TabAugmentsAssembler(this, (ContainerImprovedAssembler) inventorySlots);
         this.configTab = new TabConfigAssembler(this, tile);
+        this.redstoneTab = new TabRedstoneControl(this, tile.xCoord, tile.yCoord, tile.zCoord, tile);
         augmentsTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y);
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
+        redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
     }
 
     @Override
@@ -64,6 +67,10 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             configTab.setOpen(false);
         }
         configTab.update();
+        if (!tile.augmentRedstoneControl) {
+            redstoneTab.setOpen(false);
+        }
+        redstoneTab.update();
     }
 
     @Override
@@ -74,6 +81,9 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         augmentsTab.drawForeground(0, 0);
         if (tile.augmentReconfigSides) {
             configTab.drawForeground(0, 0);
+        }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.drawForeground(0, 0);
         }
     }
 
@@ -95,6 +105,9 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         if (tile.augmentReconfigSides) {
             configTab.drawBackground(left, top);
         }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.drawBackground(left, top);
+        }
     }
 
     @Override
@@ -107,6 +120,9 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             return;
         }
         if (tile.augmentReconfigSides && handleTabClick(configTab, mouseX, mouseY, left, top, mouseButton, shift)) {
+            return;
+        }
+        if (tile.augmentRedstoneControl && handleTabClick(redstoneTab, mouseX, mouseY, left, top, mouseButton, shift)) {
             return;
         }
 
@@ -125,6 +141,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             boolean wasOpen = tab.open;
             augmentsTab.setOpen(false);
             configTab.setOpen(false);
+            redstoneTab.setOpen(false);
             tab.setOpen(!wasOpen);
             return true;
         }
@@ -154,6 +171,9 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         if (tile.augmentReconfigSides) {
             configTab.addTooltip(mouseX, mouseY, left, top, tooltip);
+        }
+        if (tile.augmentRedstoneControl) {
+            redstoneTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         }
         if (!tooltip.isEmpty()) {
             drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
