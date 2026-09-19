@@ -11,6 +11,7 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import net.thermaladd.mod.handler.GuiHandler;
+import net.thermaladd.mod.init.ModAugments;
 import net.thermaladd.mod.init.ModBlocks;
 import net.thermaladd.mod.init.ModRecipes;
 import net.thermaladd.mod.network.PacketHandler;
@@ -58,6 +59,8 @@ public class ThermalADD {
     public void preInit(FMLPreInitializationEvent event) {
         ModBlocks.init();
         ModBlocks.register();
+        ModAugments.init();
+        ModAugments.register();
         GameRegistry.registerTileEntity(TileAdvancedPulverizer.class, MODID + "_advanced_pulverizer_tile");
         GameRegistry.registerTileEntity(TileImprovedAssembler.class, MODID + "_improved_assembler_tile");
         GameRegistry.registerTileEntity(TileAdvancedFurnace.class, MODID + "_advanced_furnace_tile");

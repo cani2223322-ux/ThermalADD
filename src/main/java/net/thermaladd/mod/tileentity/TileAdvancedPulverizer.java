@@ -106,12 +106,21 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     public static final String AUG_MACHINE_NULL = "machineNull";
     public static final String AUG_ENERGY_STORAGE = "energyStorage";
 
-    /** Same per-level modifier tables as {@code TEAugments} (index 0 = no augment present = no bonus). */
-    private static final int[] MACHINE_SPEED_PROCESS_MOD = {1, 2, 4, 8};
-    private static final int[] MACHINE_SPEED_ENERGY_MOD = {1, 3, 8, 20};
+    /**
+     * Same per-level modifier tables as {@code TEAugments} (index 0 = no augment present = no
+     * bonus) for levels 1-3, plus a 4th level - this mod's own "beyond spec" Machine Speed
+     * augment (see {@code net.thermaladd.mod.init.ModAugments}, crafted from real TE's own
+     * level-3 speed augment): x10 process speed for +200% RF/t over level 3's already-steep
+     * 20x cost (20 * 3 = 60x base), matching what the augment's own tooltip says. Only
+     * AUG_MACHINE_SPEED goes this high - AUG_MACHINE_SECONDARY/AUG_ENERGY_STORAGE (no ThermalADD
+     * equivalent exists) stay clamped to real TE's own MAX_AUGMENT_LEVEL of 3.
+     */
+    private static final int[] MACHINE_SPEED_PROCESS_MOD = {1, 2, 4, 8, 10};
+    private static final int[] MACHINE_SPEED_ENERGY_MOD = {1, 3, 8, 20, 60};
     private static final int[] MACHINE_SECONDARY_MOD = {0, 10, 15, 20};
     private static final int[] ENERGY_STORAGE_MOD = {1, 2, 4, 8};
     private static final int MAX_AUGMENT_LEVEL = 3;
+    private static final int MAX_SPEED_LEVEL = 4;
 
     private static final int AUTO_IO_INTERVAL = 8;
 
@@ -281,7 +290,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
             if (item.getAugmentLevel(augment, AUG_MACHINE_NULL) > 0) {
                 secondaryNull = true;
             }
-            speedLevel = Math.max(speedLevel, clampLevel(item.getAugmentLevel(augment, AUG_MACHINE_SPEED)));
+            speedLevel = Math.max(speedLevel, clampLevel(item.getAugmentLevel(augment, AUG_MACHINE_SPEED), MAX_SPEED_LEVEL));
             secondaryLevel = Math.max(secondaryLevel, clampLevel(item.getAugmentLevel(augment, AUG_MACHINE_SECONDARY)));
             energyLevel = Math.max(energyLevel, clampLevel(item.getAugmentLevel(augment, AUG_ENERGY_STORAGE)));
         }
@@ -366,10 +375,14 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     }
 
     private static int clampLevel(int level) {
+        return clampLevel(level, MAX_AUGMENT_LEVEL);
+    }
+
+    private static int clampLevel(int level, int max) {
         if (level < 0) {
             return 0;
         }
-        return Math.min(level, MAX_AUGMENT_LEVEL);
+        return Math.min(level, max);
     }
 
     public static boolean isAugmentItem(ItemStack stack) {

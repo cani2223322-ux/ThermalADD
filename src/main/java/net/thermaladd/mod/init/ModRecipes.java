@@ -1,5 +1,6 @@
 package net.thermaladd.mod.init;
 
+import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 
@@ -29,6 +30,7 @@ public class ModRecipes {
         registerAdvancedPulverizerRecipe();
         registerImprovedAssemblerRecipe();
         registerAdvancedFurnaceRecipe();
+        registerSpeedLevel4AugmentRecipe();
     }
 
     /**
@@ -107,5 +109,28 @@ public class ModRecipes {
                 'F', furnace,
                 'I', "ingotInvar",
                 'A', TEAugments.machineSpeed[0]));
+    }
+
+    /**
+     * ThermalADD's own "beyond spec" Machine Speed augment (see ModAugments) - crafted by
+     * pushing real Thermal Expansion's own top speed tier (machineSpeed[2], "Пространственно-
+     * временной унификатор флакса") past its limits, consuming it as the centerpiece ingredient
+     * rather than a base material. Platinum + Diamond either side mark it as a genuine endgame
+     * item, well past what this mod's own machine recipes cost.
+     */
+    private static void registerSpeedLevel4AugmentRecipe() {
+        // P D P      P = Platinum ingot, D = Diamond
+        // G S G      G = Hardened Glass, S = real Machine Speed III augment (consumed/upgraded)
+        // P R P      R = Redstone dust
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                ModAugments.speedLevel4,
+                "PDP",
+                "GSG",
+                "PRP",
+                'P', "ingotPlatinum",
+                'D', new ItemStack(Items.diamond),
+                'G', "blockGlassHardened",
+                'S', TEAugments.machineSpeed[2],
+                'R', "dustRedstone"));
     }
 }

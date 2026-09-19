@@ -66,10 +66,12 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     public static final String AUG_MACHINE_SPEED = "machineSpeed";
     public static final String AUG_ENERGY_STORAGE = "energyStorage";
 
-    private static final int[] MACHINE_SPEED_PROCESS_MOD = {1, 2, 4, 8};
-    private static final int[] MACHINE_SPEED_ENERGY_MOD = {1, 3, 8, 20};
+    /** See TileAdvancedPulverizer's own copy of these tables for the level-4 rationale. */
+    private static final int[] MACHINE_SPEED_PROCESS_MOD = {1, 2, 4, 8, 10};
+    private static final int[] MACHINE_SPEED_ENERGY_MOD = {1, 3, 8, 20, 60};
     private static final int[] ENERGY_STORAGE_MOD = {1, 2, 4, 8};
     private static final int MAX_AUGMENT_LEVEL = 3;
+    private static final int MAX_SPEED_LEVEL = 4;
 
     private static final int AUTO_IO_INTERVAL = 8;
 
@@ -207,7 +209,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
             if (item.getAugmentLevel(augment, AUG_GENERAL_REDSTONE_CONTROL) > 0) {
                 redstoneControl = true;
             }
-            speedLevel = Math.max(speedLevel, clampLevel(item.getAugmentLevel(augment, AUG_MACHINE_SPEED)));
+            speedLevel = Math.max(speedLevel, clampLevel(item.getAugmentLevel(augment, AUG_MACHINE_SPEED), MAX_SPEED_LEVEL));
             energyLevel = Math.max(energyLevel, clampLevel(item.getAugmentLevel(augment, AUG_ENERGY_STORAGE)));
         }
 
@@ -280,10 +282,14 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     }
 
     private static int clampLevel(int level) {
+        return clampLevel(level, MAX_AUGMENT_LEVEL);
+    }
+
+    private static int clampLevel(int level, int max) {
         if (level < 0) {
             return 0;
         }
-        return Math.min(level, MAX_AUGMENT_LEVEL);
+        return Math.min(level, max);
     }
 
     public static boolean isAugmentItem(ItemStack stack) {
