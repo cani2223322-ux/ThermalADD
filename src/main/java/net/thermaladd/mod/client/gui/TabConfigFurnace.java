@@ -9,16 +9,21 @@ import net.thermaladd.mod.network.MessageCycleSide;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 
-/** Same side-configuration cross layout as {@link TabConfig} (the Pulverizer's), wired to the Furnace's own tile. */
+import cofh.lib.util.helpers.BlockHelper;
+
+/**
+ * Same side-configuration cross layout as {@link TabConfig} (the Pulverizer's), wired to the
+ * Furnace's own tile. Button-to-side mapping is recomputed from the live facing every time -
+ * see TabConfig's class comment for why a fixed mapping is wrong.
+ */
 public class TabConfigFurnace extends GuiSideTab {
 
     private static final int[] BTN_X = {40, 20, 40, 60, 40, 60};
     private static final int[] BTN_Y = {24, 44, 44, 44, 64, 64};
-    private static final int[] BTN_SIDE = {1, 4, 2, 5, 0, 3};
     private static final String[] BTN_NAME_KEY = {
-            "gui.thermaladd.side.up", "gui.thermaladd.side.west",
-            "gui.thermaladd.side.north", "gui.thermaladd.side.east",
-            "gui.thermaladd.side.down", "gui.thermaladd.side.south"};
+            "gui.thermaladd.side.top", "gui.thermaladd.side.left",
+            "gui.thermaladd.side.front", "gui.thermaladd.side.right",
+            "gui.thermaladd.side.bottom", "gui.thermaladd.side.back"};
     private static final int FRONT_INDEX = 2;
 
     private static final int TINT = 0x226688;
@@ -39,10 +44,23 @@ public class TabConfigFurnace extends GuiSideTab {
         this.tile = tile;
     }
 
+    private int[] currentButtonSides() {
+        int facing = tile.getFacing();
+        return new int[]{
+                1,
+                BlockHelper.getLeftSide(facing),
+                facing,
+                BlockHelper.getRightSide(facing),
+                0,
+                BlockHelper.getOppositeSide(facing)
+        };
+    }
+
     @Override
     protected void drawContentBackground(int x, int y) {
+        int[] btnSide = currentButtonSides();
         for (int i = 0; i < 6; i++) {
-            int mode = tile.getSideMode(BTN_SIDE[i]);
+            int mode = tile.getSideMode(btnSide[i]);
             int bx = x + BTN_X[i];
             int by = y + BTN_Y[i];
             Gui.drawRect(bx - 1, by - 1, bx + 17, by + 17, 0xFF8B8B8B);
@@ -52,8 +70,9 @@ public class TabConfigFurnace extends GuiSideTab {
 
     @Override
     protected void drawContentForeground(int x, int y) {
+        int[] btnSide = currentButtonSides();
         for (int i = 0; i < 6; i++) {
-            int mode = tile.getSideMode(BTN_SIDE[i]);
+            int mode = tile.getSideMode(btnSide[i]);
             ResourceLocation icon = modeIcon(mode);
             if (icon != null) {
                 drawIcon16(icon, x + BTN_X[i], y + BTN_Y[i]);
@@ -63,12 +82,13 @@ public class TabConfigFurnace extends GuiSideTab {
 
     @Override
     public boolean onContentClick(int relX, int relY, int mouseButton, boolean shift) {
+        int[] btnSide = currentButtonSides();
         for (int i = 0; i < 6; i++) {
             if (relX < BTN_X[i] || relX >= BTN_X[i] + 16 || relY < BTN_Y[i] || relY >= BTN_Y[i] + 16) {
                 continue;
             }
             int action;
-            int side = BTN_SIDE[i];
+            int side = btnSide[i];
             if (shift) {
                 action = i == FRONT_INDEX ? MessageCycleSide.ACTION_RESET_ALL : MessageCycleSide.ACTION_RESET_ONE;
             } else {
@@ -82,11 +102,12 @@ public class TabConfigFurnace extends GuiSideTab {
 
     @Override
     protected void addContentTooltip(int relX, int relY, List<String> tooltip) {
+        int[] btnSide = currentButtonSides();
         for (int i = 0; i < 6; i++) {
             if (relX < BTN_X[i] || relX >= BTN_X[i] + 16 || relY < BTN_Y[i] || relY >= BTN_Y[i] + 16) {
                 continue;
             }
-            tooltip.add(StatCollector.translateToLocal(BTN_NAME_KEY[i]) + ": " + modeName(tile.getSideMode(BTN_SIDE[i])));
+            tooltip.add(StatCollector.translateToLocal(BTN_NAME_KEY[i]) + ": " + modeName(tile.getSideMode(btnSide[i])));
             tooltip.add("§7" + StatCollector.translateToLocal("gui.thermaladd.side.hint"));
             return;
         }

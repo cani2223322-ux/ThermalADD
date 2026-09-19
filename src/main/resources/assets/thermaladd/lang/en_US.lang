@@ -4,12 +4,12 @@ itemGroup.thermaladd=ThermalADD
 
 gui.thermaladd.tab.augments=Augments
 gui.thermaladd.tab.configuration=Configuration
-gui.thermaladd.side.up=Top
-gui.thermaladd.side.down=Bottom
-gui.thermaladd.side.north=Front
-gui.thermaladd.side.south=Back
-gui.thermaladd.side.east=Right
-gui.thermaladd.side.west=Left
+gui.thermaladd.side.top=Top
+gui.thermaladd.side.bottom=Bottom
+gui.thermaladd.side.front=Front
+gui.thermaladd.side.back=Back
+gui.thermaladd.side.right=Right
+gui.thermaladd.side.left=Left
 gui.thermaladd.side.hint=Left-click: cycle | Right-click: cycle back | Shift: reset
 gui.thermaladd.mode.auto=Auto
 gui.thermaladd.mode.input=Input
@@ -31,12 +31,12 @@ container.improvedAssembler=Improved Cyclic Assembler
 gui.improvedassembler.tab.augments=Augments
 gui.improvedassembler.tab.configuration=Configuration
 
-gui.improvedassembler.side.up=Up
-gui.improvedassembler.side.down=Down
-gui.improvedassembler.side.north=North
-gui.improvedassembler.side.south=South
-gui.improvedassembler.side.west=West
-gui.improvedassembler.side.east=East
+gui.improvedassembler.side.top=Top
+gui.improvedassembler.side.bottom=Bottom
+gui.improvedassembler.side.front=Front
+gui.improvedassembler.side.back=Back
+gui.improvedassembler.side.left=Left
+gui.improvedassembler.side.right=Right
 
 gui.improvedassembler.mode.auto=Auto
 gui.improvedassembler.mode.input=Input

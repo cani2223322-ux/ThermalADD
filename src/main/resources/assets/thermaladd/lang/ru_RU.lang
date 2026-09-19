@@ -4,12 +4,12 @@ itemGroup.thermaladd=ThermalADD
 
 gui.thermaladd.tab.augments=Расширения
 gui.thermaladd.tab.configuration=Конфигурация
-gui.thermaladd.side.up=Верх
-gui.thermaladd.side.down=Низ
-gui.thermaladd.side.north=Перед
-gui.thermaladd.side.south=Зад
-gui.thermaladd.side.east=Право
-gui.thermaladd.side.west=Лево
+gui.thermaladd.side.top=Верх
+gui.thermaladd.side.bottom=Низ
+gui.thermaladd.side.front=Перед
+gui.thermaladd.side.back=Зад
+gui.thermaladd.side.right=Право
+gui.thermaladd.side.left=Лево
 gui.thermaladd.side.hint=ЛКМ: вперёд | ПКМ: назад | Shift: сброс
 gui.thermaladd.mode.auto=Авто
 gui.thermaladd.mode.input=Вход
@@ -31,12 +31,12 @@ container.improvedAssembler=Улучшенный циклический сбор
 gui.improvedassembler.tab.augments=Расширения
 gui.improvedassembler.tab.configuration=Конфигурация
 
-gui.improvedassembler.side.up=Верх
-gui.improvedassembler.side.down=Низ
-gui.improvedassembler.side.north=Север
-gui.improvedassembler.side.south=Юг
-gui.improvedassembler.side.west=Запад
-gui.improvedassembler.side.east=Восток
+gui.improvedassembler.side.top=Верх
+gui.improvedassembler.side.bottom=Низ
+gui.improvedassembler.side.front=Перед
+gui.improvedassembler.side.back=Зад
+gui.improvedassembler.side.left=Лево
+gui.improvedassembler.side.right=Право
 
 gui.improvedassembler.mode.auto=Авто
 gui.improvedassembler.mode.input=Вход

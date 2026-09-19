@@ -9,24 +9,28 @@ import net.thermaladd.mod.network.MessageCycleSide;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 
+import cofh.lib.util.helpers.BlockHelper;
+
 /**
  * "Configuration" tab for the Improved Cyclic Assembler - same "unfolded cube" 6-button
  * cross layout as Thermal Expansion's real TabConfiguration: Top/Left/Front/Right/Bottom/
  * Back around a center query button. Left-click cycles a side forward, right-click cycles it
  * backward, shift-click resets it (shift-click the center resets every side). Only reachable
  * once the Reconfigurable Sides augment is installed, same as real TE.
+ *
+ * Button-to-side mapping is recomputed from the live facing every time - see TabConfig's
+ * class comment for why a fixed North/West/East/South mapping is wrong the moment the block
+ * is rotated with the Crescent Hammer.
  */
 public class TabConfigAssembler extends GuiSideTab {
 
     // Top, Left, Front, Right, Bottom, Back - exact offsets from cofh.core.gui.element.TabConfiguration.
     private static final int[] BTN_X = {40, 20, 40, 60, 40, 60};
     private static final int[] BTN_Y = {24, 44, 44, 44, 64, 64};
-    // Fixed absolute side per button (this block has no facing/rotation): Up, West, North, East, Down, South.
-    private static final int[] BTN_SIDE = {1, 4, 2, 5, 0, 3};
     private static final String[] BTN_NAME_KEY = {
-            "gui.improvedassembler.side.up", "gui.improvedassembler.side.west",
-            "gui.improvedassembler.side.north", "gui.improvedassembler.side.east",
-            "gui.improvedassembler.side.down", "gui.improvedassembler.side.south"};
+            "gui.improvedassembler.side.top", "gui.improvedassembler.side.left",
+            "gui.improvedassembler.side.front", "gui.improvedassembler.side.right",
+            "gui.improvedassembler.side.bottom", "gui.improvedassembler.side.back"};
     private static final int FRONT_INDEX = 2;
 
     private static final int TINT = 0x226688;
@@ -47,10 +51,23 @@ public class TabConfigAssembler extends GuiSideTab {
         this.tile = tile;
     }
 
+    private int[] currentButtonSides() {
+        int facing = tile.getFacing();
+        return new int[]{
+                1,
+                BlockHelper.getLeftSide(facing),
+                facing,
+                BlockHelper.getRightSide(facing),
+                0,
+                BlockHelper.getOppositeSide(facing)
+        };
+    }
+
     @Override
     protected void drawContentBackground(int x, int y) {
+        int[] btnSide = currentButtonSides();
         for (int i = 0; i < 6; i++) {
-            int mode = tile.getSideMode(BTN_SIDE[i]);
+            int mode = tile.getSideMode(btnSide[i]);
             int bx = x + BTN_X[i];
             int by = y + BTN_Y[i];
             Gui.drawRect(bx - 1, by - 1, bx + 17, by + 17, 0xFF8B8B8B);
@@ -60,8 +77,9 @@ public class TabConfigAssembler extends GuiSideTab {
 
     @Override
     protected void drawContentForeground(int x, int y) {
+        int[] btnSide = currentButtonSides();
         for (int i = 0; i < 6; i++) {
-            int mode = tile.getSideMode(BTN_SIDE[i]);
+            int mode = tile.getSideMode(btnSide[i]);
             ResourceLocation icon = modeIcon(mode);
             if (icon != null) {
                 drawIcon16(icon, x + BTN_X[i], y + BTN_Y[i]);
@@ -71,12 +89,13 @@ public class TabConfigAssembler extends GuiSideTab {
 
     @Override
     public boolean onContentClick(int relX, int relY, int mouseButton, boolean shift) {
+        int[] btnSide = currentButtonSides();
         for (int i = 0; i < 6; i++) {
             if (relX < BTN_X[i] || relX >= BTN_X[i] + 16 || relY < BTN_Y[i] || relY >= BTN_Y[i] + 16) {
                 continue;
             }
             int action;
-            int side = BTN_SIDE[i];
+            int side = btnSide[i];
             if (shift) {
                 action = i == FRONT_INDEX ? MessageCycleSide.ACTION_RESET_ALL : MessageCycleSide.ACTION_RESET_ONE;
             } else {
@@ -90,11 +109,12 @@ public class TabConfigAssembler extends GuiSideTab {
 
     @Override
     protected void addContentTooltip(int relX, int relY, List<String> tooltip) {
+        int[] btnSide = currentButtonSides();
         for (int i = 0; i < 6; i++) {
             if (relX < BTN_X[i] || relX >= BTN_X[i] + 16 || relY < BTN_Y[i] || relY >= BTN_Y[i] + 16) {
                 continue;
             }
-            tooltip.add(StatCollector.translateToLocal(BTN_NAME_KEY[i]) + ": " + modeName(tile.getSideMode(BTN_SIDE[i])));
+            tooltip.add(StatCollector.translateToLocal(BTN_NAME_KEY[i]) + ": " + modeName(tile.getSideMode(btnSide[i])));
             tooltip.add("§7" + StatCollector.translateToLocal("gui.improvedassembler.side.hint"));
             return;
         }

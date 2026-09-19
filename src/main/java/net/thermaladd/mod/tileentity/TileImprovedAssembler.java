@@ -133,6 +133,16 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         return energyStored;
     }
 
+    /**
+     * Unlike the Pulverizer/Furnace, this block's facing was never given its own tile field -
+     * it's read straight from block metadata, which BlockImprovedAssembler already keeps in
+     * sync via the normal block-update packet. Exposed here so TabConfigAssembler can compute
+     * Left/Right/Back the same way the other two machines' tabs do.
+     */
+    public int getFacing() {
+        return worldObj != null ? worldObj.getBlockMetadata(xCoord, yCoord, zCoord) : 3;
+    }
+
     public void setEnergyStoredClient(int scaledByFour) {
         this.energyStored = scaledByFour * 4;
     }
