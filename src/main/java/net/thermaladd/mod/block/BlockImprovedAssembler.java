@@ -116,6 +116,12 @@ public class BlockImprovedAssembler extends BlockContainer {
                 break;
         }
         world.setBlockMetadataWithNotify(x, y, z, meta, 2);
+        if (!world.isRemote) {
+            TileEntity te = world.getTileEntity(x, y, z);
+            if (te instanceof TileImprovedAssembler) {
+                ((TileImprovedAssembler) te).installDefaultAugments();
+            }
+        }
     }
 
     @Override

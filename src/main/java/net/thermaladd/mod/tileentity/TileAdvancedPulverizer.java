@@ -14,6 +14,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import cofh.api.energy.EnergyStorage;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
+import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.util.crafting.PulverizerManager;
 import cofh.thermalexpansion.util.crafting.PulverizerManager.RecipePulverizer;
 import cpw.mods.fml.common.network.NetworkRegistry;
@@ -305,6 +306,21 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         energyStorage.setCapacity(BASE_ENERGY_CAPACITY * ENERGY_STORAGE_MOD[energyLevel]);
         energyStorage.setMaxTransfer(ENERGY_RECEIVE_PER_TICK * ENERGY_STORAGE_MOD[energyLevel]);
         markDirty();
+    }
+
+    /**
+     * Mirrors real Thermal Expansion's own default-augment behavior (decompiled from
+     * {@code cofh.thermalexpansion.block.machine.BlockMachine}: {@code defaultAugments[0/1/2]}
+     * is seeded with {@code TEAugments.generalAutoOutput}/{@code generalRedstoneControl}/
+     * {@code generalReconfigSides} whenever the corresponding config flag is on, which is
+     * TE's shipped default for all three) - a freshly placed machine already has these 3
+     * augments installed, not just an empty augment bay. Only called once, from
+     * {@code onBlockPlacedBy}, so loading an existing saved tile never re-seeds it.
+     */
+    public void installDefaultAugments() {
+        setInventorySlotContents(AUGMENT_START, TEAugments.generalAutoOutput.copy());
+        setInventorySlotContents(AUGMENT_START + 1, TEAugments.generalRedstoneControl.copy());
+        setInventorySlotContents(AUGMENT_START + 2, TEAugments.generalReconfigSides.copy());
     }
 
     private static int clampLevel(int level) {

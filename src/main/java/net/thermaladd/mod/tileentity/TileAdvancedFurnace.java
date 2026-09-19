@@ -14,6 +14,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import cofh.api.energy.EnergyStorage;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
+import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.util.crafting.FurnaceManager;
 import cofh.thermalexpansion.util.crafting.FurnaceManager.RecipeFurnace;
 import cpw.mods.fml.common.network.NetworkRegistry;
@@ -224,6 +225,19 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         energyStorage.setCapacity(BASE_ENERGY_CAPACITY * ENERGY_STORAGE_MOD[energyLevel]);
         energyStorage.setMaxTransfer(ENERGY_RECEIVE_PER_TICK * ENERGY_STORAGE_MOD[energyLevel]);
         markDirty();
+    }
+
+    /**
+     * Mirrors real Thermal Expansion's own default-augment behavior (see
+     * {@link TileAdvancedPulverizer#installDefaultAugments()} for the decompiled source) -
+     * a freshly placed machine already has Auto Output, Redstone Control and Reconfigurable
+     * Sides installed, not just an empty augment bay. Only called once, from
+     * {@code onBlockPlacedBy}.
+     */
+    public void installDefaultAugments() {
+        setInventorySlotContents(AUGMENT_START, TEAugments.generalAutoOutput.copy());
+        setInventorySlotContents(AUGMENT_START + 1, TEAugments.generalRedstoneControl.copy());
+        setInventorySlotContents(AUGMENT_START + 2, TEAugments.generalReconfigSides.copy());
     }
 
     private static int clampLevel(int level) {

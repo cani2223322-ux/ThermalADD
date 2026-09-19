@@ -19,6 +19,7 @@ import net.minecraftforge.oredict.OreDictionary;
 
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
+import cofh.thermalexpansion.item.TEAugments;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
@@ -74,6 +75,8 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public static final String AUG_AUTO_OUTPUT = "generalAutoOutput";
     /** Matches cofh.thermalexpansion.item.TEAugments.GENERAL_RECONFIG_SIDES. */
     public static final String AUG_RECONFIG_SIDES = "generalReconfigSides";
+    /** Matches cofh.thermalexpansion.item.TEAugments.GENERAL_REDSTONE_CONTROL. */
+    public static final String AUG_REDSTONE_CONTROL = "generalRedstoneControl";
 
     public static final int SIDE_MODE_AUTO = 0;
     public static final int SIDE_MODE_INPUT = 1;
@@ -86,6 +89,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public boolean augmentAutoInput = false;
     public boolean augmentAutoOutput = false;
     public boolean augmentReconfigSides = false;
+    public boolean augmentRedstoneControl = false;
 
     private byte[] sideCache = new byte[6];
     private int autoIOTimer = 0;
@@ -171,12 +175,18 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
 
         boolean dirty = false;
         energyPerTick = 0;
-        for (int slot = 0; slot < SCHEMATIC_SLOTS; slot++) {
-            if (energyStored < PROCESS_ENERGY) {
-                break;
-            }
-            if (tryCraft(slot)) {
-                dirty = true;
+
+        // Same "lever to mute the machine" behavior as the Pulverizer/Furnace: an indirect
+        // redstone signal simply pauses crafting while the Redstone Control augment is in.
+        boolean redstonePaused = augmentRedstoneControl && worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord);
+        if (!redstonePaused) {
+            for (int slot = 0; slot < SCHEMATIC_SLOTS; slot++) {
+                if (energyStored < PROCESS_ENERGY) {
+                    break;
+                }
+                if (tryCraft(slot)) {
+                    dirty = true;
+                }
             }
         }
 
@@ -208,6 +218,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         boolean autoInput = false;
         boolean autoOutput = false;
         boolean reconfigSides = false;
+        boolean redstoneControl = false;
 
         for (int i = 0; i < AUGMENT_SLOTS; i++) {
             ItemStack augment = inventory[AUGMENT_START + i];
@@ -228,6 +239,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
             if (types.contains(AUG_RECONFIG_SIDES) && item.getAugmentLevel(augment, AUG_RECONFIG_SIDES) > 0) {
                 reconfigSides = true;
             }
+            if (types.contains(AUG_REDSTONE_CONTROL) && item.getAugmentLevel(augment, AUG_REDSTONE_CONTROL) > 0) {
+                redstoneControl = true;
+            }
         }
 
         if (augmentReconfigSides && !reconfigSides) {
@@ -240,6 +254,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         augmentAutoInput = autoInput;
         augmentAutoOutput = autoOutput;
         augmentReconfigSides = reconfigSides;
+        augmentRedstoneControl = redstoneControl;
         markDirty();
     }
 
@@ -250,7 +265,21 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         IAugmentItem item = (IAugmentItem) stack.getItem();
         Set<String> types = item.getAugmentTypes(stack);
         return types != null
-                && (types.contains(AUG_AUTO_INPUT) || types.contains(AUG_AUTO_OUTPUT) || types.contains(AUG_RECONFIG_SIDES));
+                && (types.contains(AUG_AUTO_INPUT) || types.contains(AUG_AUTO_OUTPUT)
+                        || types.contains(AUG_RECONFIG_SIDES) || types.contains(AUG_REDSTONE_CONTROL));
+    }
+
+    /**
+     * Mirrors real Thermal Expansion's own default-augment behavior (see
+     * {@link net.thermaladd.mod.tileentity.TileAdvancedPulverizer#installDefaultAugments()}
+     * for the decompiled source) - a freshly placed machine already has Auto Output,
+     * Redstone Control and Reconfigurable Sides installed, filling all 3 of this machine's
+     * augment slots. Only called once, from {@code onBlockPlacedBy}.
+     */
+    public void installDefaultAugments() {
+        setInventorySlotContents(AUGMENT_START, TEAugments.generalAutoOutput.copy());
+        setInventorySlotContents(AUGMENT_START + 1, TEAugments.generalRedstoneControl.copy());
+        setInventorySlotContents(AUGMENT_START + 2, TEAugments.generalReconfigSides.copy());
     }
 
     public int getSideMode(int side) {

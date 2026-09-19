@@ -132,7 +132,11 @@ public class BlockAdvancedPulverizer extends BlockContainer {
         world.setBlockMetadataWithNotify(x, y, z, meta, 2);
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileAdvancedPulverizer) {
-            ((TileAdvancedPulverizer) te).setFacing(meta);
+            TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;
+            tile.setFacing(meta);
+            if (!world.isRemote) {
+                tile.installDefaultAugments();
+            }
         }
     }
 
