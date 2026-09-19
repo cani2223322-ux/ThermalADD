@@ -164,9 +164,12 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
     /**
      * Gated by the Reconfigurable Sides augment, exactly like real Thermal Expansion machines.
+     * Also refuses to touch the front face, matching TileReconfigurable#incrSide/decrSide -
+     * real TE never lets the front be individually configured, only reset along with
+     * everything else via resetAllSideModes().
      */
     public boolean cycleSideMode(int side, int direction) {
-        if (!augmentReconfigSides) {
+        if (!augmentReconfigSides || side == facing) {
             return false;
         }
         sideCache[side] = (byte) (((sideCache[side] + direction) % SIDE_MODE_COUNT + SIDE_MODE_COUNT) % SIDE_MODE_COUNT);
@@ -176,7 +179,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     }
 
     public boolean resetSideMode(int side) {
-        if (!augmentReconfigSides) {
+        if (!augmentReconfigSides || side == facing) {
             return false;
         }
         sideCache[side] = SIDE_MODE_AUTO;

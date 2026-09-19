@@ -128,6 +128,11 @@ public class BlockAdvancedFurnace extends BlockContainer {
         return new TileAdvancedFurnace();
     }
 
+    /**
+     * Crescent Hammer support: a click with one held always rotates the machine's facing -
+     * matching real Thermal Expansion's own TileReconfigurable#onWrench (unconditional
+     * rotateBlock(), no sneak branching). Side configuration is GUI-only in real TE.
+     */
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side,
             float hitX, float hitY, float hitZ) {
@@ -139,13 +144,9 @@ public class BlockAdvancedFurnace extends BlockContainer {
                     TileEntity te = world.getTileEntity(x, y, z);
                     if (te instanceof TileAdvancedFurnace) {
                         TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
-                        if (player.isSneaking()) {
-                            tile.cycleSideMode(side, 1);
-                        } else {
-                            int next = nextFacing(tile.getFacing());
-                            world.setBlockMetadataWithNotify(x, y, z, next, 3);
-                            tile.setFacing(next);
-                        }
+                        int next = nextFacing(tile.getFacing());
+                        world.setBlockMetadataWithNotify(x, y, z, next, 3);
+                        tile.setFacing(next);
                     }
                     hammer.toolUsed(held, player, x, y, z);
                 }

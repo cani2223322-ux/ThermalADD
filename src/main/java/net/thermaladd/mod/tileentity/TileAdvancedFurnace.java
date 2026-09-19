@@ -114,8 +114,9 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         return sideCache[side];
     }
 
+    /** Refuses to touch the front face, matching real TE's TileReconfigurable#incrSide/decrSide. */
     public boolean cycleSideMode(int side, int direction) {
-        if (!augmentReconfigSides) {
+        if (!augmentReconfigSides || side == facing) {
             return false;
         }
         sideCache[side] = (byte) (((sideCache[side] + direction) % SIDE_MODE_COUNT + SIDE_MODE_COUNT) % SIDE_MODE_COUNT);
@@ -125,7 +126,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     }
 
     public boolean resetSideMode(int side) {
-        if (!augmentReconfigSides) {
+        if (!augmentReconfigSides || side == facing) {
             return false;
         }
         sideCache[side] = SIDE_MODE_AUTO;

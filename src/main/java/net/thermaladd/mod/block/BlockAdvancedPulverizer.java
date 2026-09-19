@@ -152,11 +152,12 @@ public class BlockAdvancedPulverizer extends BlockContainer {
     }
 
     /**
-     * Crescent Hammer support: a plain right-click with one held rotates the machine's
-     * facing (like vanilla's furnace); sneak + right-click instead cycles the side
-     * configuration (Auto/Input/Output/Disabled) of the exact face that was clicked, the
-     * same two-gesture convention Thermal Expansion's own machines use for their wrench.
-     * Any other held item (or an empty hand) just opens the GUI, as usual.
+     * Crescent Hammer support: a click with one held always rotates the machine's facing -
+     * matching real Thermal Expansion's own TileReconfigurable#onWrench, which unconditionally
+     * calls rotateBlock() regardless of sneaking. Side configuration (Auto/Input/Output/
+     * Disabled) is a GUI Configuration-tab-only feature in real TE - there is no wrench
+     * gesture for it - so this doesn't branch on sneak state at all. Any other held item (or
+     * an empty hand) just opens the GUI, as usual.
      */
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side,
@@ -169,13 +170,9 @@ public class BlockAdvancedPulverizer extends BlockContainer {
                     TileEntity te = world.getTileEntity(x, y, z);
                     if (te instanceof TileAdvancedPulverizer) {
                         TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;
-                        if (player.isSneaking()) {
-                            tile.cycleSideMode(side, 1);
-                        } else {
-                            int next = nextFacing(tile.getFacing());
-                            world.setBlockMetadataWithNotify(x, y, z, next, 3);
-                            tile.setFacing(next);
-                        }
+                        int next = nextFacing(tile.getFacing());
+                        world.setBlockMetadataWithNotify(x, y, z, next, 3);
+                        tile.setFacing(next);
                     }
                     hammer.toolUsed(held, player, x, y, z);
                 }

@@ -13,6 +13,8 @@ import net.minecraft.util.IIcon;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
+
+import cofh.api.item.IToolHammer;
 import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.init.ModCreativeTab;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
@@ -131,13 +133,43 @@ public class BlockImprovedAssembler extends BlockContainer {
         return new TileImprovedAssembler();
     }
 
+    private static final int[] FACING_META = {2, 5, 3, 4};
+
+    /**
+     * Crescent Hammer support - this block never had it before, even though its own
+     * Configuration tab depends on facing (Left/Right/Front/Back rotate with it) and had no
+     * way to change facing after placement. A click with one held always rotates, matching
+     * real Thermal Expansion's TileReconfigurable#onWrench (unconditional, no sneak branch).
+     */
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side,
             float hitX, float hitY, float hitZ) {
+        ItemStack held = player.getHeldItem();
+        if (held != null && held.getItem() instanceof IToolHammer) {
+            IToolHammer hammer = (IToolHammer) held.getItem();
+            if (hammer.isUsable(held, player, x, y, z)) {
+                if (!world.isRemote) {
+                    int facing = world.getBlockMetadata(x, y, z);
+                    world.setBlockMetadataWithNotify(x, y, z, nextFacing(facing), 3);
+                    hammer.toolUsed(held, player, x, y, z);
+                }
+                return true;
+            }
+        }
+
         if (!world.isRemote) {
             player.openGui(ThermalADD.instance, ThermalADD.GUI_ID_IMPROVED_ASSEMBLER, world, x, y, z);
         }
         return true;
+    }
+
+    private static int nextFacing(int facing) {
+        for (int i = 0; i < FACING_META.length; i++) {
+            if (FACING_META[i] == facing) {
+                return FACING_META[(i + 1) % FACING_META.length];
+            }
+        }
+        return FACING_META[0];
     }
 
     @Override

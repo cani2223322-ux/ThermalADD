@@ -257,9 +257,13 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         return sideCache[side];
     }
 
-    /** Server-side: cycles a side's mode forward (direction 1) or backward (-1), gated by the augment. */
+    /**
+     * Server-side: cycles a side's mode forward (direction 1) or backward (-1), gated by the
+     * augment. Also refuses to touch the front face, matching real TE's
+     * TileReconfigurable#incrSide/decrSide.
+     */
     public boolean cycleSideMode(int side, int direction) {
-        if (!augmentReconfigSides) {
+        if (!augmentReconfigSides || side == getFacing()) {
             return false;
         }
         sideCache[side] = (byte) (((sideCache[side] + direction) % SIDE_MODE_COUNT + SIDE_MODE_COUNT) % SIDE_MODE_COUNT);
@@ -269,7 +273,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     }
 
     public boolean resetSideMode(int side) {
-        if (!augmentReconfigSides) {
+        if (!augmentReconfigSides || side == getFacing()) {
             return false;
         }
         sideCache[side] = SIDE_MODE_AUTO;
