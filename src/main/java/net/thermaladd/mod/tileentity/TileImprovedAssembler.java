@@ -13,6 +13,9 @@ import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.oredict.OreDictionary;
@@ -919,5 +922,24 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         }
 
         installAugments();
+    }
+
+    /**
+     * See TileAdvancedPulverizer#getDescriptionPacket for why this exists. This tile's own
+     * facing already rides on real block metadata (always sent with chunk data), but sideCache/
+     * augments/energy/redstone mode are all tile-only fields that would otherwise sit at their
+     * construction defaults on a freshly loaded client until something else resynced them.
+     */
+    @Override
+    public Packet getDescriptionPacket() {
+        NBTTagCompound tag = new NBTTagCompound();
+        writeToNBT(tag);
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
+    }
+
+    @Override
+    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
+        readFromNBT(packet.func_148857_g());
+        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 }

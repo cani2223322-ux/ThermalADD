@@ -8,6 +8,9 @@ import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
 
@@ -1035,5 +1038,29 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
                 break;
             }
         }
+    }
+
+    /**
+     * Without this, a freshly loaded chunk never tells a client what facing/sideCache/augments
+     * this tile actually has - the default TileEntity#getDescriptionPacket() returns null, so
+     * the client keeps whatever it was constructed with (facing = south, the createNewTileEntity
+     * default) until something else happens to resync it. That's exactly the "block faces a
+     * different way after rejoining the world" bug: the SERVER's saved data was always correct,
+     * the CLIENT's own copy just never received it. Reuses writeToNBT/readFromNBT wholesale
+     * (facing, sides, augments, energy, redstone mode, everything) rather than hand-picking
+     * fields, since this only fires once per chunk load, not something to be stingy about.
+     */
+    @Override
+    public Packet getDescriptionPacket() {
+        NBTTagCompound tag = new NBTTagCompound();
+        writeToNBT(tag);
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tag);
+    }
+
+    @Override
+    public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
+        // MCP never gave this one a friendly name - func_148857_g() is S35PacketUpdateTileEntity's NBT getter.
+        readFromNBT(packet.func_148857_g());
+        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
     }
 }
