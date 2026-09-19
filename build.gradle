@@ -1,0 +1,65 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { name = "forge"; url = "https://maven.minecraftforge.net" }
+        maven { name = "sonatype"; url = "https://oss.sonatype.org/content/repositories/snapshots/" }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
+    }
+}
+
+apply plugin: 'forge'
+
+version = "1.7.10-beta 1"
+group = "net.thermaladd"
+archivesBaseName = "thermaladd"
+
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+minecraft {
+    version = "1.7.10-10.13.4.1614-1.7.10"
+    runDir = "run"
+}
+
+repositories {
+    mavenCentral()
+}
+
+// There is no reliable public Maven for these 1.7.10 CoFH artifacts, so the jars are
+// vendored directly under libs/ (see libs/README.txt) - same versions the mod is written
+// against: CoFHCore 3.1.4-329, ThermalExpansion 4.1.5-248, ThermalFoundation 1.2.6-118.
+//
+// Plain `compile files(...)`, NOT a `deobfCompile`-style configuration: ForgeGradle 1.2's
+// UserBasePlugin has no such configuration (that only exists in much later ForgeGradle
+// versions) - and none is needed here. javac only resolves method/class SIGNATURES from
+// these jars (e.g. PulverizerManager.getRecipe(ItemStack)), and CoFH/TE's own declared
+// classes and methods are never SRG-obfuscated - only their bytecode's internal references
+// into vanilla Minecraft are, and Forge's dev-environment classloader remaps those
+// automatically at load time, exactly as it does for every other regular mod jar dropped
+// into a dev run/mods folder.
+dependencies {
+    compile files(
+            'libs/CoFHCore-1.7.10-3.1.4-329.jar',
+            'libs/ThermalExpansion-1.7.10-4.1.5-248.jar',
+            // Not referenced directly by our code, but ThermalExpansion's recipe managers
+            // touch ThermalFoundation classes (TFItems, VanillaEquipment) internally, so it
+            // needs to be on the classpath for TE's own classes to resolve/verify.
+            'libs/ThermalFoundation-1.7.10-1.2.6-118.jar'
+    )
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version': project.version, 'mcversion': project.minecraft.version
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}

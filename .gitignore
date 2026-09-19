@@ -1,0 +1,23 @@
+# Gradle / ForgeGradle build output and caches
+/build/
+/.gradle/
+/run/
+/out/
+*.class
+
+# Vendored third-party mod jars (CoFHCore / Thermal Expansion / Thermal Foundation) -
+# copyrighted binaries we don't have redistribution rights for. See libs/README.txt for
+# how to obtain them; the README itself IS tracked.
+/libs/*.jar
+
+# Local build logs from testing
+build_thermaladd.log
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/

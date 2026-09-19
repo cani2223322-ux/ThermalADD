@@ -1,0 +1,809 @@
+package net.thermaladd.mod.tileentity;
+
+import java.util.List;
+import java.util.Set;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Container;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.ISidedInventory;
+import net.minecraft.inventory.InventoryCrafting;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.CraftingManager;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.oredict.OreDictionary;
+
+import cofh.api.energy.IEnergyReceiver;
+import cofh.api.item.IAugmentItem;
+import cpw.mods.fml.common.network.NetworkRegistry;
+import net.thermaladd.mod.network.MessageTileRenderSync;
+import net.thermaladd.mod.network.PacketHandler;
+
+/**
+ * Improved Cyclic Assembler.
+ *
+ * Modeled directly on Thermal Expansion's own TileAssembler (decompiled from
+ * thermalexpansion-1.7.10-4.1.5-248.jar): a schematic ItemStack carries the full
+ * 3x3 crafting pattern in NBT ("SlotN" item + optional "OreN" OreDictionary tag
+ * per cell), the machine rebuilds a real crafting grid from its material buffer,
+ * looks the result up via the vanilla recipe list and crafts for a flat RF cost
+ * (no artificial "progress" timer - exactly like the real Assembler).
+ *
+ * This version accepts genuine Thermal Expansion schematics (made with a normal
+ * TE Assembler / Schematic Table) and, unlike the original (1 schematic slot,
+ * one job at a time), has 6 schematic slots that are all evaluated - and can all
+ * craft - every single tick, so several schematics run truly in parallel.
+ */
+public class TileImprovedAssembler extends TileEntity implements ISidedInventory, IEnergyReceiver {
+
+    public static final int SCHEMATIC_SLOTS = 6;
+    public static final int INPUT_SLOTS = 18;
+    public static final int OUTPUT_SLOTS = 6;
+    /** Same count as Thermal Expansion's own TileAugmentable: exactly 3 augment slots. */
+    public static final int AUGMENT_SLOTS = 3;
+    public static final int TOTAL_SLOTS = SCHEMATIC_SLOTS + INPUT_SLOTS + OUTPUT_SLOTS + AUGMENT_SLOTS;
+
+    public static final int SCHEMATIC_START = 0;
+    public static final int INPUT_START = SCHEMATIC_SLOTS;
+    public static final int OUTPUT_START = SCHEMATIC_SLOTS + INPUT_SLOTS;
+    public static final int AUGMENT_START = SCHEMATIC_SLOTS + INPUT_SLOTS + OUTPUT_SLOTS;
+
+    /** Same flat per-craft cost as the real Thermal Expansion Assembler (TileAssembler.PROCESS_ENERGY). */
+    public static final int PROCESS_ENERGY = 20;
+
+    /**
+     * Same "UltimateResonant" power tier as the Advanced Pulverizer (see
+     * {@link net.thermaladd.mod.tileentity.TileAdvancedPulverizer#TIER_NAME}) - both machines
+     * in this mod share one power-tier identity rather than each having its own scale.
+     */
+    public static final String TIER_NAME = "UltimateResonant";
+    /** Was 64,000 RF - bumped to match the mod's UltimateResonant tier. */
+    public static final int ENERGY_CAPACITY = 500000;
+    /** Was 800 RF/t - bumped to match the mod's UltimateResonant tier (6 slots at 20 RF/craft each need only 120 RF/t at most, so this is pure headroom, not a starvation fix like the Pulverizer's). */
+    public static final int ENERGY_RECEIVE_PER_TICK = 5000;
+
+    // -------------------------------------------------- augments (TE-compatible)
+
+    /** Matches cofh.thermalexpansion.item.TEAugments.GENERAL_AUTO_INPUT. */
+    public static final String AUG_AUTO_INPUT = "generalAutoInput";
+    /** Matches cofh.thermalexpansion.item.TEAugments.GENERAL_AUTO_OUTPUT. */
+    public static final String AUG_AUTO_OUTPUT = "generalAutoOutput";
+    /** Matches cofh.thermalexpansion.item.TEAugments.GENERAL_RECONFIG_SIDES. */
+    public static final String AUG_RECONFIG_SIDES = "generalReconfigSides";
+
+    public static final int SIDE_MODE_AUTO = 0;
+    public static final int SIDE_MODE_INPUT = 1;
+    public static final int SIDE_MODE_OUTPUT = 2;
+    public static final int SIDE_MODE_DISABLED = 3;
+    public static final int SIDE_MODE_COUNT = 4;
+
+    private static final int AUTO_IO_INTERVAL = 8;
+
+    public boolean augmentAutoInput = false;
+    public boolean augmentAutoOutput = false;
+    public boolean augmentReconfigSides = false;
+
+    private byte[] sideCache = new byte[6];
+    private int autoIOTimer = 0;
+
+    private static final Container DUMMY_CONTAINER = new Container() {
+        @Override
+        public boolean canInteractWith(EntityPlayer player) {
+            return true;
+        }
+    };
+
+    private ItemStack[] inventory = new ItemStack[TOTAL_SLOTS];
+    private int energyStored = 0;
+    /** RF actually spent on the tick just finished (PROCESS_ENERGY per schematic that crafted) - "Energy Consumption" in the GUI. */
+    private int energyPerTick = 0;
+
+    // ---------------------------------------------------------------- energy
+
+    @Override
+    public int receiveEnergy(ForgeDirection from, int maxReceive, boolean simulate) {
+        int energyReceived = Math.min(ENERGY_CAPACITY - energyStored, Math.min(ENERGY_RECEIVE_PER_TICK, maxReceive));
+        if (!simulate && energyReceived > 0) {
+            energyStored += energyReceived;
+            markDirty();
+        }
+        return energyReceived;
+    }
+
+    @Override
+    public int getEnergyStored(ForgeDirection from) {
+        return energyStored;
+    }
+
+    @Override
+    public int getMaxEnergyStored(ForgeDirection from) {
+        return ENERGY_CAPACITY;
+    }
+
+    @Override
+    public boolean canConnectEnergy(ForgeDirection from) {
+        return true;
+    }
+
+    public int getEnergy() {
+        return energyStored;
+    }
+
+    public void setEnergyStoredClient(int scaledByFour) {
+        this.energyStored = scaledByFour * 4;
+    }
+
+    /** RF actually drawn on the last tick that ran server-side - what real TE's own "Energy Consumption" line shows. */
+    public int getEnergyPerTick() {
+        return energyPerTick;
+    }
+
+    /** RF/t this machine would draw if all 6 schematic slots crafted on the same tick. */
+    public int getMaxEnergyPerTick() {
+        return SCHEMATIC_SLOTS * PROCESS_ENERGY;
+    }
+
+    public void setEnergyPerTickClient(int value) {
+        energyPerTick = value;
+    }
+
+    // ---------------------------------------------------------------- tick
+
+    @Override
+    public void updateEntity() {
+        if (worldObj == null || worldObj.isRemote) {
+            return;
+        }
+
+        boolean dirty = false;
+        energyPerTick = 0;
+        for (int slot = 0; slot < SCHEMATIC_SLOTS; slot++) {
+            if (energyStored < PROCESS_ENERGY) {
+                break;
+            }
+            if (tryCraft(slot)) {
+                dirty = true;
+            }
+        }
+
+        if (augmentAutoInput || augmentAutoOutput) {
+            if (++autoIOTimer >= AUTO_IO_INTERVAL) {
+                autoIOTimer = 0;
+                if (augmentAutoInput && autoPullInputs()) {
+                    dirty = true;
+                }
+                if (augmentAutoOutput && autoPushOutputs()) {
+                    dirty = true;
+                }
+            }
+        }
+
+        if (dirty) {
+            markDirty();
+        }
+    }
+
+    // ------------------------------------------------------ augments & side config
+
+    /**
+     * Mirrors TileAugmentable#installAugments(): re-derive the auto-input/auto-output/
+     * reconfigurable-sides flags from whatever real Thermal Expansion augment items are
+     * currently sitting in the 3 augment slots.
+     */
+    public void installAugments() {
+        boolean autoInput = false;
+        boolean autoOutput = false;
+        boolean reconfigSides = false;
+
+        for (int i = 0; i < AUGMENT_SLOTS; i++) {
+            ItemStack augment = inventory[AUGMENT_START + i];
+            if (augment == null || !(augment.getItem() instanceof IAugmentItem)) {
+                continue;
+            }
+            IAugmentItem item = (IAugmentItem) augment.getItem();
+            Set<String> types = item.getAugmentTypes(augment);
+            if (types == null) {
+                continue;
+            }
+            if (types.contains(AUG_AUTO_INPUT) && item.getAugmentLevel(augment, AUG_AUTO_INPUT) > 0) {
+                autoInput = true;
+            }
+            if (types.contains(AUG_AUTO_OUTPUT) && item.getAugmentLevel(augment, AUG_AUTO_OUTPUT) > 0) {
+                autoOutput = true;
+            }
+            if (types.contains(AUG_RECONFIG_SIDES) && item.getAugmentLevel(augment, AUG_RECONFIG_SIDES) > 0) {
+                reconfigSides = true;
+            }
+        }
+
+        if (augmentReconfigSides && !reconfigSides) {
+            // the augment that unlocked side reconfiguration was removed - lock back to defaults
+            for (int i = 0; i < sideCache.length; i++) {
+                sideCache[i] = SIDE_MODE_AUTO;
+            }
+        }
+
+        augmentAutoInput = autoInput;
+        augmentAutoOutput = autoOutput;
+        augmentReconfigSides = reconfigSides;
+        markDirty();
+    }
+
+    public static boolean isValidAugment(ItemStack stack) {
+        if (stack == null || !(stack.getItem() instanceof IAugmentItem)) {
+            return false;
+        }
+        IAugmentItem item = (IAugmentItem) stack.getItem();
+        Set<String> types = item.getAugmentTypes(stack);
+        return types != null
+                && (types.contains(AUG_AUTO_INPUT) || types.contains(AUG_AUTO_OUTPUT) || types.contains(AUG_RECONFIG_SIDES));
+    }
+
+    public int getSideMode(int side) {
+        return sideCache[side];
+    }
+
+    /** Server-side: cycles a side's mode forward (direction 1) or backward (-1), gated by the augment. */
+    public boolean cycleSideMode(int side, int direction) {
+        if (!augmentReconfigSides) {
+            return false;
+        }
+        sideCache[side] = (byte) (((sideCache[side] + direction) % SIDE_MODE_COUNT + SIDE_MODE_COUNT) % SIDE_MODE_COUNT);
+        markDirty();
+        syncRenderState();
+        return true;
+    }
+
+    public boolean resetSideMode(int side) {
+        if (!augmentReconfigSides) {
+            return false;
+        }
+        sideCache[side] = SIDE_MODE_AUTO;
+        markDirty();
+        syncRenderState();
+        return true;
+    }
+
+    public boolean resetAllSideModes() {
+        if (!augmentReconfigSides) {
+            return false;
+        }
+        for (int i = 0; i < sideCache.length; i++) {
+            sideCache[i] = SIDE_MODE_AUTO;
+        }
+        markDirty();
+        syncRenderState();
+        return true;
+    }
+
+    /**
+     * The connection badge on a face depends on sideCache, which isn't stored in block
+     * metadata, so vanilla's block-change networking never reaches it - World#markBlockForUpdate
+     * called here (server-side) would be a no-op, since it only affects whichever World
+     * instance it's called on, never the client's. This explicitly pushes the new state to
+     * every nearby client, which then repaints the block from its OWN World - see
+     * MessageTileRenderSyncHandler. (Facing itself is real block metadata already, so it's
+     * sent as 0 here and simply ignored on the receiving end for this tile type.)
+     */
+    private void syncRenderState() {
+        if (worldObj == null || worldObj.isRemote) {
+            return;
+        }
+        PacketHandler.INSTANCE.sendToAllAround(new MessageTileRenderSync(xCoord, yCoord, zCoord, (byte) 0, sideCache),
+                new NetworkRegistry.TargetPoint(worldObj.provider.dimensionId, xCoord, yCoord, zCoord, 64.0));
+    }
+
+    /** Client-side only: apply a side mode received from the server without the augment gate. */
+    public void setSideModeClient(int side, int mode) {
+        sideCache[side] = (byte) mode;
+    }
+
+    private boolean sideAllowsInput(int side) {
+        int mode = sideCache[side];
+        return mode == SIDE_MODE_AUTO || mode == SIDE_MODE_INPUT;
+    }
+
+    private boolean sideAllowsOutput(int side) {
+        int mode = sideCache[side];
+        return mode == SIDE_MODE_AUTO || mode == SIDE_MODE_OUTPUT;
+    }
+
+    private boolean autoPullInputs() {
+        boolean moved = false;
+        for (int side = 0; side < 6; side++) {
+            if (sideAllowsInput(side) && pullFromSide(ForgeDirection.getOrientation(side))) {
+                moved = true;
+            }
+        }
+        return moved;
+    }
+
+    private boolean autoPushOutputs() {
+        boolean moved = false;
+        for (int side = 0; side < 6; side++) {
+            if (sideAllowsOutput(side) && pushToSide(ForgeDirection.getOrientation(side))) {
+                moved = true;
+            }
+        }
+        return moved;
+    }
+
+    /** Pulls a single item from the neighboring inventory on {@code dir} into the material buffer. */
+    private boolean pullFromSide(ForgeDirection dir) {
+        TileEntity neighbor = worldObj.getTileEntity(xCoord + dir.offsetX, yCoord + dir.offsetY, zCoord + dir.offsetZ);
+        if (!(neighbor instanceof IInventory)) {
+            return false;
+        }
+        IInventory neighborInv = (IInventory) neighbor;
+        ForgeDirection fromSide = dir.getOpposite();
+        int[] slots = neighborInv instanceof ISidedInventory
+                ? ((ISidedInventory) neighborInv).getAccessibleSlotsFromSide(fromSide.ordinal())
+                : allSlots(neighborInv);
+
+        for (int slotIdx : slots) {
+            ItemStack candidate = neighborInv.getStackInSlot(slotIdx);
+            if (candidate == null) {
+                continue;
+            }
+            if (neighborInv instanceof ISidedInventory
+                    && !((ISidedInventory) neighborInv).canExtractItem(slotIdx, candidate, fromSide.ordinal())) {
+                continue;
+            }
+            int bufferSlot = findBufferSlotFor(candidate);
+            if (bufferSlot < 0) {
+                continue;
+            }
+            if (inventory[INPUT_START + bufferSlot] == null) {
+                ItemStack moved = candidate.copy();
+                moved.stackSize = 1;
+                inventory[INPUT_START + bufferSlot] = moved;
+            } else {
+                inventory[INPUT_START + bufferSlot].stackSize++;
+            }
+            neighborInv.decrStackSize(slotIdx, 1);
+            neighborInv.markDirty();
+            return true;
+        }
+        return false;
+    }
+
+    /** Pushes a single item from the output slots into the neighboring inventory on {@code dir}. */
+    private boolean pushToSide(ForgeDirection dir) {
+        TileEntity neighbor = worldObj.getTileEntity(xCoord + dir.offsetX, yCoord + dir.offsetY, zCoord + dir.offsetZ);
+        if (!(neighbor instanceof IInventory)) {
+            return false;
+        }
+        IInventory neighborInv = (IInventory) neighbor;
+        ForgeDirection toSide = dir.getOpposite();
+
+        for (int i = 0; i < OUTPUT_SLOTS; i++) {
+            int slot = OUTPUT_START + i;
+            ItemStack stack = inventory[slot];
+            if (stack == null) {
+                continue;
+            }
+            if (insertIntoInventory(neighborInv, toSide, stack)) {
+                stack.stackSize--;
+                if (stack.stackSize <= 0) {
+                    inventory[slot] = null;
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int findBufferSlotFor(ItemStack stack) {
+        int emptySlot = -1;
+        for (int i = 0; i < INPUT_SLOTS; i++) {
+            ItemStack buf = inventory[INPUT_START + i];
+            if (buf == null) {
+                if (emptySlot < 0) {
+                    emptySlot = i;
+                }
+                continue;
+            }
+            if (buf.getItem() == stack.getItem() && buf.getItemDamage() == stack.getItemDamage()
+                    && ItemStack.areItemStackTagsEqual(buf, stack) && buf.stackSize < buf.getMaxStackSize()) {
+                return i;
+            }
+        }
+        return emptySlot;
+    }
+
+    private boolean insertIntoInventory(IInventory inv, ForgeDirection side, ItemStack stack) {
+        int[] slots = inv instanceof ISidedInventory
+                ? ((ISidedInventory) inv).getAccessibleSlotsFromSide(side.ordinal())
+                : allSlots(inv);
+
+        for (int slotIdx : slots) {
+            ItemStack single = stack.copy();
+            single.stackSize = 1;
+
+            if (inv instanceof ISidedInventory
+                    && !((ISidedInventory) inv).canInsertItem(slotIdx, single, side.ordinal())) {
+                continue;
+            }
+            if (!inv.isItemValidForSlot(slotIdx, single)) {
+                continue;
+            }
+            ItemStack existing = inv.getStackInSlot(slotIdx);
+            if (existing == null) {
+                inv.setInventorySlotContents(slotIdx, single);
+                inv.markDirty();
+                return true;
+            }
+            if (existing.getItem() == single.getItem() && existing.getItemDamage() == single.getItemDamage()
+                    && ItemStack.areItemStackTagsEqual(existing, single) && existing.stackSize < existing.getMaxStackSize()) {
+                existing.stackSize++;
+                inv.markDirty();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int[] allSlots(IInventory inv) {
+        int[] slots = new int[inv.getSizeInventory()];
+        for (int i = 0; i < slots.length; i++) {
+            slots[i] = i;
+        }
+        return slots;
+    }
+
+    /**
+     * Mirrors TileAssembler#updateOutput()/#createItem(): rebuild the 3x3 grid for
+     * this schematic slot from the shared material buffer, look up the real recipe
+     * for that grid, and if everything (materials, output space, energy) lines up,
+     * craft one item and pay the flat RF cost.
+     */
+    private boolean tryCraft(int schematicSlot) {
+        ItemStack schematic = inventory[SCHEMATIC_START + schematicSlot];
+        if (schematic == null) {
+            return false;
+        }
+
+        InventoryCrafting grid = new InventoryCrafting(DUMMY_CONTAINER, 3, 3);
+        int[] usedBufferSlot = matchGrid(schematic, grid);
+        if (usedBufferSlot == null) {
+            return false;
+        }
+
+        ItemStack result = findMatchingRecipe(grid);
+        if (result == null) {
+            return false;
+        }
+
+        int outSlot = OUTPUT_START + schematicSlot;
+        if (!canFitOutput(outSlot, result)) {
+            return false;
+        }
+
+        for (int cell = 0; cell < 9; cell++) {
+            int bufferIndex = usedBufferSlot[cell];
+            if (bufferIndex < 0) {
+                continue;
+            }
+            ItemStack buf = inventory[INPUT_START + bufferIndex];
+            buf.stackSize--;
+            if (buf.stackSize <= 0) {
+                inventory[INPUT_START + bufferIndex] = null;
+            }
+        }
+
+        if (inventory[outSlot] == null) {
+            inventory[outSlot] = result.copy();
+        } else {
+            inventory[outSlot].stackSize += result.stackSize;
+        }
+
+        energyStored -= PROCESS_ENERGY;
+        energyPerTick += PROCESS_ENERGY;
+        return true;
+    }
+
+    /**
+     * Fills {@code grid} from the material buffer according to the schematic's
+     * recorded pattern. Returns, per crafting-grid cell, which buffer slot the
+     * item was taken from (-1 for a cell the schematic leaves empty), or null if
+     * the buffer can't satisfy the pattern right now.
+     */
+    private int[] matchGrid(ItemStack schematic, InventoryCrafting grid) {
+        int[] usedSlot = new int[9];
+        int[] remaining = new int[INPUT_SLOTS];
+        for (int i = 0; i < INPUT_SLOTS; i++) {
+            ItemStack buf = inventory[INPUT_START + i];
+            remaining[i] = buf != null ? buf.stackSize : 0;
+        }
+
+        boolean anyRequired = false;
+        for (int cell = 0; cell < 9; cell++) {
+            ItemStack sample = getSchematicSlot(schematic, cell);
+            if (sample == null) {
+                usedSlot[cell] = -1;
+                grid.setInventorySlotContents(cell, null);
+                continue;
+            }
+            anyRequired = true;
+            String ore = getSchematicOreSlot(schematic, cell);
+
+            int found = -1;
+            for (int i = 0; i < INPUT_SLOTS; i++) {
+                if (remaining[i] <= 0) {
+                    continue;
+                }
+                if (matchesRequirement(inventory[INPUT_START + i], sample, ore)) {
+                    found = i;
+                    break;
+                }
+            }
+            if (found == -1) {
+                return null;
+            }
+            remaining[found]--;
+            usedSlot[cell] = found;
+            ItemStack piece = inventory[INPUT_START + found].copy();
+            piece.stackSize = 1;
+            grid.setInventorySlotContents(cell, piece);
+        }
+
+        return anyRequired ? usedSlot : null;
+    }
+
+    private boolean matchesRequirement(ItemStack buf, ItemStack sample, String oreName) {
+        if (buf == null) {
+            return false;
+        }
+        if (oreName != null) {
+            int[] ids = OreDictionary.getOreIDs(buf);
+            for (int id : ids) {
+                if (OreDictionary.getOreName(id).equals(oreName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return buf.getItem() == sample.getItem()
+                && (sample.getItemDamage() == Short.MAX_VALUE || buf.getItemDamage() == sample.getItemDamage());
+    }
+
+    @SuppressWarnings("unchecked")
+    private ItemStack findMatchingRecipe(InventoryCrafting grid) {
+        List<IRecipe> recipes = (List<IRecipe>) CraftingManager.getInstance().getRecipeList();
+        for (IRecipe recipe : recipes) {
+            if (recipe.matches(grid, worldObj)) {
+                return recipe.getCraftingResult(grid);
+            }
+        }
+        return null;
+    }
+
+    private boolean canFitOutput(int slot, ItemStack result) {
+        if (result == null) {
+            return false;
+        }
+        ItemStack existing = inventory[slot];
+        if (existing == null) {
+            return true;
+        }
+        return existing.getItem() == result.getItem()
+                && existing.getItemDamage() == result.getItemDamage()
+                && existing.stackSize + result.stackSize <= existing.getMaxStackSize();
+    }
+
+    // -------------------------------------------------- schematic NBT (TE-compatible)
+
+    /**
+     * Same NBT layout Thermal Expansion's SchematicHelper writes/reads: each
+     * populated crafting-grid cell is stored as "Slot0".."Slot8" (a full
+     * ItemStack tag) plus an optional "Ore0".."Ore8" OreDictionary name.
+     */
+    private ItemStack getSchematicSlot(ItemStack schematic, int cell) {
+        if (schematic == null || schematic.stackTagCompound == null) {
+            return null;
+        }
+        String key = "Slot" + cell;
+        if (!schematic.stackTagCompound.hasKey(key)) {
+            return null;
+        }
+        return ItemStack.loadItemStackFromNBT(schematic.stackTagCompound.getCompoundTag(key));
+    }
+
+    private String getSchematicOreSlot(ItemStack schematic, int cell) {
+        if (schematic == null || schematic.stackTagCompound == null) {
+            return null;
+        }
+        String key = "Ore" + cell;
+        if (!schematic.stackTagCompound.hasKey(key)) {
+            return null;
+        }
+        return schematic.stackTagCompound.getString(key);
+    }
+
+    // ---------------------------------------------------------------- inventory
+
+    @Override
+    public int getSizeInventory() {
+        return TOTAL_SLOTS;
+    }
+
+    @Override
+    public ItemStack getStackInSlot(int slot) {
+        return inventory[slot];
+    }
+
+    @Override
+    public ItemStack decrStackSize(int slot, int amount) {
+        if (inventory[slot] == null) {
+            return null;
+        }
+        ItemStack result;
+        if (inventory[slot].stackSize <= amount) {
+            result = inventory[slot];
+            inventory[slot] = null;
+        } else {
+            result = inventory[slot].splitStack(amount);
+            if (inventory[slot].stackSize == 0) {
+                inventory[slot] = null;
+            }
+        }
+        if (isAugmentSlot(slot)) {
+            installAugments();
+        }
+        markDirty();
+        return result;
+    }
+
+    @Override
+    public ItemStack getStackInSlotOnClosing(int slot) {
+        ItemStack stack = inventory[slot];
+        inventory[slot] = null;
+        if (isAugmentSlot(slot)) {
+            installAugments();
+        }
+        return stack;
+    }
+
+    @Override
+    public void setInventorySlotContents(int slot, ItemStack stack) {
+        inventory[slot] = stack;
+        if (stack != null && stack.stackSize > getInventoryStackLimit()) {
+            stack.stackSize = getInventoryStackLimit();
+        }
+        if (isAugmentSlot(slot)) {
+            installAugments();
+        }
+        markDirty();
+    }
+
+    private static boolean isAugmentSlot(int slot) {
+        return slot >= AUGMENT_START && slot < AUGMENT_START + AUGMENT_SLOTS;
+    }
+
+    @Override
+    public String getInventoryName() {
+        return "container.improvedAssembler";
+    }
+
+    @Override
+    public boolean hasCustomInventoryName() {
+        return false;
+    }
+
+    @Override
+    public int getInventoryStackLimit() {
+        return 64;
+    }
+
+    @Override
+    public boolean isUseableByPlayer(EntityPlayer player) {
+        return worldObj.getTileEntity(xCoord, yCoord, zCoord) == this
+                && player.getDistanceSq(xCoord + 0.5, yCoord + 0.5, zCoord + 0.5) <= 64.0;
+    }
+
+    @Override
+    public void openInventory() {
+    }
+
+    @Override
+    public void closeInventory() {
+    }
+
+    @Override
+    public boolean isItemValidForSlot(int slot, ItemStack stack) {
+        if (isAugmentSlot(slot)) {
+            return isValidAugment(stack);
+        }
+        return slot < OUTPUT_START;
+    }
+
+    @Override
+    public int[] getAccessibleSlotsFromSide(int side) {
+        boolean in = sideAllowsInput(side);
+        boolean out = sideAllowsOutput(side);
+        int[] slots = new int[(in ? INPUT_SLOTS : 0) + (out ? OUTPUT_SLOTS : 0)];
+        int idx = 0;
+        if (in) {
+            for (int i = 0; i < INPUT_SLOTS; i++) {
+                slots[idx++] = INPUT_START + i;
+            }
+        }
+        if (out) {
+            for (int i = 0; i < OUTPUT_SLOTS; i++) {
+                slots[idx++] = OUTPUT_START + i;
+            }
+        }
+        return slots;
+    }
+
+    @Override
+    public boolean canInsertItem(int slot, ItemStack stack, int side) {
+        return slot >= INPUT_START && slot < OUTPUT_START && sideAllowsInput(side);
+    }
+
+    @Override
+    public boolean canExtractItem(int slot, ItemStack stack, int side) {
+        return slot >= OUTPUT_START && slot < AUGMENT_START && sideAllowsOutput(side);
+    }
+
+    @Override
+    public void markDirty() {
+        // NOT worldObj.markBlockForUpdate() here: that forces a full chunk render-mesh
+        // rebuild plus a block-change network packet, and this is called up to 20 times a
+        // second (every energy transfer, every craft tick, every side-mode change...) - the
+        // block's actual render (texture/metadata) never depends on any of that. Plain
+        // TileEntity#markDirty() just flags the chunk for saving, which is all this needs;
+        // clients already get inventory/energy/side updates for free via the open Container
+        // (Slot diffing + ContainerImprovedAssembler#detectAndSendChanges()).
+        super.markDirty();
+    }
+
+    // ---------------------------------------------------------------- nbt
+
+    @Override
+    public void writeToNBT(NBTTagCompound tag) {
+        super.writeToNBT(tag);
+        tag.setInteger("Energy", energyStored);
+        tag.setByteArray("Sides", sideCache);
+
+        NBTTagList items = new NBTTagList();
+        for (int i = 0; i < inventory.length; i++) {
+            if (inventory[i] != null) {
+                NBTTagCompound itemTag = new NBTTagCompound();
+                itemTag.setByte("Slot", (byte) i);
+                inventory[i].writeToNBT(itemTag);
+                items.appendTag(itemTag);
+            }
+        }
+        tag.setTag("Items", items);
+    }
+
+    @Override
+    public void readFromNBT(NBTTagCompound tag) {
+        super.readFromNBT(tag);
+        energyStored = tag.getInteger("Energy");
+
+        if (tag.hasKey("Sides")) {
+            byte[] sides = tag.getByteArray("Sides");
+            if (sides.length == sideCache.length) {
+                sideCache = sides;
+            }
+        }
+
+        NBTTagList items = tag.getTagList("Items", 10);
+        inventory = new ItemStack[TOTAL_SLOTS];
+        for (int i = 0; i < items.tagCount(); i++) {
+            NBTTagCompound itemTag = items.getCompoundTagAt(i);
+            int slot = itemTag.getByte("Slot") & 255;
+            if (slot >= 0 && slot < inventory.length) {
+                inventory[slot] = ItemStack.loadItemStackFromNBT(itemTag);
+            }
+        }
+
+        installAugments();
+    }
+}

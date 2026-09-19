@@ -1,0 +1,46 @@
+tile.advancedPulverizer.name=Advanced Pulverizer
+tile.advancedFurnace.name=Advanced Furnace
+itemGroup.thermaladd=ThermalADD
+
+gui.thermaladd.tab.augments=Augments
+gui.thermaladd.tab.configuration=Configuration
+gui.thermaladd.side.up=Top
+gui.thermaladd.side.down=Bottom
+gui.thermaladd.side.north=Front
+gui.thermaladd.side.south=Back
+gui.thermaladd.side.east=Right
+gui.thermaladd.side.west=Left
+gui.thermaladd.side.hint=Left-click: cycle | Right-click: cycle back | Shift: reset
+gui.thermaladd.mode.auto=Auto
+gui.thermaladd.mode.input=Input
+gui.thermaladd.mode.output=Output
+gui.thermaladd.mode.disabled=Disabled
+
+gui.thermaladd.energy.title=Energy
+gui.thermaladd.energy.consumption=Energy Consumption: %d RF/t
+gui.thermaladd.energy.maxpower=Max Energy: %d RF/t
+gui.thermaladd.energy.stored=Energy Stored: %d RF
+
+tooltip.thermaladd.tier=§7Tier: §b%s
+tooltip.thermaladd.capacity=§7Energy Buffer: §e%,d RF
+tooltip.thermaladd.input=§7Max Input: §e%,d RF/t
+
+tile.improvedAssembler.name=Improved Cyclic Assembler
+container.improvedAssembler=Improved Cyclic Assembler
+
+gui.improvedassembler.tab.augments=Augments
+gui.improvedassembler.tab.configuration=Configuration
+
+gui.improvedassembler.side.up=Up
+gui.improvedassembler.side.down=Down
+gui.improvedassembler.side.north=North
+gui.improvedassembler.side.south=South
+gui.improvedassembler.side.west=West
+gui.improvedassembler.side.east=East
+
+gui.improvedassembler.mode.auto=Auto
+gui.improvedassembler.mode.input=Input
+gui.improvedassembler.mode.output=Output
+gui.improvedassembler.mode.disabled=Disabled
+
+gui.improvedassembler.side.hint=LMB: next  RMB: previous  Shift: reset
