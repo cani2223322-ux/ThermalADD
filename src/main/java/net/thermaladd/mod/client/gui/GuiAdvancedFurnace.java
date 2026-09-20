@@ -9,7 +9,7 @@ import net.minecraft.util.StatCollector;
 import net.thermaladd.mod.inventory.ContainerAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 
-/** Same self-drawn TE-styled panel as {@link GuiAdvancedPulverizer}, laid out for 3 inputs -> 2 stacked outputs (no secondary product). */
+/** Same self-drawn TE-styled panel as {@link GuiAdvancedPulverizer}, laid out for 3 inputs -> 3 stacked outputs, one per line (no secondary product). */
 public class GuiAdvancedFurnace extends TabbedMachineGui {
 
     private static final int ENERGY_FILL = 0xFFB01010;

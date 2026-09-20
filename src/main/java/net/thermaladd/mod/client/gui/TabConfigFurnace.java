@@ -49,13 +49,13 @@ public class TabConfigFurnace extends GuiSideTab {
 
     private static final ResourceLocation TEX_TOP_INPUT = badge("TopInput");
     private static final ResourceLocation TEX_TOP_OUTPUT = badge("TopOutput");
-    private static final ResourceLocation TEX_TOP_DISABLED = badge("TopDisabled");
+    private static final ResourceLocation TEX_TOP_ALL = badge("TopAll");
     private static final ResourceLocation TEX_BOTTOM_INPUT = badge("BottomInput");
     private static final ResourceLocation TEX_BOTTOM_OUTPUT = badge("BottomOutput");
-    private static final ResourceLocation TEX_BOTTOM_DISABLED = badge("BottomDisabled");
+    private static final ResourceLocation TEX_BOTTOM_ALL = badge("BottomAll");
     private static final ResourceLocation TEX_SIDE_INPUT = badge("SideInput");
     private static final ResourceLocation TEX_SIDE_OUTPUT = badge("SideOutput");
-    private static final ResourceLocation TEX_SIDE_DISABLED = badge("SideDisabled");
+    private static final ResourceLocation TEX_SIDE_ALL = badge("SideAll");
 
     private static ResourceLocation badge(String name) {
         return new ResourceLocation(ThermalADD.MODID, "textures/blocks/" + name + ".png");
@@ -88,18 +88,15 @@ public class TabConfigFurnace extends GuiSideTab {
         };
     }
 
+    /**
+     * The front face itself always shows the live machine face/casing regardless of mode - it
+     * can never actually be reconfigured (permanently forced to Disabled, see
+     * {@code TileAdvancedFurnace#setDefaultSides}) - exactly like real Thermal Expansion's own
+     * TabConfiguration.
+     */
     private ResourceLocation iconForButton(int index, int mode) {
         if (index == FRONT_INDEX) {
-            switch (mode) {
-                case TileAdvancedFurnace.SIDE_MODE_INPUT:
-                    return TEX_SIDE_INPUT;
-                case TileAdvancedFurnace.SIDE_MODE_OUTPUT:
-                    return TEX_SIDE_OUTPUT;
-                case TileAdvancedFurnace.SIDE_MODE_DISABLED:
-                    return TEX_SIDE_DISABLED;
-                default:
-                    return tile.isActive() ? TEX_FACE_ACTIVE : TEX_FACE_IDLE;
-            }
+            return tile.isActive() ? TEX_FACE_ACTIVE : TEX_FACE_IDLE;
         }
         if (index == TOP_INDEX) {
             switch (mode) {
@@ -107,8 +104,8 @@ public class TabConfigFurnace extends GuiSideTab {
                     return TEX_TOP_INPUT;
                 case TileAdvancedFurnace.SIDE_MODE_OUTPUT:
                     return TEX_TOP_OUTPUT;
-                case TileAdvancedFurnace.SIDE_MODE_DISABLED:
-                    return TEX_TOP_DISABLED;
+                case TileAdvancedFurnace.SIDE_MODE_ALL:
+                    return TEX_TOP_ALL;
                 default:
                     return TEX_TOP;
             }
@@ -119,8 +116,8 @@ public class TabConfigFurnace extends GuiSideTab {
                     return TEX_BOTTOM_INPUT;
                 case TileAdvancedFurnace.SIDE_MODE_OUTPUT:
                     return TEX_BOTTOM_OUTPUT;
-                case TileAdvancedFurnace.SIDE_MODE_DISABLED:
-                    return TEX_BOTTOM_DISABLED;
+                case TileAdvancedFurnace.SIDE_MODE_ALL:
+                    return TEX_BOTTOM_ALL;
                 default:
                     return TEX_BOTTOM;
             }
@@ -130,8 +127,8 @@ public class TabConfigFurnace extends GuiSideTab {
                 return TEX_SIDE_INPUT;
             case TileAdvancedFurnace.SIDE_MODE_OUTPUT:
                 return TEX_SIDE_OUTPUT;
-            case TileAdvancedFurnace.SIDE_MODE_DISABLED:
-                return TEX_SIDE_DISABLED;
+            case TileAdvancedFurnace.SIDE_MODE_ALL:
+                return TEX_SIDE_ALL;
             default:
                 return TEX_SIDE;
         }
@@ -193,10 +190,10 @@ public class TabConfigFurnace extends GuiSideTab {
                 return StatCollector.translateToLocal("gui.thermaladd.mode.input");
             case TileAdvancedFurnace.SIDE_MODE_OUTPUT:
                 return StatCollector.translateToLocal("gui.thermaladd.mode.output");
-            case TileAdvancedFurnace.SIDE_MODE_DISABLED:
-                return StatCollector.translateToLocal("gui.thermaladd.mode.disabled");
+            case TileAdvancedFurnace.SIDE_MODE_ALL:
+                return StatCollector.translateToLocal("gui.thermaladd.mode.all");
             default:
-                return StatCollector.translateToLocal("gui.thermaladd.mode.auto");
+                return StatCollector.translateToLocal("gui.thermaladd.mode.disabled");
         }
     }
 }

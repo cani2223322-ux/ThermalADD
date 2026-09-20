@@ -226,7 +226,7 @@ public class TabConfig extends GuiSideTab {
             case TileAdvancedPulverizer.SIDE_MODE_INPUT:
                 return StatCollector.translateToLocal("gui.thermaladd.mode.input");
             case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_PRIMARY:
-                return StatCollector.translateToLocal("gui.thermaladd.mode.output");
+                return StatCollector.translateToLocal("gui.thermaladd.mode.outputPrimary");
             case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_SECONDARY:
                 return StatCollector.translateToLocal("gui.thermaladd.mode.outputSecondary");
             case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_BOTH:

@@ -29,8 +29,8 @@ import net.thermaladd.mod.network.PacketHandler;
  * Advanced Furnace tile entity - the third "improved TE machine" in this mod, same overall
  * design as {@link TileAdvancedPulverizer}: 3 independent input slots instead of the real
  * Furnace's 1, each running its own recipe lookup/energy accumulation/craft cycle in
- * parallel every tick, sharing one RF buffer, one output pair and 9 augment slots. Same
- * "UltimateResonant" power tier as the other two machines.
+ * parallel every tick, sharing one RF buffer, one output slot per input line (3) and 9
+ * augment slots. Same "UltimateResonant" power tier as the other two machines.
  *
  * Simpler than the Pulverizer in one respect: {@link FurnaceManager} recipes have no
  * secondary product, so there is no secondary output slot and no Secondary Output / Null
@@ -40,7 +40,8 @@ import net.thermaladd.mod.network.PacketHandler;
 public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl {
 
     public static final int INPUT_SLOTS = 3;
-    public static final int OUTPUT_SLOTS = 2;
+    /** One output slot per input line, matching the Pulverizer's own per-line output design. */
+    public static final int OUTPUT_SLOTS = 3;
     public static final int AUGMENT_SLOTS = 9;
     public static final int TOTAL_SLOTS = INPUT_SLOTS + OUTPUT_SLOTS + AUGMENT_SLOTS;
 
@@ -54,11 +55,33 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     public static final int BASE_ENERGY_CAPACITY = 1000000;
     public static final int ENERGY_RECEIVE_PER_TICK = 10000;
 
-    public static final int SIDE_MODE_AUTO = 0;
+    /**
+     * Side config modes, verified against real Thermal Expansion's own Furnace (decompiled
+     * {@code cofh.thermalexpansion.block.machine.TileFurnace#initialize}: 4 modes -
+     * {@code sideTex = {0,1,4,7}} indexing real TE's own {@code Config_None/Blue/Orange/Open}
+     * badge textures). Mode 0 ("no badge, plain casing") is TE's actual DISABLED state, not an
+     * "accept everything" default the way this mod used to treat it - the front face is
+     * permanently forced onto it for exactly that reason (see {@code setDefaultSides()}). Real
+     * TE's Furnace Output badge is ORANGE (Config_4), unlike the Pulverizer's RED primary output
+     * (Config_2) - the Furnace has no primary/secondary split, so it only ever needed the one
+     * generic "Output" slot in TE's shared badge numbering.
+     */
+    public static final int SIDE_MODE_DISABLED = 0;
     public static final int SIDE_MODE_INPUT = 1;
     public static final int SIDE_MODE_OUTPUT = 2;
-    public static final int SIDE_MODE_DISABLED = 3;
+    public static final int SIDE_MODE_ALL = 3;
     public static final int SIDE_MODE_COUNT = 4;
+
+    /**
+     * Absolute-side defaults (index = ForgeDirection ordinal), matching real TE's own
+     * TileFurnace defaultSides table ({@code {1,1,2,2,2,2}}) exactly: both top AND bottom
+     * default to Input, all 4 walls default to Output - whichever one ends up facing the
+     * player is then forced to Disabled by {@link #setDefaultSides()}.
+     */
+    private static final int[] DEFAULT_SIDE_MODE = {
+            SIDE_MODE_INPUT, SIDE_MODE_INPUT,
+            SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT
+    };
 
     public static final int[] FACING_META = {2, 5, 3, 4};
 
@@ -139,7 +162,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         if (!augmentReconfigSides || side == facing) {
             return false;
         }
-        sideCache[side] = SIDE_MODE_AUTO;
+        sideCache[side] = (byte) DEFAULT_SIDE_MODE[side];
         markDirty();
         syncRenderState();
         return true;
@@ -149,12 +172,18 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         if (!augmentReconfigSides) {
             return false;
         }
+        setDefaultSides();
+        return true;
+    }
+
+    /** Real TE-accurate defaults (see {@link #DEFAULT_SIDE_MODE}'s javadoc). */
+    public void setDefaultSides() {
         for (int i = 0; i < sideCache.length; i++) {
-            sideCache[i] = SIDE_MODE_AUTO;
+            sideCache[i] = (byte) DEFAULT_SIDE_MODE[i];
         }
+        sideCache[facing] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
-        return true;
     }
 
     /** See TileAdvancedPulverizer#syncRenderState for why this explicit push (not World#markBlockForUpdate) is required. */
@@ -174,14 +203,21 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         sideCache[side] = (byte) mode;
     }
 
-    private boolean sideAllowsInput(int side) {
-        int mode = sideCache[side];
-        return mode == SIDE_MODE_AUTO || mode == SIDE_MODE_INPUT;
+    private static boolean modeAllowsInsertInput(int mode) {
+        return mode == SIDE_MODE_INPUT || mode == SIDE_MODE_ALL;
     }
 
-    private boolean sideAllowsOutput(int side) {
-        int mode = sideCache[side];
-        return mode == SIDE_MODE_AUTO || mode == SIDE_MODE_OUTPUT;
+    /**
+     * Real TE quirk, verified against the decompiled {@code TileFurnace}
+     * ({@code allowExtractionSide[1] = true} for its own Input mode): a side left on plain
+     * Input can still have its input slots drained back out.
+     */
+    private static boolean modeAllowsExtractInput(int mode) {
+        return mode == SIDE_MODE_INPUT;
+    }
+
+    private static boolean modeAllowsExtractOutput(int mode) {
+        return mode == SIDE_MODE_OUTPUT || mode == SIDE_MODE_ALL;
     }
 
     // ---------------------------------------------------------------- augments
@@ -217,9 +253,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         }
 
         if (augmentReconfigSides && !reconfigSides) {
-            for (int i = 0; i < sideCache.length; i++) {
-                sideCache[i] = SIDE_MODE_AUTO;
-            }
+            setDefaultSides();
         }
         if (!redstoneControl) {
             rsMode = ControlMode.DISABLED;
@@ -500,7 +534,14 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         }
 
         ItemStack output = recipe.getOutput();
-        if (!canFitStack(OUTPUT_START, output) && !canFitStack(OUTPUT_START + 1, output)) {
+        boolean fits = false;
+        for (int i = 0; i < OUTPUT_SLOTS; i++) {
+            if (canFitStack(OUTPUT_START + i, output)) {
+                fits = true;
+                break;
+            }
+        }
+        if (!fits) {
             return false;
         }
 
@@ -544,7 +585,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     private boolean autoPullInputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
-            if (sideAllowsInput(side) && pullFromSide(ForgeDirection.getOrientation(side))) {
+            if (modeAllowsInsertInput(sideCache[side]) && pullFromSide(ForgeDirection.getOrientation(side))) {
                 moved = true;
             }
         }
@@ -554,7 +595,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     private boolean autoPushOutputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
-            if (sideAllowsOutput(side) && pushToSide(ForgeDirection.getOrientation(side))) {
+            if (modeAllowsExtractOutput(sideCache[side]) && pushToSide(ForgeDirection.getOrientation(side))) {
                 moved = true;
             }
         }
@@ -783,17 +824,19 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
 
     @Override
     public int[] getAccessibleSlotsFromSide(int side) {
-        boolean in = sideAllowsInput(side);
-        boolean out = sideAllowsOutput(side);
-        int[] slots = new int[(in ? INPUT_SLOTS : 0) + (out ? OUTPUT_SLOTS : 0)];
+        int mode = sideCache[side];
+        boolean input = modeAllowsInsertInput(mode) || modeAllowsExtractInput(mode);
+        boolean output = modeAllowsExtractOutput(mode);
+
+        int[] slots = new int[(input ? INPUT_SLOTS : 0) + (output ? OUTPUT_SLOTS : 0)];
         int idx = 0;
-        if (in) {
+        if (input) {
             int start = (int) ((worldObj != null ? worldObj.getTotalWorldTime() : 0) % INPUT_SLOTS);
             for (int i = 0; i < INPUT_SLOTS; i++) {
                 slots[idx++] = INPUT_START + (start + i) % INPUT_SLOTS;
             }
         }
-        if (out) {
+        if (output) {
             for (int i = 0; i < OUTPUT_SLOTS; i++) {
                 slots[idx++] = OUTPUT_START + i;
             }
@@ -803,12 +846,19 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
 
     @Override
     public boolean canInsertItem(int slot, ItemStack stack, int side) {
-        return slot < OUTPUT_START && sideAllowsInput(side) && FurnaceManager.recipeExists(stack);
+        return slot < OUTPUT_START && modeAllowsInsertInput(sideCache[side]) && FurnaceManager.recipeExists(stack);
     }
 
     @Override
     public boolean canExtractItem(int slot, ItemStack stack, int side) {
-        return slot >= OUTPUT_START && slot < AUGMENT_START && sideAllowsOutput(side);
+        int mode = sideCache[side];
+        if (slot < OUTPUT_START) {
+            return modeAllowsExtractInput(mode);
+        }
+        if (slot < AUGMENT_START) {
+            return modeAllowsExtractOutput(mode);
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- nbt

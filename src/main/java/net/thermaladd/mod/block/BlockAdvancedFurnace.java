@@ -29,10 +29,13 @@ public class BlockAdvancedFurnace extends BlockContainer {
 
     private IIcon iconFaceIdle;
     private IIcon iconFaceActive;
-    /** Indexed by SIDE_MODE_* (Auto/Input/Output/Disabled) - Auto is just the plain casing texture for that face. */
-    private final IIcon[] iconsTop = new IIcon[4];
-    private final IIcon[] iconsBottom = new IIcon[4];
-    private final IIcon[] iconsSide = new IIcon[4];
+    /**
+     * Indexed by SIDE_MODE_* (Disabled/Input/Output/All) - Disabled is just the plain casing
+     * texture for that face, matching real Thermal Expansion's own blank Config_None badge.
+     */
+    private final IIcon[] iconsTop = new IIcon[TileAdvancedFurnace.SIDE_MODE_COUNT];
+    private final IIcon[] iconsBottom = new IIcon[TileAdvancedFurnace.SIDE_MODE_COUNT];
+    private final IIcon[] iconsSide = new IIcon[TileAdvancedFurnace.SIDE_MODE_COUNT];
 
     public BlockAdvancedFurnace() {
         super(Material.iron);
@@ -45,31 +48,38 @@ public class BlockAdvancedFurnace extends BlockContainer {
 
     @Override
     public void registerBlockIcons(IIconRegister register) {
-        iconsTop[TileAdvancedFurnace.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Top");
-        iconsBottom[TileAdvancedFurnace.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Bottom");
-        iconsSide[TileAdvancedFurnace.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Side");
+        iconsTop[TileAdvancedFurnace.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Top");
+        iconsBottom[TileAdvancedFurnace.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Bottom");
+        iconsSide[TileAdvancedFurnace.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Side");
         iconFaceIdle = register.registerIcon("thermalexpansion:machine/Machine_Face_Furnace");
         iconFaceActive = register.registerIcon("thermalexpansion:machine/Machine_Active_Furnace");
+        // Same composited connection badges as the Singularity Pulverizer (see
+        // BlockAdvancedPulverizer's own javadoc): Blue=Input, Orange=Output, Open=All - colors
+        // verified against the decompiled TileFurnace/BlockMachine. Real TE's Furnace Output
+        // badge is Orange (Config_4), not the Pulverizer's Red primary-output Config_2, since
+        // the Furnace only ever has the one generic output. TopAll/BottomAll/SideAll are the
+        // exact same files the Pulverizer uses - the "All" badge is just real TE's Config_Open
+        // dot composited over the same shared Machine_Top/Bottom/Side.png casing either way.
         iconsTop[TileAdvancedFurnace.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":TopInput");
         iconsTop[TileAdvancedFurnace.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":TopOutput");
-        iconsTop[TileAdvancedFurnace.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":TopDisabled");
+        iconsTop[TileAdvancedFurnace.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":TopAll");
         iconsBottom[TileAdvancedFurnace.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":BottomInput");
         iconsBottom[TileAdvancedFurnace.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":BottomOutput");
-        iconsBottom[TileAdvancedFurnace.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":BottomDisabled");
+        iconsBottom[TileAdvancedFurnace.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":BottomAll");
         iconsSide[TileAdvancedFurnace.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":SideInput");
         iconsSide[TileAdvancedFurnace.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":SideOutput");
-        iconsSide[TileAdvancedFurnace.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":SideDisabled");
+        iconsSide[TileAdvancedFurnace.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":SideAll");
     }
 
     @Override
     public IIcon getIcon(int side, int meta) {
         if (side == 0) {
-            return iconsBottom[TileAdvancedFurnace.SIDE_MODE_AUTO];
+            return iconsBottom[TileAdvancedFurnace.SIDE_MODE_DISABLED];
         }
         if (side == 1) {
-            return iconsTop[TileAdvancedFurnace.SIDE_MODE_AUTO];
+            return iconsTop[TileAdvancedFurnace.SIDE_MODE_DISABLED];
         }
-        return side == meta ? iconFaceIdle : iconsSide[TileAdvancedFurnace.SIDE_MODE_AUTO];
+        return side == meta ? iconFaceIdle : iconsSide[TileAdvancedFurnace.SIDE_MODE_DISABLED];
     }
 
     @Override
@@ -83,7 +93,7 @@ public class BlockAdvancedFurnace extends BlockContainer {
 
         int mode = te instanceof TileAdvancedFurnace
                 ? ((TileAdvancedFurnace) te).getSideMode(side)
-                : TileAdvancedFurnace.SIDE_MODE_AUTO;
+                : TileAdvancedFurnace.SIDE_MODE_DISABLED;
         if (side == 0) {
             return iconsBottom[mode];
         }
@@ -116,6 +126,7 @@ public class BlockAdvancedFurnace extends BlockContainer {
         if (te instanceof TileAdvancedFurnace) {
             TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
             tile.setFacing(meta);
+            tile.setDefaultSides();
             if (!world.isRemote) {
                 if (stack.hasTagCompound() && stack.getTagCompound().hasKey("Augments")) {
                     tile.readAugmentsFromNBT(stack.getTagCompound());

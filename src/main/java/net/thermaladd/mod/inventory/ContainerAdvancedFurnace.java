@@ -20,8 +20,9 @@ public class ContainerAdvancedFurnace extends Container {
     public static final int INPUT_X = 44;
     public static final int INPUT_Y = 17;
 
+    /** One output slot per input line (3), stacked in its own column exactly like the input column. */
     public static final int OUTPUT_X = 116;
-    public static final int OUTPUT_Y = 26;
+    public static final int OUTPUT_Y = 17;
 
     public static final int PLAYER_INV_Y = 92;
     public static final int PLAYER_HOTBAR_Y = 150;
