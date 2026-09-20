@@ -29,10 +29,14 @@ public class GuiSingularityCell extends TabbedMachineGui {
      * Real TE's own Resonant/Redstone Energy Cell GUI (decompiled {@code GuiCell}) draws its bar
      * with the exact same {@code ElementEnergyStored} widget the machine GUIs use, at (80, 18) -
      * which is just this panel's own {@code (BASE_WIDTH - ENERGY_WIDTH) / 2}, 18 formula once
-     * ENERGY_WIDTH is real TE's fixed 16, so no separate positioning override is needed.
+     * ENERGY_WIDTH is real TE's fixed 16. This cell draws it at 2x real TE's own size, per
+     * instruction - a bigger, more prominent gauge for a "beyond spec" cell whose capacity
+     * already dwarfs any real TE tier - via {@link TabbedMachineGui#drawEnergyStoredFilled(int,
+     * int, int, int)}'s scale parameter, still centered by the same formula.
      */
-    private static final int ENERGY_WIDTH = ENERGY_BAR_WIDTH;
-    private static final int ENERGY_HEIGHT = ENERGY_BAR_HEIGHT;
+    private static final int ENERGY_SCALE = 2;
+    private static final int ENERGY_WIDTH = ENERGY_BAR_WIDTH * ENERGY_SCALE;
+    private static final int ENERGY_HEIGHT = ENERGY_BAR_HEIGHT * ENERGY_SCALE;
     private static final int ENERGY_X = (BASE_WIDTH - ENERGY_WIDTH) / 2;
     private static final int ENERGY_Y = 18;
 
@@ -86,7 +90,9 @@ public class GuiSingularityCell extends TabbedMachineGui {
         long energy = tile.getEnergyStoredLong();
         long capacity = tile.getCapacityLong();
         double ratio = capacity <= 0 ? 0 : energy / (double) capacity;
-        int filled = (int) (ENERGY_HEIGHT * ratio);
+        // Texture-pixel space (0-42), NOT ENERGY_HEIGHT (the already-2x'd on-screen size) -
+        // drawEnergyStoredFilled's scale parameter is what stretches this to the actual gauge.
+        int filled = (int) (ENERGY_BAR_HEIGHT * ratio);
         // Capacity is astronomically larger than any realistic charge rate can fill on a
         // linear scale (even hundreds of millions of RF round down to 0 of 42 pixels against a
         // 1-trillion cap) - guarantee at least a 1px sliver whenever there's any charge at all,
@@ -95,7 +101,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
         if (filled <= 0 && energy > 0) {
             filled = 1;
         }
-        drawEnergyStoredFilled(left + ENERGY_X, top + ENERGY_Y, filled);
+        drawEnergyStoredFilled(left + ENERGY_X, top + ENERGY_Y, filled, ENERGY_SCALE);
     }
 
     @Override

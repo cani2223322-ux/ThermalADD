@@ -152,27 +152,42 @@ public abstract class TabbedMachineGui extends GuiContainer {
      * own fill fraction from a pair of longs first).
      */
     protected void drawEnergyStoredFilled(int x, int y, int filled) {
+        drawEnergyStoredFilled(x, y, filled, 1);
+    }
+
+    /**
+     * Same as above, but rendered at {@code scale}x real TE's own 16x42 size (e.g. the
+     * Singularity Energy Cell draws this at 2x, per the mod's own "beyond spec" cell needing a
+     * bigger, more prominent gauge than a stock TE machine's). {@code filled} stays in the
+     * texture's own 0-42 pixel space regardless of scale - only the on-screen quad size and the
+     * filled portion's on-screen height are multiplied, the UV mapping into Energy.png itself is
+     * untouched.
+     */
+    protected void drawEnergyStoredFilled(int x, int y, int filled, int scale) {
         if (filled > ENERGY_BAR_HEIGHT) {
             filled = ENERGY_BAR_HEIGHT;
         }
+        int screenW = ENERGY_BAR_WIDTH * scale;
+        int screenH = ENERGY_BAR_HEIGHT * scale;
         mc.getTextureManager().bindTexture(ENERGY_TEXTURE);
         GL11.glColor4f(1F, 1F, 1F, 1F);
-        drawEnergyQuad(x, y, 0, 0, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT);
+        drawEnergyQuad(x, y, 0, 0, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT, screenW, screenH);
         if (filled > 0) {
-            drawEnergyQuad(x, y + ENERGY_BAR_HEIGHT - filled, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT - filled, ENERGY_BAR_WIDTH, filled);
+            int filledScreen = filled * scale;
+            drawEnergyQuad(x, y + screenH - filledScreen, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT - filled, ENERGY_BAR_WIDTH, filled, screenW, filledScreen);
         }
     }
 
-    private void drawEnergyQuad(int x, int y, int u, int v, int w, int h) {
+    private void drawEnergyQuad(int x, int y, int u, int v, int uvW, int uvH, int screenW, int screenH) {
         float u1 = u / (float) ENERGY_TEX_W;
-        float u2 = (u + w) / (float) ENERGY_TEX_W;
+        float u2 = (u + uvW) / (float) ENERGY_TEX_W;
         float v1 = v / (float) ENERGY_TEX_H;
-        float v2 = (v + h) / (float) ENERGY_TEX_H;
+        float v2 = (v + uvH) / (float) ENERGY_TEX_H;
         Tessellator t = Tessellator.instance;
         t.startDrawingQuads();
-        t.addVertexWithUV(x, y + h, zLevel, u1, v2);
-        t.addVertexWithUV(x + w, y + h, zLevel, u2, v2);
-        t.addVertexWithUV(x + w, y, zLevel, u2, v1);
+        t.addVertexWithUV(x, y + screenH, zLevel, u1, v2);
+        t.addVertexWithUV(x + screenW, y + screenH, zLevel, u2, v2);
+        t.addVertexWithUV(x + screenW, y, zLevel, u2, v1);
         t.addVertexWithUV(x, y, zLevel, u1, v1);
         t.draw();
     }
