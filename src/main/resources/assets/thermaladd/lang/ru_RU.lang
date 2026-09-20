@@ -22,8 +22,8 @@ gui.thermaladd.energy.maxpower=Макс. энергия: %d RF/т
 gui.thermaladd.energy.stored=Хранимая энергия: %d RF
 
 tooltip.thermaladd.tier=§7Тир: §b%s
-tooltip.thermaladd.capacity=§7Запас энергии: §e%,d RF
-tooltip.thermaladd.input=§7Макс. приём: §e%,d RF/т
+tooltip.thermaladd.capacity=§7Запас энергии: §e%s RF
+tooltip.thermaladd.input=§7Макс. приём: §e%s RF/т
 
 tile.improvedAssembler.name=Улучшенный циклический сборщик
 container.improvedAssembler=Улучшенный циклический сборщик

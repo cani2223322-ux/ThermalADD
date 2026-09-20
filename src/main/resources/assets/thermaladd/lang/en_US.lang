@@ -22,8 +22,8 @@ gui.thermaladd.energy.maxpower=Max Energy: %d RF/t
 gui.thermaladd.energy.stored=Energy Stored: %d RF
 
 tooltip.thermaladd.tier=§7Tier: §b%s
-tooltip.thermaladd.capacity=§7Energy Buffer: §e%,d RF
-tooltip.thermaladd.input=§7Max Input: §e%,d RF/t
+tooltip.thermaladd.capacity=§7Energy Buffer: §e%s RF
+tooltip.thermaladd.input=§7Max Input: §e%s RF/t
 
 tile.improvedAssembler.name=Improved Cyclic Assembler
 container.improvedAssembler=Improved Cyclic Assembler

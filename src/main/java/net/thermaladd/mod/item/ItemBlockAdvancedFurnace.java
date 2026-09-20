@@ -1,6 +1,7 @@
 package net.thermaladd.mod.item;
 
 import java.util.List;
+import java.util.Locale;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
@@ -20,7 +21,13 @@ public class ItemBlockAdvancedFurnace extends ItemBlock {
     @Override
     public void addInformation(ItemStack stack, EntityPlayer player, List list, boolean advanced) {
         list.add(StatCollector.translateToLocalFormatted("tooltip.thermaladd.tier", TileAdvancedFurnace.TIER_NAME));
-        list.add(StatCollector.translateToLocalFormatted("tooltip.thermaladd.capacity", TileAdvancedFurnace.BASE_ENERGY_CAPACITY));
-        list.add(StatCollector.translateToLocalFormatted("tooltip.thermaladd.input", TileAdvancedFurnace.ENERGY_RECEIVE_PER_TICK));
+        // See ItemBlockAdvancedPulverizer's own comment on this same pattern - pre-formatting
+        // with a fixed Locale here avoids StatCollector.translateToLocalFormatted() picking up
+        // whatever thousands separator the JVM's default Locale uses (often not a plain comma,
+        // and Minecraft's font has no glyph for most of the alternatives).
+        list.add(StatCollector.translateToLocalFormatted("tooltip.thermaladd.capacity",
+                String.format(Locale.ROOT, "%,d", TileAdvancedFurnace.BASE_ENERGY_CAPACITY)));
+        list.add(StatCollector.translateToLocalFormatted("tooltip.thermaladd.input",
+                String.format(Locale.ROOT, "%,d", TileAdvancedFurnace.ENERGY_RECEIVE_PER_TICK)));
     }
 }
