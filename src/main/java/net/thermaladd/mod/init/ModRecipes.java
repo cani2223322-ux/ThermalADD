@@ -5,8 +5,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 
 import cofh.thermalexpansion.block.TEBlocks;
+import cofh.thermalexpansion.block.cell.BlockCell;
 import cofh.thermalexpansion.block.machine.BlockMachine;
 import cofh.thermalexpansion.item.TEAugments;
+import cofh.thermalexpansion.item.TEItems;
 import cpw.mods.fml.common.registry.GameRegistry;
 
 /**
@@ -31,6 +33,8 @@ public class ModRecipes {
         registerImprovedAssemblerRecipe();
         registerAdvancedFurnaceRecipe();
         registerSpeedLevel4AugmentRecipe();
+        registerSecondarySieve4AugmentRecipe();
+        registerSingularityCellRecipe();
     }
 
     /**
@@ -132,5 +136,54 @@ public class ModRecipes {
                 'G', "blockGlassHardened",
                 'S', TEAugments.machineSpeed[2],
                 'R', "dustRedstone"));
+    }
+
+    /**
+     * ThermalADD's own "beyond spec" Machine Secondary (sieve) tier - same idea as the Speed
+     * Level 4 recipe above, just themed with Emerald instead of Diamond so the two endgame
+     * augments don't share an identical shopping list: consumes real Thermal Expansion's own
+     * top sieve tier (machineSecondary[2], "Отклик Гиросервомеханизма") as the centerpiece.
+     */
+    private static void registerSecondarySieve4AugmentRecipe() {
+        // P E P      P = Platinum ingot, E = Emerald
+        // G S G      G = Hardened Glass, S = real Machine Secondary III augment (consumed/upgraded)
+        // P R P      R = Redstone dust
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                ModAugments.secondarySieve4,
+                "PEP",
+                "GSG",
+                "PRP",
+                'P', "ingotPlatinum",
+                'E', new ItemStack(Items.emerald),
+                'G', "blockGlassHardened",
+                'S', TEAugments.machineSecondary[2],
+                'R', "dustRedstone"));
+    }
+
+    /**
+     * Singularity Energy Cell (see net.thermaladd.mod.tileentity.TileSingularityCell) -
+     * "beyond spec" past real TE's own Resonant Energy Cell (BlockCell.Types.RESONANT), 3 of
+     * which sit at its base as instructed. Every other ingredient is itself a crafted item, not
+     * a raw material: Enderium/Signalum are TE's own multi-step smelted alloys (never mined
+     * directly), the Resonant Capacitor is itself upgrade-crafted from Reinforced Capacitor +
+     * Enderium, and the Power Coil is a wound/crafted TE component - nothing here is a plain
+     * ingot, dust or gem straight from ore.
+     */
+    private static void registerSingularityCellRecipe() {
+        ItemStack resonantCell = new ItemStack(TEBlocks.blockCell, 1, BlockCell.Types.RESONANT.ordinal());
+
+        // N C N      N = Enderium ingot, C = Resonant Energy Cell
+        // C R C      R = Resonant Capacitor (TE's own crafted energy-tier upgrade item)
+        // S P S      S = Signalum ingot, P = Gold Power Coil (crafted)
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModBlocks.singularityCell),
+                "NCN",
+                "CRC",
+                "SPS",
+                'N', "ingotEnderium",
+                'C', resonantCell,
+                'R', TEItems.capacitorResonant,
+                'S', "ingotSignalum",
+                'P', TEItems.powerCoilGold));
     }
 }

@@ -8,12 +8,15 @@ import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.client.gui.GuiAdvancedFurnace;
 import net.thermaladd.mod.client.gui.GuiAdvancedPulverizer;
 import net.thermaladd.mod.client.gui.GuiImprovedAssembler;
+import net.thermaladd.mod.client.gui.GuiSingularityCell;
 import net.thermaladd.mod.inventory.ContainerAdvancedFurnace;
 import net.thermaladd.mod.inventory.ContainerAdvancedPulverizer;
 import net.thermaladd.mod.inventory.ContainerImprovedAssembler;
+import net.thermaladd.mod.inventory.ContainerSingularityCell;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
+import net.thermaladd.mod.tileentity.TileSingularityCell;
 
 public class GuiHandler implements IGuiHandler {
 
@@ -29,6 +32,9 @@ public class GuiHandler implements IGuiHandler {
         if (id == ThermalADD.GUI_ID_ADVANCED_FURNACE && te instanceof TileAdvancedFurnace) {
             return new ContainerAdvancedFurnace(player.inventory, (TileAdvancedFurnace) te);
         }
+        if (id == ThermalADD.GUI_ID_SINGULARITY_CELL && te instanceof TileSingularityCell) {
+            return new ContainerSingularityCell(player.inventory, (TileSingularityCell) te);
+        }
         return null;
     }
 
@@ -43,6 +49,9 @@ public class GuiHandler implements IGuiHandler {
         }
         if (id == ThermalADD.GUI_ID_ADVANCED_FURNACE && te instanceof TileAdvancedFurnace) {
             return new GuiAdvancedFurnace(player.inventory, (TileAdvancedFurnace) te);
+        }
+        if (id == ThermalADD.GUI_ID_SINGULARITY_CELL && te instanceof TileSingularityCell) {
+            return new GuiSingularityCell(player.inventory, (TileSingularityCell) te);
         }
         return null;
     }

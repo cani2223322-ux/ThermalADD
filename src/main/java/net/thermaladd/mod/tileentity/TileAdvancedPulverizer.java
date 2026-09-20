@@ -115,15 +115,26 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
      * augment (see {@code net.thermaladd.mod.init.ModAugments}, crafted from real TE's own
      * level-3 speed augment): x10 process speed for +200% RF/t over level 3's already-steep
      * 20x cost (20 * 3 = 60x base), matching what the augment's own tooltip says. Only
-     * AUG_MACHINE_SPEED goes this high - AUG_MACHINE_SECONDARY/AUG_ENERGY_STORAGE (no ThermalADD
-     * equivalent exists) stay clamped to real TE's own MAX_AUGMENT_LEVEL of 3.
+     * AUG_MACHINE_SPEED goes this high - AUG_ENERGY_STORAGE (no ThermalADD equivalent exists)
+     * stays clamped to real TE's own MAX_AUGMENT_LEVEL of 3.
      */
     private static final int[] MACHINE_SPEED_PROCESS_MOD = {1, 2, 4, 8, 10};
     private static final int[] MACHINE_SPEED_ENERGY_MOD = {1, 3, 8, 20, 60};
-    private static final int[] MACHINE_SECONDARY_MOD = {0, 10, 15, 20};
+    /**
+     * Levels 0-3 match real TE's own MACHINE_SECONDARY_MOD exactly (subtracted straight from
+     * the 100-based chance divisor - see placeOutput()). Level 4 is this mod's own "beyond
+     * spec" tier (net.thermaladd.mod.init.ModAugments' secondarySieve4, crafted from real TE's
+     * level-3 sieve): +200 pushes the divisor to {@code max(1, 100-200)=1}, meaning any recipe
+     * with a nonzero secondary chance always hits - a guaranteed-secondary-output top tier.
+     * Unlike the other tiers, this one also isn't free: MACHINE_SECONDARY_ENERGY_PCT adds +25%
+     * RF/t on top of whatever the Machine Speed augment already costs, level 4 only.
+     */
+    private static final int[] MACHINE_SECONDARY_MOD = {0, 10, 15, 20, 200};
+    private static final int[] MACHINE_SECONDARY_ENERGY_PCT = {100, 100, 100, 100, 125};
     private static final int[] ENERGY_STORAGE_MOD = {1, 2, 4, 8};
     private static final int MAX_AUGMENT_LEVEL = 3;
     private static final int MAX_SPEED_LEVEL = 4;
+    private static final int MAX_SECONDARY_LEVEL = 4;
 
     private static final int AUTO_IO_INTERVAL = 8;
 
@@ -138,6 +149,8 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
     private int speedProcessMod = 1;
     private int speedEnergyMod = 1;
+    /** 100 = no surcharge; only the level-4 Secondary Sieve augment raises this (see MACHINE_SECONDARY_ENERGY_PCT). */
+    private int secondaryEnergyPct = 100;
     private int secondaryChanceDivisor = 100;
     private int autoIOTimer = 0;
 
@@ -294,7 +307,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
                 secondaryNull = true;
             }
             speedLevel = Math.max(speedLevel, clampLevel(item.getAugmentLevel(augment, AUG_MACHINE_SPEED), MAX_SPEED_LEVEL));
-            secondaryLevel = Math.max(secondaryLevel, clampLevel(item.getAugmentLevel(augment, AUG_MACHINE_SECONDARY)));
+            secondaryLevel = Math.max(secondaryLevel, clampLevel(item.getAugmentLevel(augment, AUG_MACHINE_SECONDARY), MAX_SECONDARY_LEVEL));
             energyLevel = Math.max(energyLevel, clampLevel(item.getAugmentLevel(augment, AUG_ENERGY_STORAGE)));
         }
 
@@ -317,7 +330,8 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
         speedProcessMod = MACHINE_SPEED_PROCESS_MOD[speedLevel];
         speedEnergyMod = MACHINE_SPEED_ENERGY_MOD[speedLevel];
-        maxEnergyPerTick = INPUT_SLOTS * BASE_ENERGY_PER_TICK * speedEnergyMod;
+        secondaryEnergyPct = MACHINE_SECONDARY_ENERGY_PCT[secondaryLevel];
+        maxEnergyPerTick = INPUT_SLOTS * BASE_ENERGY_PER_TICK * speedEnergyMod * secondaryEnergyPct / 100;
         secondaryChanceDivisor = Math.max(1, 100 - MACHINE_SECONDARY_MOD[secondaryLevel]);
 
         // Capacity AND intake rate scale together with the Energy Storage augment - a bigger
@@ -602,7 +616,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         progressMax[line] = recipe.getEnergy();
 
         if (progress[line] < progressMax[line]) {
-            int energyCost = BASE_ENERGY_PER_TICK * speedEnergyMod;
+            int energyCost = BASE_ENERGY_PER_TICK * speedEnergyMod * secondaryEnergyPct / 100;
             if (energyStorage.getEnergyStored() < energyCost) {
                 return false;
             }

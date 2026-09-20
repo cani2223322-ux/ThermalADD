@@ -15,9 +15,11 @@ import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 public class ModAugments {
 
     public static final int META_SPEED_4 = 0;
+    public static final int META_SECONDARY_4 = 1;
 
     public static ItemADDAugment item;
     public static ItemStack speedLevel4;
+    public static ItemStack secondarySieve4;
 
     private ModAugments() {
     }
@@ -36,6 +38,18 @@ public class ModAugments {
                         "tooltip.thermaladd.addAugment.speedLevel4.1"
                 });
         speedLevel4 = item.getStack(META_SPEED_4);
+
+        // "Beyond spec" 4th Machine Secondary (sieve) tier - one level past real TE's own top
+        // tier (machineSecondary[2], "Отклик Гиросервомеханизма"), which this augment's own
+        // recipe consumes as an ingredient (see ModRecipes). Pulverizer-only (Furnace/Assembler
+        // never had secondary-output augment support). +200% secondary chance for +25% RF/t -
+        // see TileAdvancedPulverizer.MACHINE_SECONDARY_MOD/MACHINE_SECONDARY_ENERGY_PCT index 4.
+        item.addAugment(META_SECONDARY_4, TileAdvancedPulverizer.AUG_MACHINE_SECONDARY, 4, "secondarySieve4",
+                new String[]{
+                        "tooltip.thermaladd.addAugment.secondarySieve4.0",
+                        "tooltip.thermaladd.addAugment.secondarySieve4.1"
+                });
+        secondarySieve4 = item.getStack(META_SECONDARY_4);
     }
 
     public static void register() {
