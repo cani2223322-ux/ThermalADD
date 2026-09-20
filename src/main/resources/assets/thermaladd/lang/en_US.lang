@@ -67,3 +67,6 @@ gui.thermaladd.cell.side.hint=Left-click: cycle | Right-click: cycle back | Shif
 gui.thermaladd.cell.energyIn=Input: %s RF/t
 gui.thermaladd.cell.energyOut=Output: %s RF/t
 gui.thermaladd.cell.capacity=capacity
+
+item.singularityGear.name=Singularity Gear
+tile.singularityFrame.name=Machine Frame (Singularity)

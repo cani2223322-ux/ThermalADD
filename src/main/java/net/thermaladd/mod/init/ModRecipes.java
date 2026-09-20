@@ -7,8 +7,10 @@ import net.minecraftforge.oredict.ShapedOreRecipe;
 import cofh.thermalexpansion.block.TEBlocks;
 import cofh.thermalexpansion.block.cell.BlockCell;
 import cofh.thermalexpansion.block.machine.BlockMachine;
+import cofh.thermalexpansion.block.simple.BlockFrame;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.item.TEItems;
+import cofh.thermalfoundation.item.TFItems;
 import cpw.mods.fml.common.registry.GameRegistry;
 
 /**
@@ -35,6 +37,8 @@ public class ModRecipes {
         registerSpeedLevel4AugmentRecipe();
         registerSecondarySieve4AugmentRecipe();
         registerSingularityCellRecipe();
+        registerSingularityGearRecipe();
+        registerSingularityFrameRecipe();
     }
 
     /**
@@ -185,5 +189,51 @@ public class ModRecipes {
                 'R', TEItems.capacitorResonant,
                 'S', "ingotSignalum",
                 'P', TEItems.powerCoilGold));
+    }
+
+    /**
+     * Singularity Gear (see net.thermaladd.mod.item.ItemSingularityGear) - a real Enderium
+     * Gear (ThermalFoundation's own TFItems.gearEnderium) as the base, as instructed, fused
+     * with Thermal Expansion's other two top-tier alloy gears (Signalum/Lumium) around it.
+     * Every ingredient is itself a gear crafted from an already multi-step-smelted TE alloy
+     * ingot - nothing here is a raw ore, ingot or dust.
+     */
+    private static void registerSingularityGearRecipe() {
+        // L S L      L = Lumium Gear, S = Signalum Gear
+        // S G S      G = real Enderium Gear (centerpiece, as instructed)
+        // L S L
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModItems.singularityGear),
+                "LSL",
+                "SGS",
+                "LSL",
+                'L', TFItems.gearLumium,
+                'S', TFItems.gearSignalum,
+                'G', TFItems.gearEnderium));
+    }
+
+    /**
+     * Singularity Machine Frame (see net.thermaladd.mod.block.BlockSingularityFrame) - a real
+     * Resonant Machine Frame plus a Singularity Gear as the two centerpiece ingredients, as
+     * instructed. Shaped after real TE's own frameMachineResonant recipe (ingots at the
+     * corners/edges around the tier below and a gear on top), but with the raw ingotSilver that
+     * recipe uses swapped for Enderium/Signalum ingots - both themselves multi-step smelted TE
+     * alloys, never mined directly - so every ingredient here is a crafted item.
+     */
+    private static void registerSingularityFrameRecipe() {
+        ItemStack resonantFrame = new ItemStack(TEBlocks.blockFrame, 1, BlockFrame.Types.MACHINE_RESONANT.ordinal());
+
+        // N G N      N = Enderium ingot, G = Singularity Gear
+        // S F S      S = Signalum ingot, F = real Resonant Machine Frame (consumed/upgraded)
+        // N S N
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModBlocks.singularityFrame),
+                "NGN",
+                "SFS",
+                "NSN",
+                'N', "ingotEnderium",
+                'G', ModItems.singularityGear,
+                'S', "ingotSignalum",
+                'F', resonantFrame));
     }
 }

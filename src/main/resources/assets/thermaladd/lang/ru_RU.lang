@@ -67,3 +67,6 @@ gui.thermaladd.cell.side.hint=ЛКМ: вперёд | ПКМ: назад | Shift:
 gui.thermaladd.cell.energyIn=Вход: %s RF/т
 gui.thermaladd.cell.energyOut=Выход: %s RF/т
 gui.thermaladd.cell.capacity=вместимость
+
+item.singularityGear.name=Сингулярная шестерня
+tile.singularityFrame.name=Рамка механизма (сингулярная)
