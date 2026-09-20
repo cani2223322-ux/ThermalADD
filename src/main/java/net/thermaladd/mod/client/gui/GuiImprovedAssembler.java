@@ -38,6 +38,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
     private final TabAugmentsAssembler augmentsTab;
     private final TabConfigAssembler configTab;
     private final TabRedstoneControl redstoneTab;
+    private final TabEnergy energyTab;
 
     public GuiImprovedAssembler(InventoryPlayer playerInv, TileImprovedAssembler tile) {
         super(new ContainerImprovedAssembler(playerInv, tile));
@@ -52,9 +53,11 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         this.augmentsTab = new TabAugmentsAssembler(this, (ContainerImprovedAssembler) inventorySlots);
         this.configTab = new TabConfigAssembler(this, tile);
         this.redstoneTab = new TabRedstoneControl(this, tile.xCoord, tile.yCoord, tile.zCoord, tile);
+        this.energyTab = new TabEnergy(this, tile);
         augmentsTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y);
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
         redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
+        energyTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 3);
     }
 
     @Override
@@ -69,6 +72,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             redstoneTab.setOpen(false);
         }
         redstoneTab.update();
+        energyTab.update();
     }
 
     @Override
@@ -83,6 +87,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         if (tile.augmentRedstoneControl) {
             redstoneTab.drawForeground(0, 0);
         }
+        energyTab.drawForeground(0, 0);
     }
 
     @Override
@@ -127,6 +132,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         if (tile.augmentRedstoneControl) {
             redstoneTab.drawBackground(left, top);
         }
+        energyTab.drawBackground(left, top);
     }
 
     /** Small static right-pointing triangle (7x7) marking schematic -> output direction; the real Assembler crafts instantly, so there's no progress fraction to animate here. */
@@ -162,6 +168,9 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         if (tile.augmentRedstoneControl && handleTabClick(redstoneTab, mouseX, mouseY, left, top, mouseButton, shift)) {
             return;
         }
+        if (handleTabClick(energyTab, mouseX, mouseY, left, top, mouseButton, shift)) {
+            return;
+        }
 
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
@@ -179,6 +188,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             augmentsTab.setOpen(false);
             configTab.setOpen(false);
             redstoneTab.setOpen(false);
+            energyTab.setOpen(false);
             tab.setOpen(!wasOpen);
             return true;
         }
@@ -194,16 +204,6 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
 
-        if (mouseX >= left + ENERGY_X && mouseX <= left + ENERGY_X + ENERGY_WIDTH
-                && mouseY >= top + ENERGY_Y && mouseY <= top + ENERGY_Y + ENERGY_HEIGHT) {
-            List<String> energyLines = new ArrayList<String>();
-            energyLines.add(StatCollector.translateToLocalFormatted("gui.thermaladd.energy.consumption", tile.getEnergyPerTick()));
-            energyLines.add(StatCollector.translateToLocalFormatted("gui.thermaladd.energy.maxpower", tile.getMaxEnergyPerTick()));
-            energyLines.add(StatCollector.translateToLocalFormatted("gui.thermaladd.energy.stored", tile.getEnergy()));
-            drawEnergyInfoTooltip(mouseX, mouseY, StatCollector.translateToLocal("gui.thermaladd.energy.title"), energyLines);
-            return;
-        }
-
         List<String> tooltip = new ArrayList<String>();
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         if (tile.augmentReconfigSides) {
@@ -212,6 +212,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         if (tile.augmentRedstoneControl) {
             redstoneTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         }
+        energyTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         if (!tooltip.isEmpty()) {
             drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
         }

@@ -22,6 +22,7 @@ import net.minecraftforge.oredict.OreDictionary;
 
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
+import cofh.api.tileentity.IEnergyInfo;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
 import cpw.mods.fml.common.network.NetworkRegistry;
@@ -43,7 +44,7 @@ import net.thermaladd.mod.network.PacketHandler;
  * one job at a time), has 6 schematic slots that are all evaluated - and can all
  * craft - every single tick, so several schematics run truly in parallel.
  */
-public class TileImprovedAssembler extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl {
+public class TileImprovedAssembler extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo {
 
     public static final int SCHEMATIC_SLOTS = 6;
     public static final int INPUT_SLOTS = 18;
@@ -198,6 +199,28 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
 
     public void setEnergyPerTickClient(int value) {
         energyPerTick = value;
+    }
+
+    // ---------------------------------------------------------------- IEnergyInfo (real TE's own Energy tab)
+
+    @Override
+    public int getInfoEnergyPerTick() {
+        return getEnergyPerTick();
+    }
+
+    @Override
+    public int getInfoMaxEnergyPerTick() {
+        return getMaxEnergyPerTick();
+    }
+
+    @Override
+    public int getInfoEnergyStored() {
+        return getEnergy();
+    }
+
+    @Override
+    public int getInfoMaxEnergyStored() {
+        return ENERGY_CAPACITY;
     }
 
     // ---------------------------------------------------------------- redstone control (TE-compatible)

@@ -17,6 +17,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import cofh.api.energy.EnergyStorage;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
+import cofh.api.tileentity.IEnergyInfo;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.util.crafting.PulverizerManager;
@@ -45,7 +46,7 @@ import net.thermaladd.mod.network.PacketHandler;
  * machine gets, all always available at once since this block has no separate tier/upgrade
  * item of its own.
  */
-public class TileAdvancedPulverizer extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl {
+public class TileAdvancedPulverizer extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo {
 
     public static final int INPUT_SLOTS = 3;
     /** One primary-output slot per input line, as instructed - not a fixed 2 regardless of INPUT_SLOTS. */
@@ -546,6 +547,28 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
     public void setMaxEnergyPerTickClient(int value) {
         maxEnergyPerTick = value;
+    }
+
+    // ---------------------------------------------------------------- IEnergyInfo (real TE's own Energy tab)
+
+    @Override
+    public int getInfoEnergyPerTick() {
+        return getEnergyPerTick();
+    }
+
+    @Override
+    public int getInfoMaxEnergyPerTick() {
+        return getMaxEnergyPerTick();
+    }
+
+    @Override
+    public int getInfoEnergyStored() {
+        return getEnergy();
+    }
+
+    @Override
+    public int getInfoMaxEnergyStored() {
+        return getMaxEnergy();
     }
 
     // ---------------------------------------------------------------- redstone control (TE-compatible)

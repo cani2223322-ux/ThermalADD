@@ -20,9 +20,9 @@ gui.thermaladd.mode.all=Все
 gui.thermaladd.mode.disabled=Отключено
 
 gui.thermaladd.energy.title=Энергия
-gui.thermaladd.energy.consumption=Расход энергии: %d RF/т
-gui.thermaladd.energy.maxpower=Макс. энергия: %d RF/т
-gui.thermaladd.energy.stored=Хранимая энергия: %d RF
+gui.thermaladd.energy.tab.consumption=Расход:
+gui.thermaladd.energy.tab.maxpower=Макс. энергия/т:
+gui.thermaladd.energy.tab.stored=Запас:
 
 tooltip.thermaladd.tier=§7Тир: §b%s
 tooltip.thermaladd.capacity=§7Запас энергии: §e%s RF

@@ -20,9 +20,9 @@ gui.thermaladd.mode.all=All
 gui.thermaladd.mode.disabled=Disabled
 
 gui.thermaladd.energy.title=Energy
-gui.thermaladd.energy.consumption=Energy Consumption: %d RF/t
-gui.thermaladd.energy.maxpower=Max Energy: %d RF/t
-gui.thermaladd.energy.stored=Energy Stored: %d RF
+gui.thermaladd.energy.tab.consumption=Consumption:
+gui.thermaladd.energy.tab.maxpower=Max Energy/t:
+gui.thermaladd.energy.tab.stored=Stored:
 
 tooltip.thermaladd.tier=§7Tier: §b%s
 tooltip.thermaladd.capacity=§7Energy Buffer: §e%s RF

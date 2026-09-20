@@ -17,6 +17,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 import cofh.api.energy.EnergyStorage;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
+import cofh.api.tileentity.IEnergyInfo;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.util.crafting.FurnaceManager;
@@ -37,7 +38,7 @@ import net.thermaladd.mod.network.PacketHandler;
  * augment to support - those augment types are simply not recognized as valid here (they
  * would have zero effect on this machine).
  */
-public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl {
+public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo {
 
     public static final int INPUT_SLOTS = 3;
     /** One output slot per input line, matching the Pulverizer's own per-line output design. */
@@ -418,6 +419,28 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
 
     public void setMaxEnergyPerTickClient(int value) {
         maxEnergyPerTick = value;
+    }
+
+    // ---------------------------------------------------------------- IEnergyInfo (real TE's own Energy tab)
+
+    @Override
+    public int getInfoEnergyPerTick() {
+        return getEnergyPerTick();
+    }
+
+    @Override
+    public int getInfoMaxEnergyPerTick() {
+        return getMaxEnergyPerTick();
+    }
+
+    @Override
+    public int getInfoEnergyStored() {
+        return getEnergy();
+    }
+
+    @Override
+    public int getInfoMaxEnergyStored() {
+        return getMaxEnergy();
     }
 
     // ---------------------------------------------------------------- redstone control (TE-compatible)
