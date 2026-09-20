@@ -81,14 +81,13 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
 
     /**
      * Same fluid tank real Thermal Expansion's own Assembler has (decompiled
-     * {@code TileAssembler}: {@code new FluidTankAdv(10000)}) - as instructed, matching the
-     * stock machine's own capacity exactly rather than scaling it up with the rest of this
-     * mod's "beyond spec" theme. Used exactly like real TE does: a schematic cell that calls
-     * for a filled container item (a bucket of water, etc.) can be satisfied by draining the
-     * matching fluid from this tank instead, without needing the actual bucket in the material
-     * buffer - see {@link #matchGrid}.
+     * {@code TileAssembler}: {@code new FluidTankAdv(10000)}), bumped 10x past the stock
+     * machine's own capacity per instruction. Used exactly like real TE does: a schematic cell
+     * that calls for a filled container item (a bucket of water, etc.) can be satisfied by
+     * draining the matching fluid from this tank instead, without needing the actual bucket in
+     * the material buffer - see {@link #matchGrid}.
      */
-    public static final int TANK_CAPACITY = 10000;
+    public static final int TANK_CAPACITY = 100000;
     private final FluidTank tank = new FluidTank(TANK_CAPACITY);
     /** matchGrid()'s usedSlot[] sentinel marking a cell satisfied by draining the tank rather than a material buffer slot. */
     private static final int FLUID_CELL = -2;
@@ -306,8 +305,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         rebuildClientTank();
     }
 
+    /** {@code amount} arrives pre-divided by 4 (see ContainerImprovedAssembler#detectAndSendChanges) to fit the windowProperty short. */
     public void setTankFluidAmountClient(int amount) {
-        clientFluidAmount = amount;
+        clientFluidAmount = amount * 4;
         rebuildClientTank();
     }
 

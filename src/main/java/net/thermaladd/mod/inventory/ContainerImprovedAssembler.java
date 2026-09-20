@@ -150,7 +150,10 @@ public class ContainerImprovedAssembler extends Container {
         int redstoneControl = tile.augmentRedstoneControl ? 1 : 0;
         FluidStack tankFluid = tile.getTankFluid();
         int fluidId = tankFluid != null ? FluidRegistry.getFluidID(tankFluid.getFluid()) : -1;
-        int fluidAmount = tankFluid != null ? tankFluid.amount : 0;
+        // Same /4 trick getEnergy() already needs above: windowProperty values are transmitted
+        // as shorts (max 32767), and the tank's 100,000 mB capacity exceeds that on its own -
+        // setTankFluidAmountClient multiplies back by 4 on the way in.
+        int fluidAmount = tankFluid != null ? tankFluid.amount / 4 : 0;
 
         for (int i = 0; i < list.size(); i++) {
             ICrafting crafter = list.get(i);
