@@ -11,9 +11,11 @@ gui.thermaladd.side.back=Back
 gui.thermaladd.side.right=Right
 gui.thermaladd.side.left=Left
 gui.thermaladd.side.hint=Left-click: cycle | Right-click: cycle back | Shift: reset
-gui.thermaladd.mode.auto=Auto
 gui.thermaladd.mode.input=Input
-gui.thermaladd.mode.output=Output
+gui.thermaladd.mode.output=Output (Primary)
+gui.thermaladd.mode.outputSecondary=Output (Secondary)
+gui.thermaladd.mode.outputBoth=Output (Both)
+gui.thermaladd.mode.all=All
 gui.thermaladd.mode.disabled=Disabled
 
 gui.thermaladd.energy.title=Energy

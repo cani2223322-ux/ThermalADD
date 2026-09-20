@@ -11,9 +11,11 @@ gui.thermaladd.side.back=Зад
 gui.thermaladd.side.right=Право
 gui.thermaladd.side.left=Лево
 gui.thermaladd.side.hint=ЛКМ: вперёд | ПКМ: назад | Shift: сброс
-gui.thermaladd.mode.auto=Авто
 gui.thermaladd.mode.input=Вход
-gui.thermaladd.mode.output=Выход
+gui.thermaladd.mode.output=Выход (первичный)
+gui.thermaladd.mode.outputSecondary=Выход (вторичный)
+gui.thermaladd.mode.outputBoth=Выход (оба)
+gui.thermaladd.mode.all=Все
 gui.thermaladd.mode.disabled=Отключено
 
 gui.thermaladd.energy.title=Энергия

@@ -32,7 +32,8 @@ public class ContainerAdvancedPulverizer extends Container {
     public static final int OUTPUT_PRIMARY_X = 116;
     public static final int OUTPUT_PRIMARY_Y = 17;
 
-    public static final int OUTPUT_SECONDARY_X = 116;
+    /** Bottom-right corner of the panel, right next to the primary output column - 2 slots side by side. */
+    public static final int[] OUTPUT_SECONDARY_X = {116, 134};
     public static final int OUTPUT_SECONDARY_Y = 53;
 
     public static final int PLAYER_INV_Y = 92;
@@ -71,8 +72,10 @@ public class ContainerAdvancedPulverizer extends Container {
             addSlotToContainer(new Slot(tile, TileAdvancedPulverizer.OUTPUT_PRIMARY_START + i,
                     OUTPUT_PRIMARY_X, OUTPUT_PRIMARY_Y + i * SLOT_SIZE));
         }
-        addSlotToContainer(new Slot(tile, TileAdvancedPulverizer.OUTPUT_SECONDARY_START,
-                OUTPUT_SECONDARY_X, OUTPUT_SECONDARY_Y));
+        for (int i = 0; i < TileAdvancedPulverizer.OUTPUT_SECONDARY_SLOTS; i++) {
+            addSlotToContainer(new Slot(tile, TileAdvancedPulverizer.OUTPUT_SECONDARY_START + i,
+                    OUTPUT_SECONDARY_X[i], OUTPUT_SECONDARY_Y));
+        }
 
         // 9 augment slots - same design/functionality as Thermal Expansion's TileAugmentable,
         // just more of them since this block has no separate tier/upgrade item of its own.

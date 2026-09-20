@@ -35,10 +35,14 @@ public class BlockAdvancedPulverizer extends BlockContainer {
 
     private IIcon iconFaceIdle;
     private IIcon iconFaceActive;
-    /** Indexed by SIDE_MODE_* (Auto/Input/Output/Disabled) - Auto is just the plain casing texture for that face. */
-    private final IIcon[] iconsTop = new IIcon[4];
-    private final IIcon[] iconsBottom = new IIcon[4];
-    private final IIcon[] iconsSide = new IIcon[4];
+    /**
+     * Indexed by SIDE_MODE_* (Disabled/Input/OutputPrimary/OutputSecondary/OutputBoth/All) -
+     * Disabled is just the plain casing texture for that face, exactly like real Thermal
+     * Expansion's own Config_None badge (blank/transparent, so the plain casing shows through).
+     */
+    private final IIcon[] iconsTop = new IIcon[TileAdvancedPulverizer.SIDE_MODE_COUNT];
+    private final IIcon[] iconsBottom = new IIcon[TileAdvancedPulverizer.SIDE_MODE_COUNT];
+    private final IIcon[] iconsSide = new IIcon[TileAdvancedPulverizer.SIDE_MODE_COUNT];
 
     public BlockAdvancedPulverizer() {
         super(Material.iron);
@@ -53,47 +57,56 @@ public class BlockAdvancedPulverizer extends BlockContainer {
     public void registerBlockIcons(IIconRegister register) {
         // assets/thermalexpansion/textures/blocks/machine/Machine_*.png - the "blocks/" part
         // of the path is implicit for a block IIconRegister, so it is left out of the string.
-        iconsTop[TileAdvancedPulverizer.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Top");
-        iconsBottom[TileAdvancedPulverizer.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Bottom");
-        iconsSide[TileAdvancedPulverizer.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Side");
+        iconsTop[TileAdvancedPulverizer.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Top");
+        iconsBottom[TileAdvancedPulverizer.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Bottom");
+        iconsSide[TileAdvancedPulverizer.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Side");
         iconFaceIdle = register.registerIcon("thermalexpansion:machine/Machine_Face_Pulverizer");
         iconFaceActive = register.registerIcon("thermalexpansion:machine/Machine_Active_Pulverizer");
-        // Composited once per face (Machine_Top/Bottom/Side.png + the real TE Config_Blue/
-        // Orange/Red.png connection badges - see thermaladd:blocks/{Top,Bottom,Side}{Input,
-        // Output,Disabled}.png) so the block shows, on EVERY face including top/bottom, exactly
-        // what the Configuration tab says for it - the same "read the face, not just the GUI"
-        // workflow real Thermal Expansion machines use.
+        // Composited once per face (Machine_Top/Bottom/Side.png + real TE's own Config_Blue/
+        // Red/Yellow/Orange/Open.png connection badges - see thermaladd:blocks/{Top,Bottom,
+        // Side}{Input,OutputPrimary,OutputSecondary,OutputBoth,All}.png) so the block shows,
+        // on EVERY face including top/bottom, exactly what the Configuration tab says for it -
+        // the same "read the face, not just the GUI" workflow real Thermal Expansion machines
+        // use. Colors verified against the decompiled TilePulverizer/BlockMachine: Blue=Input,
+        // Red=Output(Primary), Yellow=Output(Secondary), Orange=Output(Both), Open=All - Disabled
+        // has no badge of its own (real TE's Config_None is blank), so it just falls back to the
+        // plain casing texture registered above.
         iconsTop[TileAdvancedPulverizer.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":TopInput");
-        iconsTop[TileAdvancedPulverizer.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":TopOutput");
-        iconsTop[TileAdvancedPulverizer.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":TopDisabled");
+        iconsTop[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_PRIMARY] = register.registerIcon(ThermalADD.MODID + ":TopOutputPrimary");
+        iconsTop[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_SECONDARY] = register.registerIcon(ThermalADD.MODID + ":TopOutputSecondary");
+        iconsTop[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_BOTH] = register.registerIcon(ThermalADD.MODID + ":TopOutputBoth");
+        iconsTop[TileAdvancedPulverizer.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":TopAll");
         iconsBottom[TileAdvancedPulverizer.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":BottomInput");
-        iconsBottom[TileAdvancedPulverizer.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":BottomOutput");
-        iconsBottom[TileAdvancedPulverizer.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":BottomDisabled");
+        iconsBottom[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_PRIMARY] = register.registerIcon(ThermalADD.MODID + ":BottomOutputPrimary");
+        iconsBottom[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_SECONDARY] = register.registerIcon(ThermalADD.MODID + ":BottomOutputSecondary");
+        iconsBottom[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_BOTH] = register.registerIcon(ThermalADD.MODID + ":BottomOutputBoth");
+        iconsBottom[TileAdvancedPulverizer.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":BottomAll");
         iconsSide[TileAdvancedPulverizer.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":SideInput");
-        iconsSide[TileAdvancedPulverizer.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":SideOutput");
-        iconsSide[TileAdvancedPulverizer.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":SideDisabled");
+        iconsSide[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_PRIMARY] = register.registerIcon(ThermalADD.MODID + ":SideOutputPrimary");
+        iconsSide[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_SECONDARY] = register.registerIcon(ThermalADD.MODID + ":SideOutputSecondary");
+        iconsSide[TileAdvancedPulverizer.SIDE_MODE_OUTPUT_BOTH] = register.registerIcon(ThermalADD.MODID + ":SideOutputBoth");
+        iconsSide[TileAdvancedPulverizer.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":SideAll");
     }
 
     /** Inventory / item-form rendering: no world context, so always show the idle face and plain casing. */
     @Override
     public IIcon getIcon(int side, int meta) {
         if (side == 0) {
-            return iconsBottom[TileAdvancedPulverizer.SIDE_MODE_AUTO];
+            return iconsBottom[TileAdvancedPulverizer.SIDE_MODE_DISABLED];
         }
         if (side == 1) {
-            return iconsTop[TileAdvancedPulverizer.SIDE_MODE_AUTO];
+            return iconsTop[TileAdvancedPulverizer.SIDE_MODE_DISABLED];
         }
-        return side == meta ? iconFaceIdle : iconsSide[TileAdvancedPulverizer.SIDE_MODE_AUTO];
+        return side == meta ? iconFaceIdle : iconsSide[TileAdvancedPulverizer.SIDE_MODE_DISABLED];
     }
 
     /**
      * In-world rendering: swaps the front face to the "working" texture while the tile is
      * active, and - independently of that, on EVERY face including top/bottom - swaps in a
-     * connection badge (blue/orange/red) whenever that side's mode isn't Auto, exactly
-     * mirroring what TileMachineBase#getTexture does in real Thermal Expansion (side icon
-     * driven by sideCache for all 6 sides, not just the 4 "walls"). Auto mode intentionally
-     * shows the plain casing - only a side actually reconfigured away from the default gets
-     * decorated.
+     * connection badge (blue/red/yellow/orange/open) whenever that side's mode isn't Disabled,
+     * exactly mirroring what TileMachineBase#getTexture does in real Thermal Expansion (side
+     * icon driven by sideCache for all 6 sides, not just the 4 "walls"). Disabled intentionally
+     * shows the plain casing - only a side actually reconfigured away from Off gets decorated.
      */
     @Override
     public IIcon getIcon(IBlockAccess world, int x, int y, int z, int side) {
@@ -106,7 +119,7 @@ public class BlockAdvancedPulverizer extends BlockContainer {
 
         int mode = te instanceof TileAdvancedPulverizer
                 ? ((TileAdvancedPulverizer) te).getSideMode(side)
-                : TileAdvancedPulverizer.SIDE_MODE_AUTO;
+                : TileAdvancedPulverizer.SIDE_MODE_DISABLED;
         if (side == 0) {
             return iconsBottom[mode];
         }
@@ -139,6 +152,7 @@ public class BlockAdvancedPulverizer extends BlockContainer {
         if (te instanceof TileAdvancedPulverizer) {
             TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;
             tile.setFacing(meta);
+            tile.setDefaultSides();
             if (!world.isRemote) {
                 // A block picked back up after being broken carries its previous augments (and
                 // only those) in its own NBT - only a genuinely fresh item (creative menu, a
@@ -170,8 +184,8 @@ public class BlockAdvancedPulverizer extends BlockContainer {
     /**
      * Crescent Hammer support: a click with one held always rotates the machine's facing -
      * matching real Thermal Expansion's own TileReconfigurable#onWrench, which unconditionally
-     * calls rotateBlock() regardless of sneaking. Side configuration (Auto/Input/Output/
-     * Disabled) is a GUI Configuration-tab-only feature in real TE - there is no wrench
+     * calls rotateBlock() regardless of sneaking. Side configuration (Disabled/Input/Output
+     * Primary/Secondary/Both/All) is a GUI Configuration-tab-only feature in real TE - there is no wrench
      * gesture for it - so this doesn't branch on sneak state at all. Any other held item (or
      * an empty hand) just opens the GUI, as usual.
      */

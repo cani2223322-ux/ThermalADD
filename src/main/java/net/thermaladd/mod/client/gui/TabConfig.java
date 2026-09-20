@@ -64,14 +64,20 @@ public class TabConfig extends GuiSideTab {
             new ResourceLocation("thermalexpansion", "textures/blocks/machine/Machine_Active_Pulverizer.png");
 
     private static final ResourceLocation TEX_TOP_INPUT = badge("TopInput");
-    private static final ResourceLocation TEX_TOP_OUTPUT = badge("TopOutput");
-    private static final ResourceLocation TEX_TOP_DISABLED = badge("TopDisabled");
+    private static final ResourceLocation TEX_TOP_OUTPUT_PRIMARY = badge("TopOutputPrimary");
+    private static final ResourceLocation TEX_TOP_OUTPUT_SECONDARY = badge("TopOutputSecondary");
+    private static final ResourceLocation TEX_TOP_OUTPUT_BOTH = badge("TopOutputBoth");
+    private static final ResourceLocation TEX_TOP_ALL = badge("TopAll");
     private static final ResourceLocation TEX_BOTTOM_INPUT = badge("BottomInput");
-    private static final ResourceLocation TEX_BOTTOM_OUTPUT = badge("BottomOutput");
-    private static final ResourceLocation TEX_BOTTOM_DISABLED = badge("BottomDisabled");
+    private static final ResourceLocation TEX_BOTTOM_OUTPUT_PRIMARY = badge("BottomOutputPrimary");
+    private static final ResourceLocation TEX_BOTTOM_OUTPUT_SECONDARY = badge("BottomOutputSecondary");
+    private static final ResourceLocation TEX_BOTTOM_OUTPUT_BOTH = badge("BottomOutputBoth");
+    private static final ResourceLocation TEX_BOTTOM_ALL = badge("BottomAll");
     private static final ResourceLocation TEX_SIDE_INPUT = badge("SideInput");
-    private static final ResourceLocation TEX_SIDE_OUTPUT = badge("SideOutput");
-    private static final ResourceLocation TEX_SIDE_DISABLED = badge("SideDisabled");
+    private static final ResourceLocation TEX_SIDE_OUTPUT_PRIMARY = badge("SideOutputPrimary");
+    private static final ResourceLocation TEX_SIDE_OUTPUT_SECONDARY = badge("SideOutputSecondary");
+    private static final ResourceLocation TEX_SIDE_OUTPUT_BOTH = badge("SideOutputBoth");
+    private static final ResourceLocation TEX_SIDE_ALL = badge("SideAll");
 
     private static ResourceLocation badge(String name) {
         return new ResourceLocation(ThermalADD.MODID, "textures/blocks/" + name + ".png");
@@ -104,27 +110,28 @@ public class TabConfig extends GuiSideTab {
         };
     }
 
+    /**
+     * A side actually configured to the front face's own mode can't happen in practice (the
+     * front is always forced to Disabled - see {@code TileAdvancedPulverizer#setDefaultSides}),
+     * but the front button itself always shows the live machine face/casing regardless of mode,
+     * exactly like real Thermal Expansion's own TabConfiguration.
+     */
     private ResourceLocation iconForButton(int index, int mode) {
         if (index == FRONT_INDEX) {
-            switch (mode) {
-                case TileAdvancedPulverizer.SIDE_MODE_INPUT:
-                    return TEX_SIDE_INPUT;
-                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT:
-                    return TEX_SIDE_OUTPUT;
-                case TileAdvancedPulverizer.SIDE_MODE_DISABLED:
-                    return TEX_SIDE_DISABLED;
-                default:
-                    return tile.isActive() ? TEX_FACE_ACTIVE : TEX_FACE_IDLE;
-            }
+            return tile.isActive() ? TEX_FACE_ACTIVE : TEX_FACE_IDLE;
         }
         if (index == TOP_INDEX) {
             switch (mode) {
                 case TileAdvancedPulverizer.SIDE_MODE_INPUT:
                     return TEX_TOP_INPUT;
-                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT:
-                    return TEX_TOP_OUTPUT;
-                case TileAdvancedPulverizer.SIDE_MODE_DISABLED:
-                    return TEX_TOP_DISABLED;
+                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_PRIMARY:
+                    return TEX_TOP_OUTPUT_PRIMARY;
+                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_SECONDARY:
+                    return TEX_TOP_OUTPUT_SECONDARY;
+                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_BOTH:
+                    return TEX_TOP_OUTPUT_BOTH;
+                case TileAdvancedPulverizer.SIDE_MODE_ALL:
+                    return TEX_TOP_ALL;
                 default:
                     return TEX_TOP;
             }
@@ -133,10 +140,14 @@ public class TabConfig extends GuiSideTab {
             switch (mode) {
                 case TileAdvancedPulverizer.SIDE_MODE_INPUT:
                     return TEX_BOTTOM_INPUT;
-                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT:
-                    return TEX_BOTTOM_OUTPUT;
-                case TileAdvancedPulverizer.SIDE_MODE_DISABLED:
-                    return TEX_BOTTOM_DISABLED;
+                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_PRIMARY:
+                    return TEX_BOTTOM_OUTPUT_PRIMARY;
+                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_SECONDARY:
+                    return TEX_BOTTOM_OUTPUT_SECONDARY;
+                case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_BOTH:
+                    return TEX_BOTTOM_OUTPUT_BOTH;
+                case TileAdvancedPulverizer.SIDE_MODE_ALL:
+                    return TEX_BOTTOM_ALL;
                 default:
                     return TEX_BOTTOM;
             }
@@ -144,10 +155,14 @@ public class TabConfig extends GuiSideTab {
         switch (mode) {
             case TileAdvancedPulverizer.SIDE_MODE_INPUT:
                 return TEX_SIDE_INPUT;
-            case TileAdvancedPulverizer.SIDE_MODE_OUTPUT:
-                return TEX_SIDE_OUTPUT;
-            case TileAdvancedPulverizer.SIDE_MODE_DISABLED:
-                return TEX_SIDE_DISABLED;
+            case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_PRIMARY:
+                return TEX_SIDE_OUTPUT_PRIMARY;
+            case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_SECONDARY:
+                return TEX_SIDE_OUTPUT_SECONDARY;
+            case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_BOTH:
+                return TEX_SIDE_OUTPUT_BOTH;
+            case TileAdvancedPulverizer.SIDE_MODE_ALL:
+                return TEX_SIDE_ALL;
             default:
                 return TEX_SIDE;
         }
@@ -210,12 +225,16 @@ public class TabConfig extends GuiSideTab {
         switch (mode) {
             case TileAdvancedPulverizer.SIDE_MODE_INPUT:
                 return StatCollector.translateToLocal("gui.thermaladd.mode.input");
-            case TileAdvancedPulverizer.SIDE_MODE_OUTPUT:
+            case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_PRIMARY:
                 return StatCollector.translateToLocal("gui.thermaladd.mode.output");
-            case TileAdvancedPulverizer.SIDE_MODE_DISABLED:
-                return StatCollector.translateToLocal("gui.thermaladd.mode.disabled");
+            case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_SECONDARY:
+                return StatCollector.translateToLocal("gui.thermaladd.mode.outputSecondary");
+            case TileAdvancedPulverizer.SIDE_MODE_OUTPUT_BOTH:
+                return StatCollector.translateToLocal("gui.thermaladd.mode.outputBoth");
+            case TileAdvancedPulverizer.SIDE_MODE_ALL:
+                return StatCollector.translateToLocal("gui.thermaladd.mode.all");
             default:
-                return StatCollector.translateToLocal("gui.thermaladd.mode.auto");
+                return StatCollector.translateToLocal("gui.thermaladd.mode.disabled");
         }
     }
 }

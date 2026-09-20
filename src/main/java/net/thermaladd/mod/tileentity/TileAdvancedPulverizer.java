@@ -40,15 +40,16 @@ import net.thermaladd.mod.network.PacketHandler;
  *
  * The upgrade over a real Pulverizer: 3 independent input slots instead of 1, each running
  * its own recipe lookup/energy accumulation/craft cycle in parallel every tick, sharing one
- * RF buffer, one primary output pair and one secondary output slot - and 9 augment slots
- * instead of the 3-6 a real (tiered) TE machine gets, all always available at once since
- * this block has no separate tier/upgrade item of its own.
+ * RF buffer, one primary output pair and a secondary output pair (real TE's own Pulverizer
+ * only ever has one of each) - and 9 augment slots instead of the 3-6 a real (tiered) TE
+ * machine gets, all always available at once since this block has no separate tier/upgrade
+ * item of its own.
  */
 public class TileAdvancedPulverizer extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl {
 
     public static final int INPUT_SLOTS = 3;
     public static final int OUTPUT_PRIMARY_SLOTS = 2;
-    public static final int OUTPUT_SECONDARY_SLOTS = 1;
+    public static final int OUTPUT_SECONDARY_SLOTS = 2;
     public static final int AUGMENT_SLOTS = 9;
     public static final int TOTAL_SLOTS = INPUT_SLOTS + OUTPUT_PRIMARY_SLOTS + OUTPUT_SECONDARY_SLOTS + AUGMENT_SLOTS;
 
@@ -83,11 +84,41 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     /** Base RF intake per tick - was 1,200, well below the ~4,800 RF/t a maxed-out speed setup can burn. */
     public static final int ENERGY_RECEIVE_PER_TICK = 10000;
 
-    public static final int SIDE_MODE_AUTO = 0;
+    /**
+     * Side config modes, verified against real Thermal Expansion's own Pulverizer (decompiled
+     * {@code cofh.thermalexpansion.block.machine.TilePulverizer#initialize}: 6 modes, numbered
+     * and colored exactly this way - {@code sideTex = {0,1,2,3,4,7}} indexing real TE's own
+     * {@code Config_None/Blue/Red/Yellow/Orange/Open} badge textures). Mode 0 ("no badge, plain
+     * casing") is Thermal Expansion's actual DISABLED state, not an "accept everything" default
+     * the way this mod used to treat it - a real Pulverizer's front face is permanently forced
+     * to mode 0 for exactly that reason (see {@code setDefaultSides()} below), and a side only
+     * ever ends up here if a player explicitly disables it. "Output" is genuinely 3 separate
+     * modes in real TE - Primary only, Secondary only, or Both - not one generic mode that
+     * always exposes everything, which is what let a pipe pull secondary byproducts out of a
+     * side meant only for the primary product.
+     */
+    public static final int SIDE_MODE_DISABLED = 0;
     public static final int SIDE_MODE_INPUT = 1;
-    public static final int SIDE_MODE_OUTPUT = 2;
-    public static final int SIDE_MODE_DISABLED = 3;
-    public static final int SIDE_MODE_COUNT = 4;
+    public static final int SIDE_MODE_OUTPUT_PRIMARY = 2;
+    public static final int SIDE_MODE_OUTPUT_SECONDARY = 3;
+    public static final int SIDE_MODE_OUTPUT_BOTH = 4;
+    public static final int SIDE_MODE_ALL = 5;
+    public static final int SIDE_MODE_COUNT = 6;
+
+    /**
+     * Absolute-side defaults (index = ForgeDirection ordinal: 0 down, 1 up, 2 north, 3 south,
+     * 4 west, 5 east), matching real TE's own {@code TilePulverizer} defaultSides table
+     * ({@code {3,1,2,2,2,2}}) so a freshly placed machine already auto-connects sensibly
+     * instead of needing every side configured by hand: top takes input, bottom is dedicated
+     * to the secondary byproduct, and the 4 walls default to the primary product - whichever
+     * one ends up facing the player is then forced to Disabled by {@link #setDefaultSides()},
+     * exactly like real TE forces the front face's side cache to 0.
+     */
+    private static final int[] DEFAULT_SIDE_MODE = {
+            SIDE_MODE_OUTPUT_SECONDARY, SIDE_MODE_INPUT,
+            SIDE_MODE_OUTPUT_PRIMARY, SIDE_MODE_OUTPUT_PRIMARY,
+            SIDE_MODE_OUTPUT_PRIMARY, SIDE_MODE_OUTPUT_PRIMARY
+    };
 
     /** North/South/West/East facing metas, same convention vanilla furnaces use. */
     public static final int[] FACING_META = {2, 5, 3, 4};
@@ -212,7 +243,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         if (!augmentReconfigSides || side == facing) {
             return false;
         }
-        sideCache[side] = SIDE_MODE_AUTO;
+        sideCache[side] = (byte) DEFAULT_SIDE_MODE[side];
         markDirty();
         syncRenderState();
         return true;
@@ -222,12 +253,22 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         if (!augmentReconfigSides) {
             return false;
         }
+        setDefaultSides();
+        return true;
+    }
+
+    /**
+     * Real TE-accurate defaults (see {@link #DEFAULT_SIDE_MODE}'s javadoc): applied once when
+     * the block is freshly placed ({@code BlockAdvancedPulverizer#onBlockPlacedBy}) and again
+     * whenever every side is reset via a shift-click on the Configuration tab's center button.
+     */
+    public void setDefaultSides() {
         for (int i = 0; i < sideCache.length; i++) {
-            sideCache[i] = SIDE_MODE_AUTO;
+            sideCache[i] = (byte) DEFAULT_SIDE_MODE[i];
         }
+        sideCache[facing] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
-        return true;
     }
 
     /**
@@ -255,14 +296,27 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         sideCache[side] = (byte) mode;
     }
 
-    private boolean sideAllowsInput(int side) {
-        int mode = sideCache[side];
-        return mode == SIDE_MODE_AUTO || mode == SIDE_MODE_INPUT;
+    /** Sides in Input or All mode accept items pushed/pulled into the 3 input slots. */
+    private static boolean modeAllowsInsertInput(int mode) {
+        return mode == SIDE_MODE_INPUT || mode == SIDE_MODE_ALL;
     }
 
-    private boolean sideAllowsOutput(int side) {
-        int mode = sideCache[side];
-        return mode == SIDE_MODE_AUTO || mode == SIDE_MODE_OUTPUT;
+    /**
+     * Real TE quirk, verified against the decompiled {@code TilePulverizer}
+     * ({@code allowExtractionSide[1] = true} for its own Input mode): a side left on plain
+     * Input can still have its input slots drained back out (e.g. by a pipe on the other end
+     * correcting a wrong item), even though Input alone never exposes the output slots.
+     */
+    private static boolean modeAllowsExtractInput(int mode) {
+        return mode == SIDE_MODE_INPUT;
+    }
+
+    private static boolean modeAllowsExtractPrimary(int mode) {
+        return mode == SIDE_MODE_OUTPUT_PRIMARY || mode == SIDE_MODE_OUTPUT_BOTH || mode == SIDE_MODE_ALL;
+    }
+
+    private static boolean modeAllowsExtractSecondary(int mode) {
+        return mode == SIDE_MODE_OUTPUT_SECONDARY || mode == SIDE_MODE_OUTPUT_BOTH || mode == SIDE_MODE_ALL;
     }
 
     // ---------------------------------------------------------------- augments
@@ -313,9 +367,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
         if (augmentReconfigSides && !reconfigSides) {
             // the augment that unlocked side reconfiguration was removed - lock back to defaults
-            for (int i = 0; i < sideCache.length; i++) {
-                sideCache[i] = SIDE_MODE_AUTO;
-            }
+            setDefaultSides();
         }
         if (!redstoneControl) {
             // matches real TE's TileAugmentable#onInstalled() - no augment means no mode to show/apply
@@ -649,10 +701,16 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         }
         ItemStack secondary = recipe.getSecondaryOutput();
         // The Null augment mirrors real TE's augmentSecondaryNull: skip this gate entirely,
-        // so a jammed secondary slot never blocks the primary product from finishing.
+        // so jammed secondary slots never block the primary product from finishing.
         if (secondary != null && !augmentSecondaryNull) {
-            ItemStack existing = inventory[OUTPUT_SECONDARY_START];
-            if (existing != null && !canFitStack(OUTPUT_SECONDARY_START, secondary)) {
+            boolean anyFits = false;
+            for (int i = 0; i < OUTPUT_SECONDARY_SLOTS; i++) {
+                if (canFitStack(OUTPUT_SECONDARY_START + i, secondary)) {
+                    anyFits = true;
+                    break;
+                }
+            }
+            if (!anyFits) {
                 return false;
             }
         }
@@ -709,7 +767,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     private boolean autoPullInputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
-            if (sideAllowsInput(side) && pullFromSide(ForgeDirection.getOrientation(side))) {
+            if (modeAllowsInsertInput(sideCache[side]) && pullFromSide(ForgeDirection.getOrientation(side))) {
                 moved = true;
             }
         }
@@ -719,7 +777,10 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     private boolean autoPushOutputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
-            if (sideAllowsOutput(side) && pushToSide(ForgeDirection.getOrientation(side))) {
+            int mode = sideCache[side];
+            boolean primary = modeAllowsExtractPrimary(mode);
+            boolean secondary = modeAllowsExtractSecondary(mode);
+            if ((primary || secondary) && pushToSide(ForgeDirection.getOrientation(side), primary, secondary)) {
                 moved = true;
             }
         }
@@ -764,7 +825,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         return false;
     }
 
-    private boolean pushToSide(ForgeDirection dir) {
+    private boolean pushToSide(ForgeDirection dir, boolean primary, boolean secondary) {
         TileEntity neighbor = worldObj.getTileEntity(xCoord + dir.offsetX, yCoord + dir.offsetY, zCoord + dir.offsetZ);
         if (!(neighbor instanceof IInventory)) {
             return false;
@@ -772,19 +833,34 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         IInventory neighborInv = (IInventory) neighbor;
         ForgeDirection toSide = dir.getOpposite();
 
-        for (int i = 0; i < OUTPUT_PRIMARY_SLOTS + OUTPUT_SECONDARY_SLOTS; i++) {
-            int slot = OUTPUT_PRIMARY_START + i;
-            ItemStack stack = inventory[slot];
-            if (stack == null) {
-                continue;
-            }
-            if (insertIntoInventory(neighborInv, toSide, stack)) {
-                stack.stackSize--;
-                if (stack.stackSize <= 0) {
-                    inventory[slot] = null;
+        if (primary) {
+            for (int i = 0; i < OUTPUT_PRIMARY_SLOTS; i++) {
+                if (pushSlot(neighborInv, toSide, OUTPUT_PRIMARY_START + i)) {
+                    return true;
                 }
-                return true;
             }
+        }
+        if (secondary) {
+            for (int i = 0; i < OUTPUT_SECONDARY_SLOTS; i++) {
+                if (pushSlot(neighborInv, toSide, OUTPUT_SECONDARY_START + i)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean pushSlot(IInventory neighborInv, ForgeDirection toSide, int slot) {
+        ItemStack stack = inventory[slot];
+        if (stack == null) {
+            return false;
+        }
+        if (insertIntoInventory(neighborInv, toSide, stack)) {
+            stack.stackSize--;
+            if (stack.stackSize <= 0) {
+                inventory[slot] = null;
+            }
+            return true;
         }
         return false;
     }
@@ -955,19 +1031,27 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
      */
     @Override
     public int[] getAccessibleSlotsFromSide(int side) {
-        boolean in = sideAllowsInput(side);
-        boolean out = sideAllowsOutput(side);
-        int[] slots = new int[(in ? INPUT_SLOTS : 0) + (out ? OUTPUT_PRIMARY_SLOTS + OUTPUT_SECONDARY_SLOTS : 0)];
+        int mode = sideCache[side];
+        boolean input = modeAllowsInsertInput(mode) || modeAllowsExtractInput(mode);
+        boolean primary = modeAllowsExtractPrimary(mode);
+        boolean secondary = modeAllowsExtractSecondary(mode);
+
+        int[] slots = new int[(input ? INPUT_SLOTS : 0) + (primary ? OUTPUT_PRIMARY_SLOTS : 0) + (secondary ? OUTPUT_SECONDARY_SLOTS : 0)];
         int idx = 0;
-        if (in) {
+        if (input) {
             int start = (int) ((worldObj != null ? worldObj.getTotalWorldTime() : 0) % INPUT_SLOTS);
             for (int i = 0; i < INPUT_SLOTS; i++) {
                 slots[idx++] = INPUT_START + (start + i) % INPUT_SLOTS;
             }
         }
-        if (out) {
-            for (int i = 0; i < OUTPUT_PRIMARY_SLOTS + OUTPUT_SECONDARY_SLOTS; i++) {
+        if (primary) {
+            for (int i = 0; i < OUTPUT_PRIMARY_SLOTS; i++) {
                 slots[idx++] = OUTPUT_PRIMARY_START + i;
+            }
+        }
+        if (secondary) {
+            for (int i = 0; i < OUTPUT_SECONDARY_SLOTS; i++) {
+                slots[idx++] = OUTPUT_SECONDARY_START + i;
             }
         }
         return slots;
@@ -975,12 +1059,22 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
     @Override
     public boolean canInsertItem(int slot, ItemStack stack, int side) {
-        return slot < OUTPUT_PRIMARY_START && sideAllowsInput(side) && PulverizerManager.recipeExists(stack);
+        return slot < OUTPUT_PRIMARY_START && modeAllowsInsertInput(sideCache[side]) && PulverizerManager.recipeExists(stack);
     }
 
     @Override
     public boolean canExtractItem(int slot, ItemStack stack, int side) {
-        return slot >= OUTPUT_PRIMARY_START && slot < AUGMENT_START && sideAllowsOutput(side);
+        int mode = sideCache[side];
+        if (slot < OUTPUT_PRIMARY_START) {
+            return modeAllowsExtractInput(mode);
+        }
+        if (slot < OUTPUT_SECONDARY_START) {
+            return modeAllowsExtractPrimary(mode);
+        }
+        if (slot < AUGMENT_START) {
+            return modeAllowsExtractSecondary(mode);
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- nbt
