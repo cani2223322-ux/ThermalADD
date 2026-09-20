@@ -107,21 +107,6 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     public static final int SIDE_MODE_ALL = 5;
     public static final int SIDE_MODE_COUNT = 6;
 
-    /**
-     * Absolute-side defaults (index = ForgeDirection ordinal: 0 down, 1 up, 2 north, 3 south,
-     * 4 west, 5 east), matching real TE's own {@code TilePulverizer} defaultSides table
-     * ({@code {3,1,2,2,2,2}}) so a freshly placed machine already auto-connects sensibly
-     * instead of needing every side configured by hand: top takes input, bottom is dedicated
-     * to the secondary byproduct, and the 4 walls default to the primary product - whichever
-     * one ends up facing the player is then forced to Disabled by {@link #setDefaultSides()},
-     * exactly like real TE forces the front face's side cache to 0.
-     */
-    private static final int[] DEFAULT_SIDE_MODE = {
-            SIDE_MODE_OUTPUT_SECONDARY, SIDE_MODE_INPUT,
-            SIDE_MODE_OUTPUT_PRIMARY, SIDE_MODE_OUTPUT_PRIMARY,
-            SIDE_MODE_OUTPUT_PRIMARY, SIDE_MODE_OUTPUT_PRIMARY
-    };
-
     /** North/South/West/East facing metas, same convention vanilla furnaces use. */
     public static final int[] FACING_META = {2, 5, 3, 4};
 
@@ -245,7 +230,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         if (!augmentReconfigSides || side == facing) {
             return false;
         }
-        sideCache[side] = (byte) DEFAULT_SIDE_MODE[side];
+        sideCache[side] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
         return true;
@@ -260,15 +245,18 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     }
 
     /**
-     * Real TE-accurate defaults (see {@link #DEFAULT_SIDE_MODE}'s javadoc): applied once when
-     * the block is freshly placed ({@code BlockAdvancedPulverizer#onBlockPlacedBy}) and again
-     * whenever every side is reset via a shift-click on the Configuration tab's center button.
+     * Every side starts (and resets back to) plain Disabled - no "smart" per-side defaults.
+     * Real TE's own Pulverizer does auto-assign sides on placement, but per explicit
+     * instruction this mod deliberately does NOT: a side only ever carries a role (and only
+     * ever shows a slot highlight - see {@link #isAnyInputSide()} and friends) once the player
+     * has actually chosen one via the Configuration tab. Applied once when the block is freshly
+     * placed ({@code BlockAdvancedPulverizer#onBlockPlacedBy}) and again whenever every side is
+     * reset via a shift-click on the Configuration tab's center button.
      */
     public void setDefaultSides() {
         for (int i = 0; i < sideCache.length; i++) {
-            sideCache[i] = (byte) DEFAULT_SIDE_MODE[i];
+            sideCache[i] = SIDE_MODE_DISABLED;
         }
-        sideCache[facing] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
     }
@@ -319,6 +307,40 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
     private static boolean modeAllowsExtractSecondary(int mode) {
         return mode == SIDE_MODE_OUTPUT_SECONDARY || mode == SIDE_MODE_OUTPUT_BOTH || mode == SIDE_MODE_ALL;
+    }
+
+    /**
+     * Live per-role slot-highlight queries for the GUI (see GuiAdvancedPulverizer): matching
+     * real Thermal Expansion, the colored ring around a slot only appears once the player has
+     * actually configured a side to reach it - these scan the current sideCache directly rather
+     * than reading any fixed default, so the highlight tracks whatever's actually configured
+     * right now and disappears again the moment no side grants that role anymore.
+     */
+    public boolean isAnyInputSide() {
+        for (int side = 0; side < 6; side++) {
+            if (modeAllowsInsertInput(sideCache[side])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAnyOutputPrimarySide() {
+        for (int side = 0; side < 6; side++) {
+            if (modeAllowsExtractPrimary(sideCache[side])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAnyOutputSecondarySide() {
+        for (int side = 0; side < 6; side++) {
+            if (modeAllowsExtractSecondary(sideCache[side])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- augments

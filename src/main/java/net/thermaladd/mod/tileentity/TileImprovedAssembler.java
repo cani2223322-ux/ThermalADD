@@ -104,15 +104,6 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public static final int SIDE_MODE_ALL = 5;
     public static final int SIDE_MODE_COUNT = 6;
 
-    /**
-     * Absolute-side defaults (index = ForgeDirection ordinal), matching real TE's own
-     * TileAssembler defaultSides table ({@code {1,1,2,2,2,2}}) exactly: both top AND bottom
-     * default to (whole-buffer) Input, all 4 walls default to Output.
-     */
-    private static final int[] DEFAULT_SIDE_MODE = {
-            SIDE_MODE_INPUT, SIDE_MODE_INPUT,
-            SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT
-    };
 
     /** The material buffer is a 9x2 grid; Row 1/Row 2 side modes address one half each. */
     private static final int BUFFER_ROW_SIZE = 9;
@@ -455,7 +446,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         if (!augmentReconfigSides || side == getFacing()) {
             return false;
         }
-        sideCache[side] = (byte) DEFAULT_SIDE_MODE[side];
+        sideCache[side] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
         return true;
@@ -469,12 +460,16 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         return true;
     }
 
-    /** Real TE-accurate defaults (see {@link #DEFAULT_SIDE_MODE}'s javadoc). */
+    /**
+     * Every side starts (and resets back to) plain Disabled - no "smart" per-side defaults.
+     * See TileAdvancedPulverizer#setDefaultSides for why: a side only ever carries a role (and
+     * only ever shows a slot highlight) once the player has actually chosen one via the
+     * Configuration tab.
+     */
     public void setDefaultSides() {
         for (int i = 0; i < sideCache.length; i++) {
-            sideCache[i] = (byte) DEFAULT_SIDE_MODE[i];
+            sideCache[i] = SIDE_MODE_DISABLED;
         }
-        sideCache[getFacing()] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
     }
@@ -519,6 +514,50 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
      */
     private static boolean modeExtractsOutput(int mode) {
         return mode == SIDE_MODE_OUTPUT || mode == SIDE_MODE_ALL;
+    }
+
+    /**
+     * Live per-role slot-highlight queries for the GUI (see GuiImprovedAssembler) - see
+     * TileAdvancedPulverizer#isAnyInputSide for why these scan sideCache live instead of
+     * reading any fixed default. isAnyInputSide() covers the schematic slots (shown blue
+     * whenever ANY input-flavored mode is set anywhere); the row-specific ones drive the
+     * matching half of the material buffer only.
+     */
+    public boolean isAnyInputSide() {
+        for (int side = 0; side < 6; side++) {
+            int mode = sideCache[side];
+            if (modeInsertsRow1(mode) || modeInsertsRow2(mode)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAnyInputRow1Side() {
+        for (int side = 0; side < 6; side++) {
+            if (modeInsertsRow1(sideCache[side])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAnyInputRow2Side() {
+        for (int side = 0; side < 6; side++) {
+            if (modeInsertsRow2(sideCache[side])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAnyOutputSide() {
+        for (int side = 0; side < 6; side++) {
+            if (modeExtractsOutput(sideCache[side])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean autoPullInputs() {

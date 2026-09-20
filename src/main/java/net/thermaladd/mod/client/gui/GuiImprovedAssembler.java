@@ -100,24 +100,30 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
 
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 
-        // See GuiAdvancedPulverizer's own copy of this comment: the colored role ring is part
-        // of the side-config feature, gated behind the same augment as the Configuration tab.
-        int inputHighlight = tile.augmentReconfigSides ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
-        int outputHighlight = tile.augmentReconfigSides ? HIGHLIGHT_OUTPUT : HIGHLIGHT_NONE;
+        // See GuiAdvancedPulverizer's own copy of this comment: the colored role ring tracks
+        // live side configuration - a fresh machine starts with every side Disabled, so
+        // nothing is highlighted until the Configuration tab is actually used. The material
+        // buffer's 2 rows can be configured independently (Row 1/Row 2), so each gets its own
+        // live check; the schematic slots just use "is ANY input-flavored mode set anywhere".
+        int schematicHighlight = tile.isAnyInputSide() ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
+        int outputHighlight = tile.isAnyOutputSide() ? HIGHLIGHT_OUTPUT : HIGHLIGHT_NONE;
+        int row1Highlight = tile.isAnyInputRow1Side() ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
+        int row2Highlight = tile.isAnyInputRow2Side() ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 2; col++) {
                 int x = left + ContainerImprovedAssembler.PAIR_X[col];
                 int y = top + ContainerImprovedAssembler.ROW_Y[row];
-                drawTESlot(x - 1, y - 1, inputHighlight);
+                drawTESlot(x - 1, y - 1, schematicHighlight);
                 drawTESlot(x + ContainerImprovedAssembler.OUTPUT_OFFSET - 1, y - 1, outputHighlight);
                 drawArrow(x + ContainerImprovedAssembler.SLOT_SIZE + 4, y + 5);
             }
         }
 
         for (int row = 0; row < 2; row++) {
+            int rowHighlight = row == 0 ? row1Highlight : row2Highlight;
             for (int col = 0; col < 9; col++) {
                 drawTESlot(left + ContainerImprovedAssembler.BUFFER_X + col * ContainerImprovedAssembler.SLOT_SIZE - 1,
-                        top + ContainerImprovedAssembler.BUFFER_Y + row * ContainerImprovedAssembler.SLOT_SIZE - 1, inputHighlight);
+                        top + ContainerImprovedAssembler.BUFFER_Y + row * ContainerImprovedAssembler.SLOT_SIZE - 1, rowHighlight);
             }
         }
 

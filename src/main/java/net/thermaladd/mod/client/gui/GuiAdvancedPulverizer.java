@@ -101,13 +101,14 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
 
         drawEnergyBar(left, top);
 
-        // Matches real Thermal Expansion: the colored role ring is part of the side-config
-        // feature, so it only shows up once the Reconfigurable Sides augment actually unlocks
-        // that feature - without it, slots stay plain, same as the Configuration tab itself
-        // being hidden.
-        int inputHighlight = tile.augmentReconfigSides ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
-        int primaryHighlight = tile.augmentReconfigSides ? HIGHLIGHT_OUTPUT_PRIMARY : HIGHLIGHT_NONE;
-        int secondaryHighlight = tile.augmentReconfigSides ? HIGHLIGHT_OUTPUT_SECONDARY : HIGHLIGHT_NONE;
+        // Matches real Thermal Expansion: the colored role ring only appears once the player
+        // has actually configured a side to grant that role - not just because the
+        // Reconfigurable Sides augment is installed. A fresh machine starts with every side
+        // Disabled (see TileAdvancedPulverizer#setDefaultSides), so nothing is highlighted
+        // until the Configuration tab is actually used.
+        int inputHighlight = tile.isAnyInputSide() ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
+        int primaryHighlight = tile.isAnyOutputPrimarySide() ? HIGHLIGHT_OUTPUT_PRIMARY : HIGHLIGHT_NONE;
+        int secondaryHighlight = tile.isAnyOutputSecondarySide() ? HIGHLIGHT_OUTPUT_SECONDARY : HIGHLIGHT_NONE;
         for (int i = 0; i < TileAdvancedPulverizer.INPUT_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedPulverizer.INPUT_X - 1,
                     top + ContainerAdvancedPulverizer.INPUT_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1, inputHighlight);

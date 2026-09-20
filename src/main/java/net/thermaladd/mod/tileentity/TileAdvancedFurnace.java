@@ -73,16 +73,6 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     public static final int SIDE_MODE_ALL = 3;
     public static final int SIDE_MODE_COUNT = 4;
 
-    /**
-     * Absolute-side defaults (index = ForgeDirection ordinal), matching real TE's own
-     * TileFurnace defaultSides table ({@code {1,1,2,2,2,2}}) exactly: both top AND bottom
-     * default to Input, all 4 walls default to Output - whichever one ends up facing the
-     * player is then forced to Disabled by {@link #setDefaultSides()}.
-     */
-    private static final int[] DEFAULT_SIDE_MODE = {
-            SIDE_MODE_INPUT, SIDE_MODE_INPUT,
-            SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT
-    };
 
     public static final int[] FACING_META = {2, 5, 3, 4};
 
@@ -163,7 +153,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         if (!augmentReconfigSides || side == facing) {
             return false;
         }
-        sideCache[side] = (byte) DEFAULT_SIDE_MODE[side];
+        sideCache[side] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
         return true;
@@ -177,12 +167,16 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         return true;
     }
 
-    /** Real TE-accurate defaults (see {@link #DEFAULT_SIDE_MODE}'s javadoc). */
+    /**
+     * Every side starts (and resets back to) plain Disabled - no "smart" per-side defaults.
+     * See TileAdvancedPulverizer#setDefaultSides for why: a side only ever carries a role (and
+     * only ever shows a slot highlight) once the player has actually chosen one via the
+     * Configuration tab.
+     */
     public void setDefaultSides() {
         for (int i = 0; i < sideCache.length; i++) {
-            sideCache[i] = (byte) DEFAULT_SIDE_MODE[i];
+            sideCache[i] = SIDE_MODE_DISABLED;
         }
-        sideCache[facing] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
     }
@@ -219,6 +213,29 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
 
     private static boolean modeAllowsExtractOutput(int mode) {
         return mode == SIDE_MODE_OUTPUT || mode == SIDE_MODE_ALL;
+    }
+
+    /**
+     * Live per-role slot-highlight queries for the GUI (see GuiAdvancedFurnace) - see
+     * TileAdvancedPulverizer#isAnyInputSide for why these scan sideCache live instead of
+     * reading any fixed default.
+     */
+    public boolean isAnyInputSide() {
+        for (int side = 0; side < 6; side++) {
+            if (modeAllowsInsertInput(sideCache[side])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAnyOutputSide() {
+        for (int side = 0; side < 6; side++) {
+            if (modeAllowsExtractOutput(sideCache[side])) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- augments

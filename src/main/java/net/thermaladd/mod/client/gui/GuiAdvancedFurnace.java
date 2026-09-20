@@ -80,10 +80,12 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
 
         drawEnergyBar(left, top);
 
-        // See GuiAdvancedPulverizer's own copy of this comment: the colored role ring is part
-        // of the side-config feature, gated behind the same augment as the Configuration tab.
-        int inputHighlight = tile.augmentReconfigSides ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
-        int outputHighlight = tile.augmentReconfigSides ? HIGHLIGHT_OUTPUT : HIGHLIGHT_NONE;
+        // See GuiAdvancedPulverizer's own copy of this comment: the colored role ring tracks
+        // live side configuration, not merely whether the Reconfigurable Sides augment is
+        // installed - a fresh machine starts with every side Disabled, so nothing is
+        // highlighted until the Configuration tab is actually used.
+        int inputHighlight = tile.isAnyInputSide() ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
+        int outputHighlight = tile.isAnyOutputSide() ? HIGHLIGHT_OUTPUT : HIGHLIGHT_NONE;
         for (int i = 0; i < TileAdvancedFurnace.INPUT_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedFurnace.INPUT_X - 1,
                     top + ContainerAdvancedFurnace.INPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE - 1, inputHighlight);
