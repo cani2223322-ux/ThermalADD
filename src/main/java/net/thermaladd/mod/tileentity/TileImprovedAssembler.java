@@ -49,8 +49,8 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public static final int SCHEMATIC_SLOTS = 6;
     public static final int INPUT_SLOTS = 18;
     public static final int OUTPUT_SLOTS = 6;
-    /** Same count as Thermal Expansion's own TileAugmentable: exactly 3 augment slots. */
-    public static final int AUGMENT_SLOTS = 3;
+    /** Same 9 slots as the Advanced Pulverizer/Furnace (real TE's own TileAugmentable caps at 3-6; this mod's machines all get 9, fixed, since none has a separate tier/upgrade item). */
+    public static final int AUGMENT_SLOTS = 9;
     public static final int TOTAL_SLOTS = SCHEMATIC_SLOTS + INPUT_SLOTS + OUTPUT_SLOTS + AUGMENT_SLOTS;
 
     public static final int SCHEMATIC_START = 0;
@@ -354,6 +354,37 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         return types != null
                 && (types.contains(AUG_AUTO_INPUT) || types.contains(AUG_AUTO_OUTPUT)
                         || types.contains(AUG_RECONFIG_SIDES) || types.contains(AUG_REDSTONE_CONTROL));
+    }
+
+    /** See TileAdvancedPulverizer#hasDuplicateAugmentType for why this exists - this mod refuses a second augment of the same type outright rather than silently ignoring it like real TE does. */
+    public boolean hasDuplicateAugmentType(ItemStack candidate, int excludeSlot) {
+        if (candidate == null || !(candidate.getItem() instanceof IAugmentItem)) {
+            return false;
+        }
+        Set<String> types = ((IAugmentItem) candidate.getItem()).getAugmentTypes(candidate);
+        if (types == null || types.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < AUGMENT_SLOTS; i++) {
+            int slot = AUGMENT_START + i;
+            if (slot == excludeSlot) {
+                continue;
+            }
+            ItemStack other = inventory[slot];
+            if (other == null || !(other.getItem() instanceof IAugmentItem)) {
+                continue;
+            }
+            Set<String> otherTypes = ((IAugmentItem) other.getItem()).getAugmentTypes(other);
+            if (otherTypes == null) {
+                continue;
+            }
+            for (String type : types) {
+                if (otherTypes.contains(type)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -900,7 +931,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
         if (isAugmentSlot(slot)) {
-            return isValidAugment(stack);
+            return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }
         return slot < OUTPUT_START;
     }

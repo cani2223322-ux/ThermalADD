@@ -29,6 +29,19 @@ public abstract class TabbedMachineGui extends GuiContainer {
     protected static final int TE_SHADOW = 0xFF555555;
     protected static final int TE_SLOT_DARK = 0xFF373737;
 
+    /**
+     * Slot role-highlight colors, matching this mod's own side-config badge palette exactly
+     * (see BlockAdvancedPulverizer's javadoc for how those were verified against real TE's
+     * Config_Blue/Red/Yellow/Orange.png) - the same "read the slot, not just the Configuration
+     * tab" idea real Thermal Expansion uses: an input slot's frame is tinted blue, a primary
+     * output's red, a secondary output's yellow, and a machine with only one generic output
+     * (Furnace/Assembler) uses orange, exactly like their own side badges do.
+     */
+    protected static final int HIGHLIGHT_INPUT = 0xFF0A76CF;
+    protected static final int HIGHLIGHT_OUTPUT_PRIMARY = 0xFFD22C15;
+    protected static final int HIGHLIGHT_OUTPUT_SECONDARY = 0xFFD2AA15;
+    protected static final int HIGHLIGHT_OUTPUT = 0xFFD26C16;
+
     protected TabbedMachineGui(Container container) {
         super(container);
     }
@@ -75,6 +88,18 @@ public abstract class TabbedMachineGui extends GuiContainer {
         drawRect(x + 1, y + 1, x + 17, y + 17, TE_PANEL_DARK);
         drawRect(x + 17, y + 1, x + 18, y + 18, TE_HIGHLIGHT);
         drawRect(x + 1, y + 17, x + 18, y + 18, TE_HIGHLIGHT);
+    }
+
+    /**
+     * Same slot, plus a 1px colored ring wrapped directly around it marking its role (input vs.
+     * which kind of output) - see the HIGHLIGHT_* constants above.
+     */
+    protected void drawTESlot(int x, int y, int roleColor) {
+        drawTESlot(x, y);
+        drawRect(x - 1, y - 1, x + 19, y, roleColor);
+        drawRect(x - 1, y + 18, x + 19, y + 19, roleColor);
+        drawRect(x - 1, y - 1, x, y + 19, roleColor);
+        drawRect(x + 18, y - 1, x + 19, y + 19, roleColor);
     }
 
     /**

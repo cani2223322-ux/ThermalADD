@@ -12,8 +12,12 @@ public class SlotAugmentAssembler extends Slot {
         super(inv, index, x, y);
     }
 
+    /** Rejects both an invalid item AND a valid augment whose type already sits in another slot - see TileImprovedAssembler#hasDuplicateAugmentType. */
     @Override
     public boolean isItemValid(ItemStack stack) {
-        return TileImprovedAssembler.isValidAugment(stack);
+        if (!TileImprovedAssembler.isValidAugment(stack)) {
+            return false;
+        }
+        return !((TileImprovedAssembler) this.inventory).hasDuplicateAugmentType(stack, getSlotIndex());
     }
 }

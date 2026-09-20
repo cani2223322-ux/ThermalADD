@@ -82,12 +82,12 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
 
         for (int i = 0; i < TileAdvancedFurnace.INPUT_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedFurnace.INPUT_X - 1,
-                    top + ContainerAdvancedFurnace.INPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE - 1);
+                    top + ContainerAdvancedFurnace.INPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE - 1, HIGHLIGHT_INPUT);
             drawProgressBar(left, top, i);
         }
         for (int i = 0; i < TileAdvancedFurnace.OUTPUT_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedFurnace.OUTPUT_X - 1,
-                    top + ContainerAdvancedFurnace.OUTPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE - 1);
+                    top + ContainerAdvancedFurnace.OUTPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE - 1, HIGHLIGHT_OUTPUT);
         }
 
         for (int row = 0; row < 3; row++) {

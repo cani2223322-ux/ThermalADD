@@ -475,6 +475,44 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
                 || types.contains(AUG_MACHINE_NULL) || types.contains(AUG_ENERGY_STORAGE);
     }
 
+    /**
+     * Real TE lets a second augment of the same type sit in another slot and just silently
+     * ignores it (see {@code TileMachineBase#installAugment}'s own hasDuplicateAugment check) -
+     * this mod instead refuses the slot outright, so a duplicate never becomes a dead, wasted
+     * slot in the first place. "Same type" means sharing at least one of the augment's own
+     * type strings (a stack can in principle report more than one), checked against every
+     * OTHER currently-filled augment slot.
+     */
+    public boolean hasDuplicateAugmentType(ItemStack candidate, int excludeSlot) {
+        if (!isAugmentItem(candidate)) {
+            return false;
+        }
+        Set<String> types = ((IAugmentItem) candidate.getItem()).getAugmentTypes(candidate);
+        if (types == null || types.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < AUGMENT_SLOTS; i++) {
+            int slot = AUGMENT_START + i;
+            if (slot == excludeSlot) {
+                continue;
+            }
+            ItemStack other = inventory[slot];
+            if (!isAugmentItem(other)) {
+                continue;
+            }
+            Set<String> otherTypes = ((IAugmentItem) other.getItem()).getAugmentTypes(other);
+            if (otherTypes == null) {
+                continue;
+            }
+            for (String type : types) {
+                if (otherTypes.contains(type)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // ---------------------------------------------------------------- energy (RF)
 
     @Override
@@ -1045,7 +1083,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
         if (isAugmentSlot(slot)) {
-            return isValidAugment(stack);
+            return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }
         if (slot < OUTPUT_PRIMARY_START) {
             return PulverizerManager.recipeExists(stack);

@@ -349,6 +349,37 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
                 || types.contains(AUG_MACHINE_SPEED) || types.contains(AUG_ENERGY_STORAGE);
     }
 
+    /** See TileAdvancedPulverizer#hasDuplicateAugmentType for why this exists - this mod refuses a second augment of the same type outright rather than silently ignoring it like real TE does. */
+    public boolean hasDuplicateAugmentType(ItemStack candidate, int excludeSlot) {
+        if (!isAugmentItem(candidate)) {
+            return false;
+        }
+        Set<String> types = ((IAugmentItem) candidate.getItem()).getAugmentTypes(candidate);
+        if (types == null || types.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < AUGMENT_SLOTS; i++) {
+            int slot = AUGMENT_START + i;
+            if (slot == excludeSlot) {
+                continue;
+            }
+            ItemStack other = inventory[slot];
+            if (!isAugmentItem(other)) {
+                continue;
+            }
+            Set<String> otherTypes = ((IAugmentItem) other.getItem()).getAugmentTypes(other);
+            if (otherTypes == null) {
+                continue;
+            }
+            for (String type : types) {
+                if (otherTypes.contains(type)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // ---------------------------------------------------------------- energy (RF)
 
     @Override
@@ -837,7 +868,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
         if (isAugmentSlot(slot)) {
-            return isValidAugment(stack);
+            return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }
         if (slot < OUTPUT_START) {
             return FurnaceManager.recipeExists(stack);

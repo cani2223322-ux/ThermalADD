@@ -104,8 +104,8 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             for (int col = 0; col < 2; col++) {
                 int x = left + ContainerImprovedAssembler.PAIR_X[col];
                 int y = top + ContainerImprovedAssembler.ROW_Y[row];
-                drawTESlot(x - 1, y - 1);
-                drawTESlot(x + ContainerImprovedAssembler.OUTPUT_OFFSET - 1, y - 1);
+                drawTESlot(x - 1, y - 1, HIGHLIGHT_INPUT);
+                drawTESlot(x + ContainerImprovedAssembler.OUTPUT_OFFSET - 1, y - 1, HIGHLIGHT_OUTPUT);
                 drawArrow(x + ContainerImprovedAssembler.SLOT_SIZE + 4, y + 5);
             }
         }
@@ -113,7 +113,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 9; col++) {
                 drawTESlot(left + ContainerImprovedAssembler.BUFFER_X + col * ContainerImprovedAssembler.SLOT_SIZE - 1,
-                        top + ContainerImprovedAssembler.BUFFER_Y + row * ContainerImprovedAssembler.SLOT_SIZE - 1);
+                        top + ContainerImprovedAssembler.BUFFER_Y + row * ContainerImprovedAssembler.SLOT_SIZE - 1, HIGHLIGHT_INPUT);
             }
         }
 

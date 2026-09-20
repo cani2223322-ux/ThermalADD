@@ -11,8 +11,12 @@ public class SlotAugmentFurnace extends Slot {
         super(inv, index, x, y);
     }
 
+    /** Rejects both an invalid item AND a valid augment whose type already sits in another slot - see TileAdvancedFurnace#hasDuplicateAugmentType. */
     @Override
     public boolean isItemValid(ItemStack stack) {
-        return TileAdvancedFurnace.isValidAugment(stack);
+        if (!TileAdvancedFurnace.isValidAugment(stack)) {
+            return false;
+        }
+        return !((TileAdvancedFurnace) this.inventory).hasDuplicateAugmentType(stack, getSlotIndex());
     }
 }
