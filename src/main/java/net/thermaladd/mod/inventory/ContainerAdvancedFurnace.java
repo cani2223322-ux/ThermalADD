@@ -139,8 +139,8 @@ public class ContainerAdvancedFurnace extends Container {
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
         List<ICrafting> list = (List<ICrafting>) crafters;
-        int energyScaled = tile.getEnergy() / 4;
-        int maxEnergyScaled = tile.getMaxEnergy() / 4;
+        int energyScaled = tile.getEnergy() / TileAdvancedFurnace.ENERGY_SYNC_SCALE;
+        int maxEnergyScaled = tile.getMaxEnergy() / TileAdvancedFurnace.ENERGY_SYNC_SCALE;
         int reconfigSides = tile.augmentReconfigSides ? 1 : 0;
         int autoInput = tile.augmentAutoInput ? 1 : 0;
         int autoOutput = tile.augmentAutoOutput ? 1 : 0;
@@ -219,7 +219,7 @@ public class ContainerAdvancedFurnace extends Container {
         if (id == 0) {
             tile.setEnergyStoredClient(value);
         } else if (id == 1) {
-            tile.setMaxEnergyClient(value * 4);
+            tile.setMaxEnergyClient(value * TileAdvancedFurnace.ENERGY_SYNC_SCALE);
         } else if (id >= 2 && id <= 4) {
             tile.setProgressClient(id - 2, value);
         } else if (id >= 5 && id <= 7) {

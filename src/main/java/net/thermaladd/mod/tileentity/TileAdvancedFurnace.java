@@ -60,6 +60,9 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     public static final int BASE_ENERGY_CAPACITY = 1000000;
     public static final int ENERGY_RECEIVE_PER_TICK = 10000;
 
+    /** See TileAdvancedPulverizer#ENERGY_SYNC_SCALE - same overflow fix, same capacity ceiling (BASE_ENERGY_CAPACITY * 8 with a maxed Energy Storage augment). */
+    public static final int ENERGY_SYNC_SCALE = 256;
+
     /**
      * Side config modes, verified against real Thermal Expansion's own Furnace (decompiled
      * {@code cofh.thermalexpansion.block.machine.TileFurnace#initialize}: 4 modes -
@@ -142,9 +145,19 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         return sideCache[side];
     }
 
+    /**
+     * {@code side} arrives straight from a client-sent network packet (MessageCycleSide's
+     * {@code side} field is an unchecked byte, -128..127) - without this bounds check, an
+     * out-of-range value indexes {@code sideCache} out of bounds and throws, which Forge's
+     * packet handling turns into a disconnect for the sender.
+     */
+    private static boolean isValidSide(int side) {
+        return side >= 0 && side < 6;
+    }
+
     /** Refuses to touch the front face, matching real TE's TileReconfigurable#incrSide/decrSide. */
     public boolean cycleSideMode(int side, int direction) {
-        if (!augmentReconfigSides || side == facing) {
+        if (!isValidSide(side) || !augmentReconfigSides || side == facing) {
             return false;
         }
         sideCache[side] = (byte) (((sideCache[side] + direction) % SIDE_MODE_COUNT + SIDE_MODE_COUNT) % SIDE_MODE_COUNT);
@@ -154,7 +167,7 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     }
 
     public boolean resetSideMode(int side) {
-        if (!augmentReconfigSides || side == facing) {
+        if (!isValidSide(side) || !augmentReconfigSides || side == facing) {
             return false;
         }
         sideCache[side] = SIDE_MODE_DISABLED;
@@ -431,8 +444,9 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         return energyStorage.getMaxEnergyStored();
     }
 
-    public void setEnergyStoredClient(int scaledByFour) {
-        energyStorage.setEnergyStored(scaledByFour * 4);
+    /** Client-side only: applies a value received (already divided by ENERGY_SYNC_SCALE for the packet) via the container. */
+    public void setEnergyStoredClient(int scaled) {
+        energyStorage.setEnergyStored(scaled * ENERGY_SYNC_SCALE);
     }
 
     public void setMaxEnergyClient(int value) {

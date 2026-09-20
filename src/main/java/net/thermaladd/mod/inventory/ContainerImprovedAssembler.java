@@ -156,7 +156,7 @@ public class ContainerImprovedAssembler extends Container {
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
         List<ICrafting> list = (List<ICrafting>) crafters;
-        int energyScaled = tile.getEnergy() / 4;
+        int energyScaled = tile.getEnergy() / TileImprovedAssembler.ENERGY_SYNC_SCALE;
         int reconfigSides = tile.augmentReconfigSides ? 1 : 0;
         int autoInput = tile.augmentAutoInput ? 1 : 0;
         int autoOutput = tile.augmentAutoOutput ? 1 : 0;

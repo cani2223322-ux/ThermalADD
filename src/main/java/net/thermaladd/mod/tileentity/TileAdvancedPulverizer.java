@@ -91,6 +91,17 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     public static final int ENERGY_RECEIVE_PER_TICK = 10000;
 
     /**
+     * windowProperty values are transmitted as a signed 16-bit short (max 32767, see
+     * S31PacketWindowProperty) - dividing by only 4 (as this mod used to) still overflows it the
+     * moment stored/max energy passes ~131,068 RF, which happens within the first second of
+     * charging at this tier's capacities (up to {@code BASE_ENERGY_CAPACITY * 8} = 8,000,000 RF
+     * with a maxed Energy Storage augment). 256 keeps the scaled value under 32767 even at that
+     * ceiling (8,000,000 / 256 = 31,250) with margin to spare; the GUI's energy bar is only 42px
+     * tall regardless; so this loses no perceptible precision.
+     */
+    public static final int ENERGY_SYNC_SCALE = 256;
+
+    /**
      * Side config modes, verified against real Thermal Expansion's own Pulverizer (decompiled
      * {@code cofh.thermalexpansion.block.machine.TilePulverizer#initialize}: 6 modes, numbered
      * and colored exactly this way - {@code sideTex = {0,1,2,3,4,7}} indexing real TE's own
@@ -220,8 +231,18 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
      * real TE never lets the front be individually configured, only reset along with
      * everything else via resetAllSideModes().
      */
+    /**
+     * {@code side} arrives straight from a client-sent network packet (MessageCycleSide's
+     * {@code side} field is an unchecked byte, -128..127) - without this bounds check, an
+     * out-of-range value indexes {@code sideCache} out of bounds and throws, which Forge's
+     * packet handling turns into a disconnect for the sender.
+     */
+    private static boolean isValidSide(int side) {
+        return side >= 0 && side < 6;
+    }
+
     public boolean cycleSideMode(int side, int direction) {
-        if (!augmentReconfigSides || side == facing) {
+        if (!isValidSide(side) || !augmentReconfigSides || side == facing) {
             return false;
         }
         sideCache[side] = (byte) (((sideCache[side] + direction) % SIDE_MODE_COUNT + SIDE_MODE_COUNT) % SIDE_MODE_COUNT);
@@ -231,7 +252,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     }
 
     public boolean resetSideMode(int side) {
-        if (!augmentReconfigSides || side == facing) {
+        if (!isValidSide(side) || !augmentReconfigSides || side == facing) {
             return false;
         }
         sideCache[side] = SIDE_MODE_DISABLED;
@@ -570,9 +591,9 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         return energyStorage.getMaxEnergyStored();
     }
 
-    /** Client-side only: applies a value received (already /4'd for the packet) via the container. */
-    public void setEnergyStoredClient(int scaledByFour) {
-        energyStorage.setEnergyStored(scaledByFour * 4);
+    /** Client-side only: applies a value received (already divided by ENERGY_SYNC_SCALE for the packet) via the container. */
+    public void setEnergyStoredClient(int scaled) {
+        energyStorage.setEnergyStored(scaled * ENERGY_SYNC_SCALE);
     }
 
     public void setMaxEnergyClient(int value) {

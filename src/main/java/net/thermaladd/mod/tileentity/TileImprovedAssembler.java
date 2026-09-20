@@ -83,6 +83,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     /** Was 800 RF/t - bumped to match the mod's UltimateResonant tier (6 slots at 20 RF/craft each need only 120 RF/t at most, so this is pure headroom, not a starvation fix like the Pulverizer's). */
     public static final int ENERGY_RECEIVE_PER_TICK = 5000;
 
+    /** See TileAdvancedPulverizer#ENERGY_SYNC_SCALE - same windowProperty short-overflow fix; ENERGY_CAPACITY here is fixed, but /4 (500,000 / 4 = 125,000) was already well past the 32767 short limit on its own. */
+    public static final int ENERGY_SYNC_SCALE = 256;
+
     /**
      * Same fluid tank real Thermal Expansion's own Assembler has (decompiled
      * {@code TileAssembler}: {@code new FluidTankAdv(10000)}), bumped 10x past the stock
@@ -153,6 +156,12 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     };
 
     private ItemStack[] inventory = new ItemStack[TOTAL_SLOTS];
+    /**
+     * Per-schematic-slot recipe cache (see {@link #resolveRecipe}) - avoids re-scanning the
+     * entire vanilla-style recipe list every single tick for every schematic slot.
+     */
+    private final ItemStack[] cachedSchematicRef = new ItemStack[SCHEMATIC_SLOTS];
+    private final IRecipe[] cachedRecipe = new IRecipe[SCHEMATIC_SLOTS];
     private int energyStored = 0;
     /** RF actually spent on the tick just finished (PROCESS_ENERGY per schematic that crafted) - "Energy Consumption" in the GUI. */
     private int energyPerTick = 0;
@@ -198,8 +207,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         return worldObj != null ? worldObj.getBlockMetadata(xCoord, yCoord, zCoord) : 3;
     }
 
-    public void setEnergyStoredClient(int scaledByFour) {
-        this.energyStored = scaledByFour * 4;
+    /** Client-side only: applies a value received (already divided by ENERGY_SYNC_SCALE for the packet) via the container. */
+    public void setEnergyStoredClient(int scaled) {
+        this.energyStored = scaled * ENERGY_SYNC_SCALE;
     }
 
     /** RF actually drawn on the last tick that ran server-side - what real TE's own "Energy Consumption" line shows. */
@@ -568,8 +578,18 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
      * augment. Also refuses to touch the front face, matching real TE's
      * TileReconfigurable#incrSide/decrSide.
      */
+    /**
+     * {@code side} arrives straight from a client-sent network packet (MessageCycleSide's
+     * {@code side} field is an unchecked byte, -128..127) - without this bounds check, an
+     * out-of-range value indexes {@code sideCache} out of bounds and throws, which Forge's
+     * packet handling turns into a disconnect for the sender.
+     */
+    private static boolean isValidSide(int side) {
+        return side >= 0 && side < 6;
+    }
+
     public boolean cycleSideMode(int side, int direction) {
-        if (!augmentReconfigSides || side == getFacing()) {
+        if (!isValidSide(side) || !augmentReconfigSides || side == getFacing()) {
             return false;
         }
         sideCache[side] = (byte) (((sideCache[side] + direction) % SIDE_MODE_COUNT + SIDE_MODE_COUNT) % SIDE_MODE_COUNT);
@@ -579,7 +599,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     }
 
     public boolean resetSideMode(int side) {
-        if (!augmentReconfigSides || side == getFacing()) {
+        if (!isValidSide(side) || !augmentReconfigSides || side == getFacing()) {
             return false;
         }
         sideCache[side] = SIDE_MODE_DISABLED;
@@ -863,7 +883,11 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
             return false;
         }
 
-        ItemStack result = findMatchingRecipe(grid);
+        IRecipe recipe = resolveRecipe(schematicSlot, schematic, grid);
+        if (recipe == null) {
+            return false;
+        }
+        ItemStack result = recipe.getCraftingResult(grid);
         if (result == null) {
             return false;
         }
@@ -988,12 +1012,34 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
                 && (sample.getItemDamage() == Short.MAX_VALUE || buf.getItemDamage() == sample.getItemDamage());
     }
 
+    /**
+     * Which {@link IRecipe} a schematic's fixed 3x3 pattern resolves to can never change while
+     * the schematic itself doesn't - {@link #matchGrid} always copies exactly 1 of each
+     * ingredient's identity into the grid regardless of how much sits in the buffer, so the
+     * match result depends only on the schematic's own (immutable, once written) pattern, not on
+     * buffer quantities. Caching it here - keyed on the schematic {@code ItemStack}'s own object
+     * identity, which changes the instant a player swaps in a different one via
+     * {@link #setInventorySlotContents} - turns what would otherwise be a full linear scan of
+     * every registered vanilla-style recipe, for every one of the {@value #SCHEMATIC_SLOTS}
+     * schematic slots, EVERY server tick, into a single cache hit for the overwhelmingly common
+     * case of a schematic just sitting in its slot craft after craft.
+     */
+    private IRecipe resolveRecipe(int schematicSlot, ItemStack schematic, InventoryCrafting grid) {
+        if (cachedSchematicRef[schematicSlot] == schematic) {
+            return cachedRecipe[schematicSlot];
+        }
+        IRecipe recipe = findMatchingRecipe(grid);
+        cachedSchematicRef[schematicSlot] = schematic;
+        cachedRecipe[schematicSlot] = recipe;
+        return recipe;
+    }
+
     @SuppressWarnings("unchecked")
-    private ItemStack findMatchingRecipe(InventoryCrafting grid) {
+    private IRecipe findMatchingRecipe(InventoryCrafting grid) {
         List<IRecipe> recipes = (List<IRecipe>) CraftingManager.getInstance().getRecipeList();
         for (IRecipe recipe : recipes) {
             if (recipe.matches(grid, worldObj)) {
-                return recipe.getCraftingResult(grid);
+                return recipe;
             }
         }
         return null;

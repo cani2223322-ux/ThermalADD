@@ -156,7 +156,21 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler {
         return sideCache[side];
     }
 
+    /**
+     * {@code side} arrives straight from a client-sent network packet (MessageCycleSide's
+     * {@code side} field is an unchecked byte, -128..127) - without this bounds check, an
+     * out-of-range value indexes {@code sideCache}/{@code DEFAULT_SIDES} out of bounds and
+     * throws, which Forge's packet handling turns into a disconnect for the sender. Every
+     * cycle/reset entry point below needs this same guard for the same reason.
+     */
+    private static boolean isValidSide(int side) {
+        return side >= 0 && side < 6;
+    }
+
     public boolean cycleSideMode(int side, int direction) {
+        if (!isValidSide(side)) {
+            return false;
+        }
         sideCache[side] = (byte) (((sideCache[side] + direction) % MODE_COUNT + MODE_COUNT) % MODE_COUNT);
         markDirty();
         syncRenderState();
@@ -164,6 +178,9 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler {
     }
 
     public boolean resetSideMode(int side) {
+        if (!isValidSide(side)) {
+            return false;
+        }
         sideCache[side] = DEFAULT_SIDES[side];
         markDirty();
         syncRenderState();

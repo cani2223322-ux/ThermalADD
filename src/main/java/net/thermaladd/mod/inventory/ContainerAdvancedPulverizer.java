@@ -21,8 +21,8 @@ import cofh.thermalexpansion.util.crafting.PulverizerManager;
  * sibling ImprovedAssembler mod uses, no custom network packets required for state sync (a
  * packet IS used, separately, for the Configuration tab's own clicks - see MessageCycleSide).
  * windowProperty values are transmitted as shorts, which is why energy values are divided by
- * 4 before sending (matches TileAdvancedPulverizer's setEnergyStoredClient/setMaxEnergyClient,
- * which multiply back by 4 on the way in).
+ * TileAdvancedPulverizer.ENERGY_SYNC_SCALE before sending (matches TileAdvancedPulverizer's
+ * setEnergyStoredClient/setMaxEnergyClient, which multiply back by the same scale on the way in).
  */
 public class ContainerAdvancedPulverizer extends Container {
 
@@ -160,8 +160,8 @@ public class ContainerAdvancedPulverizer extends Container {
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
         List<ICrafting> list = (List<ICrafting>) crafters;
-        int energyScaled = tile.getEnergy() / 4;
-        int maxEnergyScaled = tile.getMaxEnergy() / 4;
+        int energyScaled = tile.getEnergy() / TileAdvancedPulverizer.ENERGY_SYNC_SCALE;
+        int maxEnergyScaled = tile.getMaxEnergy() / TileAdvancedPulverizer.ENERGY_SYNC_SCALE;
         int reconfigSides = tile.augmentReconfigSides ? 1 : 0;
         int autoInput = tile.augmentAutoInput ? 1 : 0;
         int autoOutput = tile.augmentAutoOutput ? 1 : 0;
@@ -240,7 +240,7 @@ public class ContainerAdvancedPulverizer extends Container {
         if (id == 0) {
             tile.setEnergyStoredClient(value);
         } else if (id == 1) {
-            tile.setMaxEnergyClient(value * 4);
+            tile.setMaxEnergyClient(value * TileAdvancedPulverizer.ENERGY_SYNC_SCALE);
         } else if (id >= 2 && id <= 4) {
             tile.setProgressClient(id - 2, value);
         } else if (id >= 5 && id <= 7) {
