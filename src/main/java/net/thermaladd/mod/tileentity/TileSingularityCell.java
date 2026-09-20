@@ -199,10 +199,20 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler {
         sideCache[side] = (byte) mode;
     }
 
-    /** Server-side: restores side modes from a picked-back-up cell's own NBT (see BlockSingularityCell#onBlockPlacedBy). */
+    /**
+     * Server-side: restores side modes from a picked-back-up cell's own NBT (see
+     * BlockSingularityCell#onBlockPlacedBy). Item NBT is trivially player-editable (a creative
+     * NBT-edit tool, a shared/cheated item, a foreign/future-version save) - a mode value outside
+     * MODE_COUNT would otherwise index BlockSingularityCell's per-mode icon array out of bounds
+     * the next time this face renders, so each byte is validated individually and anything
+     * out-of-range is just skipped (leaving that face at whatever it already was) rather than
+     * rejecting the whole array.
+     */
     public void setSideModes(byte[] sides) {
         for (int i = 0; i < Math.min(sideCache.length, sides.length); i++) {
-            sideCache[i] = sides[i];
+            if (sides[i] >= 0 && sides[i] < MODE_COUNT) {
+                sideCache[i] = sides[i];
+            }
         }
         markDirty();
     }
@@ -279,10 +289,21 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler {
         energyStored = tag.getLong("Energy");
         if (tag.hasKey("Sides")) {
             byte[] sides = tag.getByteArray("Sides");
-            if (sides.length == sideCache.length) {
+            // See setSideModes' own doc for why this is validated - a mode outside MODE_COUNT
+            // would otherwise index BlockSingularityCell's per-mode icon array out of bounds.
+            if (sides.length == sideCache.length && isValidSideArray(sides)) {
                 sideCache = sides;
             }
         }
+    }
+
+    private static boolean isValidSideArray(byte[] sides) {
+        for (byte mode : sides) {
+            if (mode < 0 || mode >= MODE_COUNT) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** See TileAdvancedPulverizer#getDescriptionPacket - without this a freshly loaded chunk never tells the client the real charge/sides (or the light level charge implies). */

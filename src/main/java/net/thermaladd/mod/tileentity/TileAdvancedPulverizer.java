@@ -241,6 +241,16 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         return side >= 0 && side < 6;
     }
 
+    /** See readFromNBT's own use of this - guards against a mode value outside SIDE_MODE_COUNT reaching sideCache from tampered/foreign NBT. */
+    private static boolean isValidSideArray(byte[] sides) {
+        for (byte mode : sides) {
+            if (mode < 0 || mode >= SIDE_MODE_COUNT) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public boolean cycleSideMode(int side, int direction) {
         if (!isValidSide(side) || !augmentReconfigSides || side == facing) {
             return false;
@@ -1264,7 +1274,12 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
         if (tag.hasKey("Sides")) {
             byte[] sides = tag.getByteArray("Sides");
-            if (sides.length == sideCache.length) {
+            // Tampered/foreign/downgraded-from-a-future-version NBT could carry a mode value
+            // outside SIDE_MODE_COUNT, which would later index BlockAdvancedPulverizer's
+            // per-mode icon arrays out of bounds during rendering - reject the whole array
+            // rather than trust it element-by-element (sideCache's own zero-initialized default
+            // is already all-Disabled, a safe fallback).
+            if (sides.length == sideCache.length && isValidSideArray(sides)) {
                 sideCache = sides;
             }
         }

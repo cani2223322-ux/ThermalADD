@@ -155,6 +155,16 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         return side >= 0 && side < 6;
     }
 
+    /** See readFromNBT's own use of this - guards against a mode value outside SIDE_MODE_COUNT reaching sideCache from tampered/foreign NBT. */
+    private static boolean isValidSideArray(byte[] sides) {
+        for (byte mode : sides) {
+            if (mode < 0 || mode >= SIDE_MODE_COUNT) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** Refuses to touch the front face, matching real TE's TileReconfigurable#incrSide/decrSide. */
     public boolean cycleSideMode(int side, int direction) {
         if (!isValidSide(side) || !augmentReconfigSides || side == facing) {
@@ -1014,7 +1024,10 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
 
         if (tag.hasKey("Sides")) {
             byte[] sides = tag.getByteArray("Sides");
-            if (sides.length == sideCache.length) {
+            // See TileAdvancedPulverizer#readFromNBT's identical guard - tampered/foreign NBT
+            // could otherwise carry a mode outside SIDE_MODE_COUNT and later index
+            // BlockAdvancedFurnace's per-mode icon arrays out of bounds during rendering.
+            if (sides.length == sideCache.length && isValidSideArray(sides)) {
                 sideCache = sides;
             }
         }

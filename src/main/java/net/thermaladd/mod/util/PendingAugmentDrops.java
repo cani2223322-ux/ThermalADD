@@ -1,6 +1,6 @@
 package net.thermaladd.mod.util;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import net.minecraft.nbt.NBTTagCompound;
@@ -18,10 +18,26 @@ import net.minecraft.nbt.NBTTagCompound;
  * Originally built to fix an augment duplication bug: augments used to drop as separate loose
  * item entities, which meant a re-placed block got handed a brand new set of default augments
  * on top of the ones already lying on the ground.
+ *
+ * {@code take()} isn't guaranteed to run for every {@code put()}: a creative-mode break never
+ * calls {@code getDrops} at all (Block#breakBlock still runs, {@code World#func_147480_a} is
+ * called with {@code dropBlock=false}), and an explosion's own drop-chance roll can skip it too -
+ * either way, the pending entry would otherwise sit in this map forever, a slow unbounded leak
+ * on any long-running server with creative-mode use. Capped as an eviction-oldest LRU instead of
+ * a plain HashMap so a missed take() can never accumulate past MAX_PENDING entries - comfortably
+ * above anything a single tick's worth of simultaneous breaks (an explosion, WorldEdit, etc.)
+ * would ever need alive at once.
  */
 public final class PendingAugmentDrops {
 
-    private static final Map<Long, NBTTagCompound> PENDING = new HashMap<Long, NBTTagCompound>();
+    private static final int MAX_PENDING = 64;
+
+    private static final Map<Long, NBTTagCompound> PENDING = new LinkedHashMap<Long, NBTTagCompound>(16, 0.75F, false) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, NBTTagCompound> eldest) {
+            return size() > MAX_PENDING;
+        }
+    };
 
     private PendingAugmentDrops() {
     }
