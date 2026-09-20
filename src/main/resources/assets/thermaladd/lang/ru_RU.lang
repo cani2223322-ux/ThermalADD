@@ -24,8 +24,6 @@ gui.thermaladd.energy.tab.consumption=Расход:
 gui.thermaladd.energy.tab.maxpower=Макс. энергия/т:
 gui.thermaladd.energy.tab.stored=Запас:
 
-gui.thermaladd.tank.empty=Пусто
-
 tooltip.thermaladd.tier=§7Тир: §b%s
 tooltip.thermaladd.capacity=§7Запас энергии: §e%s RF
 tooltip.thermaladd.input=§7Макс. приём: §e%s RF/т

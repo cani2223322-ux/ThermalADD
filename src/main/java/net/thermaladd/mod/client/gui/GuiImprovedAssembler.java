@@ -3,8 +3,12 @@ package net.thermaladd.mod.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.lwjgl.opengl.GL11;
+
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.fluids.FluidStack;
 import net.thermaladd.mod.inventory.ContainerImprovedAssembler;
@@ -31,11 +35,21 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
     private static final int ENERGY_WIDTH = 14;
     private static final int ENERGY_HEIGHT = 58;
 
-    /** Same fluid tank real TE's own Assembler shows (GuiAssembler's ElementFluidTank) - sized/positioned to fit the gap between the 2nd output slot column and the RF socket. */
-    private static final int TANK_X = 130;
+    /**
+     * Same fluid tank real TE's own Assembler shows (GuiAssembler's ElementFluidTank), same
+     * 16x60 size - positioned to fit the gap between the 2nd output slot column and the RF
+     * socket. The frame/gauge overlay (the blue border + red tick marks) is real TE's own
+     * {@code cofh:textures/gui/elements/FluidTank.png} (64x64 sheet), used directly like every
+     * other real CoFH/TE texture this mod already references - real
+     * ElementFluidTank#drawBackground blits it from {@code (32 + gaugeType*16, 1)} sized
+     * 16x60; {@code setGauge(1)} (what the real Assembler's own tank uses) puts that at UV
+     * (48, 1).
+     */
+    private static final ResourceLocation TANK_TEXTURE = new ResourceLocation("cofh", "textures/gui/elements/FluidTank.png");
+    private static final int TANK_X = 129;
     private static final int TANK_Y = 17;
-    private static final int TANK_WIDTH = 14;
-    private static final int TANK_HEIGHT = 58;
+    private static final int TANK_WIDTH = 16;
+    private static final int TANK_HEIGHT = 60;
     /** Used whenever a fluid reports a plain white tint (most vanilla-style fluids bake their actual color into the texture, not this multiplier) so the bar isn't just a blank white sliver. */
     private static final int TANK_FALLBACK_COLOR = 0xFF3060C0;
 
@@ -146,7 +160,13 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         }
 
         drawEnergyBar(left, top);
-        drawFluidTank(left, top);
+        // Real TE doesn't bake this border into FluidTank.png at all - GuiAssembler layers a
+        // separate ElementSlotOverlay on top of the tank, shown only while some side is set to
+        // an input-flavored mode (hasSide(1)||hasSide(3)||hasSide(4)). We already compute that
+        // exact condition as schematicHighlight above for the schematic slots, so reuse it here
+        // instead of re-deriving it; output is included too since our own tank (unlike real
+        // TE's) can also be drained via an Output-configured side.
+        drawFluidTank(left, top, schematicHighlight != HIGHLIGHT_NONE ? schematicHighlight : outputHighlight);
 
         augmentsTab.drawBackground(left, top);
         if (tile.augmentReconfigSides) {
@@ -176,21 +196,53 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         }
     }
 
-    private void drawFluidTank(int left, int top) {
-        drawTESocket(left + TANK_X, top + TANK_Y, TANK_WIDTH, TANK_HEIGHT);
+    /** Matches real ElementFluidTank#drawBackground's own draw order: the fluid fill first, then the frame/gauge texture on top - its inner cavity is transparent, letting the fill show through the real border/tick-mark artwork. The role-colored ring is drawn last, around the outside, same as every other TE-styled slot in this GUI. */
+    private void drawFluidTank(int left, int top, int roleColor) {
+        int x = left + TANK_X;
+        int y = top + TANK_Y;
 
         FluidStack fluid = tile.getTankFluid();
-        if (fluid == null || fluid.amount <= 0) {
-            return;
+        if (fluid != null && fluid.amount > 0) {
+            int filled = (int) (TANK_HEIGHT * ((float) fluid.amount / (float) tile.getTankCapacity()));
+            if (filled > 0) {
+                int rawColor = fluid.getFluid().getColor();
+                int color = (rawColor & 0xFFFFFF) == 0xFFFFFF ? TANK_FALLBACK_COLOR : (0xFF000000 | (rawColor & 0xFFFFFF));
+                drawRect(x, y + (TANK_HEIGHT - filled), x + TANK_WIDTH, y + TANK_HEIGHT, color);
+            }
         }
-        int filled = (int) (TANK_HEIGHT * ((float) fluid.amount / (float) tile.getTankCapacity()));
-        if (filled <= 0) {
-            return;
-        }
-        int rawColor = fluid.getFluid().getColor();
-        int color = (rawColor & 0xFFFFFF) == 0xFFFFFF ? TANK_FALLBACK_COLOR : (0xFF000000 | (rawColor & 0xFFFFFF));
-        drawRect(left + TANK_X, top + TANK_Y + (TANK_HEIGHT - filled),
-                left + TANK_X + TANK_WIDTH, top + TANK_Y + TANK_HEIGHT, color);
+
+        drawTankFrame(x, y);
+        drawTankRing(x, y, roleColor);
+    }
+
+    /** Same 1px ring convention as {@link TabbedMachineGui#drawTESlot(int, int, int)}, just sized for the tank's own 16x60 footprint instead of an 18x18 item slot. */
+    private void drawTankRing(int x, int y, int color) {
+        drawRect(x - 1, y - 1, x + TANK_WIDTH + 1, y, color);
+        drawRect(x - 1, y + TANK_HEIGHT, x + TANK_WIDTH + 1, y + TANK_HEIGHT + 1, color);
+        drawRect(x - 1, y - 1, x, y + TANK_HEIGHT + 1, color);
+        drawRect(x + TANK_WIDTH, y - 1, x + TANK_WIDTH + 1, y + TANK_HEIGHT + 1, color);
+    }
+
+    /**
+     * {@code drawTexturedModalRect} always assumes a 256x256 sheet (its UV math divides by
+     * 256 unconditionally) - wrong for this 64x64 texture, so this blits the (48,1)-(64,61)
+     * region by hand with explicit UV fractions instead, the same "standalone non-256-sheet
+     * texture" workaround {@link GuiSideTab#drawIcon16} already uses.
+     */
+    private void drawTankFrame(int x, int y) {
+        mc.getTextureManager().bindTexture(TANK_TEXTURE);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        float u1 = 48 / 64F;
+        float u2 = 64 / 64F;
+        float v1 = 1 / 64F;
+        float v2 = 61 / 64F;
+        Tessellator t = Tessellator.instance;
+        t.startDrawingQuads();
+        t.addVertexWithUV(x, y + TANK_HEIGHT, zLevel, u1, v2);
+        t.addVertexWithUV(x + TANK_WIDTH, y + TANK_HEIGHT, zLevel, u2, v2);
+        t.addVertexWithUV(x + TANK_WIDTH, y, zLevel, u2, v1);
+        t.addVertexWithUV(x, y, zLevel, u1, v1);
+        t.draw();
     }
 
     @Override
@@ -246,14 +298,16 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
 
         if (mouseX >= left + TANK_X && mouseX < left + TANK_X + TANK_WIDTH
                 && mouseY >= top + TANK_Y && mouseY < top + TANK_Y + TANK_HEIGHT) {
+            // Matches real ElementFluidTank#addTooltip exactly: the fluid's own name only shows
+            // up as a line when there's actually something in the tank, but the "amount /
+            // capacity" line is always shown, even at 0.
             List<String> tankTooltip = new ArrayList<String>();
             FluidStack fluid = tile.getTankFluid();
-            if (fluid != null && fluid.amount > 0) {
+            int amount = fluid != null ? fluid.amount : 0;
+            if (fluid != null && amount > 0) {
                 tankTooltip.add(fluid.getFluid().getLocalizedName(fluid));
-                tankTooltip.add(fluid.amount + " / " + tile.getTankCapacity() + " mB");
-            } else {
-                tankTooltip.add(StatCollector.translateToLocal("gui.thermaladd.tank.empty"));
             }
+            tankTooltip.add(amount + " / " + tile.getTankCapacity() + " mB");
             drawHoveringText(tankTooltip, mouseX, mouseY, fontRendererObj);
             return;
         }

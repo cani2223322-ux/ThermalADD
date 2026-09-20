@@ -24,8 +24,6 @@ gui.thermaladd.energy.tab.consumption=Consumption:
 gui.thermaladd.energy.tab.maxpower=Max Energy/t:
 gui.thermaladd.energy.tab.stored=Stored:
 
-gui.thermaladd.tank.empty=Empty
-
 tooltip.thermaladd.tier=§7Tier: §b%s
 tooltip.thermaladd.capacity=§7Energy Buffer: §e%s RF
 tooltip.thermaladd.input=§7Max Input: §e%s RF/t
