@@ -87,10 +87,38 @@ public class ThermalADD {
             FMLLog.severe("[%s] Failed to register recipes: %s", NAME, t);
         }
 
-        // Deliberately a bare string, not a class reference - see
-        // net.thermaladd.mod.waila.ThermalADDWailaPlugin's own javadoc for why that class must
-        // never be imported/touched anywhere else in this mod, Waila installed or not. Harmless
-        // no-op if Waila isn't present: an IMC message with no listening mod just goes nowhere.
+        // Belt-and-suspenders: send the standard IMC registration request too (this is what
+        // most other 1.7.10 mods use, and costs nothing if it doesn't get picked up), but don't
+        // rely on it alone - Waila's own "Receiving registration request from [ ... ]" log line
+        // never showed up for this mod despite the message clearly being sent (verified in the
+        // compiled class), for reasons that weren't worth chasing further. registerWailaSupport()
+        // below is the actual, verified-working path: it calls Waila's registrar directly.
         FMLInterModComms.sendMessage("Waila", "register", "net.thermaladd.mod.waila.ThermalADDWailaPlugin.callbackRegister");
+        registerWailaSupport();
+    }
+
+    /**
+     * Direct equivalent of the IMC registration above, bypassing Waila's own asynchronous IMC
+     * message collection entirely: reflectively grabs mcp.mobius.waila.api.impl.ModuleRegistrar's
+     * singleton and calls net.thermaladd.mod.waila.ThermalADDWailaPlugin#callbackRegister on it
+     * ourselves. Every class name is a plain string (Class.forName), including our own plugin
+     * class - see that class's own javadoc for why it must stay untouched by any direct
+     * import/reference anywhere else in this mod. A ClassNotFoundException here just means Waila
+     * isn't installed, which is perfectly fine; anything else gets logged but never rethrown -
+     * this must never be able to take the rest of postInit (or the whole mod) down with it.
+     */
+    private void registerWailaSupport() {
+        try {
+            Class<?> registrarImplClass = Class.forName("mcp.mobius.waila.api.impl.ModuleRegistrar");
+            Object registrar = registrarImplClass.getMethod("instance").invoke(null);
+            Class<?> registrarInterface = Class.forName("mcp.mobius.waila.api.IWailaRegistrar");
+            Class<?> pluginClass = Class.forName("net.thermaladd.mod.waila.ThermalADDWailaPlugin");
+            pluginClass.getMethod("callbackRegister", registrarInterface).invoke(null, registrar);
+            FMLLog.info("[%s] Registered Waila support directly.", NAME);
+        } catch (ClassNotFoundException e) {
+            // Waila isn't installed - nothing to do.
+        } catch (Throwable t) {
+            FMLLog.warning("[%s] Could not register Waila support: %s", NAME, t);
+        }
     }
 }
