@@ -196,10 +196,21 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         }
     }
 
-    /** Matches real ElementFluidTank#drawBackground's own draw order: the fluid fill first, then the frame/gauge texture on top - its inner cavity is transparent, letting the fill show through the real border/tick-mark artwork. The role-colored ring is drawn last, around the outside, same as every other TE-styled slot in this GUI. */
+    /**
+     * Real TE's own tank border isn't part of FluidTank.png either (confirmed by decompiling it
+     * - that sheet is only the fill-color-underlay math plus the thin red tick marks); the
+     * plain socket border real TE always shows, config or not, comes from the ordinary
+     * panel-recessed bevel every TE gauge/socket widget sits in (this mod's own energy bar uses
+     * the exact same {@link #drawTESocket}). So that always-on bevel is drawn first here, then
+     * the fluid fill, then the real tick-mark texture on top, then - only while a side is
+     * actually configured - the role-colored ring around the outside. Disabling every side
+     * should only drop that outer ring, never the socket itself.
+     */
     private void drawFluidTank(int left, int top, int roleColor) {
         int x = left + TANK_X;
         int y = top + TANK_Y;
+
+        drawTESocket(x, y, TANK_WIDTH, TANK_HEIGHT);
 
         FluidStack fluid = tile.getTankFluid();
         if (fluid != null && fluid.amount > 0) {
