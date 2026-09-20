@@ -1,6 +1,5 @@
 package net.thermaladd.mod.init;
 
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 
@@ -119,48 +118,55 @@ public class ModRecipes {
     }
 
     /**
-     * ThermalADD's own "beyond spec" Machine Speed augment (see ModAugments) - crafted by
-     * pushing real Thermal Expansion's own top speed tier (machineSpeed[2], "Пространственно-
-     * временной унификатор флакса") past its limits, consuming it as the centerpiece ingredient
-     * rather than a base material. Platinum + Diamond either side mark it as a genuine endgame
-     * item, well past what this mod's own machine recipes cost.
+     * ThermalADD's own "beyond spec" Machine Speed augment (see ModAugments) - now based on the
+     * Singularity Gear as instructed, alongside its previous real Thermal Expansion tier
+     * (machineSpeed[2], "Пространственно-временной унификатор флакса", consumed as the
+     * centerpiece), replacing the old Platinum/Diamond/redstone-dust recipe (all raw/mined
+     * materials, no longer allowed). Signalum ingots and a pair of crafted Gold Power Coils mark
+     * it as a genuine endgame item - every ingredient here is itself crafted from something else:
+     * Signalum is TE's own multi-step alloy, the Power Coil is a wound/crafted TE component,
+     * Hardened Glass is Induction-Smelter-crafted, and the Gear/augment are this mod's/TE's own
+     * crafted items - nothing raw.
      */
     private static void registerSpeedLevel4AugmentRecipe() {
-        // P D P      P = Platinum ingot, D = Diamond
-        // G S G      G = Hardened Glass, S = real Machine Speed III augment (consumed/upgraded)
-        // P R P      R = Redstone dust
+        // S G S      S = Signalum ingot, G = Singularity Gear
+        // H A H      H = Hardened Glass, A = real Machine Speed III augment (consumed/upgraded)
+        // S P S      P = Gold Power Coil (crafted)
         GameRegistry.addRecipe(new ShapedOreRecipe(
                 ModAugments.speedLevel4,
-                "PDP",
-                "GSG",
-                "PRP",
-                'P', "ingotPlatinum",
-                'D', new ItemStack(Items.diamond),
-                'G', "blockGlassHardened",
-                'S', TEAugments.machineSpeed[2],
-                'R', "dustRedstone"));
+                "SGS",
+                "HAH",
+                "SPS",
+                'S', "ingotSignalum",
+                'G', ModItems.singularityGear,
+                'H', "blockGlassHardened",
+                'A', TEAugments.machineSpeed[2],
+                'P', TEItems.powerCoilGold));
     }
 
     /**
-     * ThermalADD's own "beyond spec" Machine Secondary (sieve) tier - same idea as the Speed
-     * Level 4 recipe above, just themed with Emerald instead of Diamond so the two endgame
-     * augments don't share an identical shopping list: consumes real Thermal Expansion's own
-     * top sieve tier (machineSecondary[2], "Отклик Гиросервомеханизма") as the centerpiece.
+     * ThermalADD's own "beyond spec" Machine Secondary (sieve) tier - same Singularity Gear +
+     * previous-tier-augment base as the Speed Level 4 recipe above, themed with Enderium instead
+     * of Signalum and a Resonant Capacitor instead of a Power Coil so the two endgame augments
+     * don't share an identical shopping list: consumes real Thermal Expansion's own top sieve
+     * tier (machineSecondary[2], "Отклик Гиросервомеханизма") as the centerpiece. Every
+     * ingredient is crafted - Enderium is TE's own multi-step alloy, the Resonant Capacitor is
+     * itself upgrade-crafted from a Reinforced Capacitor + Enderium - nothing raw.
      */
     private static void registerSecondarySieve4AugmentRecipe() {
-        // P E P      P = Platinum ingot, E = Emerald
-        // G S G      G = Hardened Glass, S = real Machine Secondary III augment (consumed/upgraded)
-        // P R P      R = Redstone dust
+        // E G E      E = Enderium ingot, G = Singularity Gear
+        // H B H      H = Hardened Glass, B = real Machine Secondary III augment (consumed/upgraded)
+        // E K E      K = Resonant Capacitor (crafted)
         GameRegistry.addRecipe(new ShapedOreRecipe(
                 ModAugments.secondarySieve4,
-                "PEP",
-                "GSG",
-                "PRP",
-                'P', "ingotPlatinum",
-                'E', new ItemStack(Items.emerald),
-                'G', "blockGlassHardened",
-                'S', TEAugments.machineSecondary[2],
-                'R', "dustRedstone"));
+                "EGE",
+                "HBH",
+                "EKE",
+                'E', "ingotEnderium",
+                'G', ModItems.singularityGear,
+                'H', "blockGlassHardened",
+                'B', TEAugments.machineSecondary[2],
+                'K', TEItems.capacitorResonant));
     }
 
     /**
