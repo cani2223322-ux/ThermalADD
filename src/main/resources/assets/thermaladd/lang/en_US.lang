@@ -1,5 +1,5 @@
-tile.advancedPulverizer.name=Advanced Pulverizer
-tile.advancedFurnace.name=Advanced Furnace
+tile.advancedPulverizer.name=Singularity Pulverizer
+tile.advancedFurnace.name=Cyclic Furnace
 itemGroup.thermaladd=ThermalADD
 
 gui.thermaladd.tab.augments=Augments
@@ -25,8 +25,8 @@ tooltip.thermaladd.tier=§7Tier: §b%s
 tooltip.thermaladd.capacity=§7Energy Buffer: §e%s RF
 tooltip.thermaladd.input=§7Max Input: §e%s RF/t
 
-tile.improvedAssembler.name=Improved Cyclic Assembler
-container.improvedAssembler=Improved Cyclic Assembler
+tile.improvedAssembler.name=Singularity Cyclic Assembler
+container.improvedAssembler=Singularity Cyclic Assembler
 
 gui.improvedassembler.tab.augments=Augments
 gui.improvedassembler.tab.configuration=Configuration

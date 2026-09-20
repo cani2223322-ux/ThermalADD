@@ -1,5 +1,5 @@
-tile.advancedPulverizer.name=Улучшенный Измельчитель
-tile.advancedFurnace.name=Улучшенная Красная Печь
+tile.advancedPulverizer.name=Сингулярный измельчитель
+tile.advancedFurnace.name=Циклическая красная печь
 itemGroup.thermaladd=ThermalADD
 
 gui.thermaladd.tab.augments=Расширения
@@ -25,8 +25,8 @@ tooltip.thermaladd.tier=§7Тир: §b%s
 tooltip.thermaladd.capacity=§7Запас энергии: §e%s RF
 tooltip.thermaladd.input=§7Макс. приём: §e%s RF/т
 
-tile.improvedAssembler.name=Улучшенный циклический сборщик
-container.improvedAssembler=Улучшенный циклический сборщик
+tile.improvedAssembler.name=Сингулярный циклический сборщик
+container.improvedAssembler=Сингулярный циклический сборщик
 
 gui.improvedassembler.tab.augments=Расширения
 gui.improvedassembler.tab.configuration=Конфигурация

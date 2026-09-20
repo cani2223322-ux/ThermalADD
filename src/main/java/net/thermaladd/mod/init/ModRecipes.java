@@ -42,81 +42,80 @@ public class ModRecipes {
     }
 
     /**
-     * Now noticeably pricier than the first beta's recipe: a Machine Speed augment (I) is
-     * consumed into the frame itself (justifying the "faster than stock" claim), and half the
-     * Invar is swapped for Platinum - Thermal Foundation's rarest base-tier ingot - to reflect
-     * the UltimateResonant tier's higher material cost.
+     * Rebuilt around the Singularity Frame + Singularity Gear as the shared "base" the user
+     * asked for, replacing the old Invar/Platinum/redstone-dust recipe (which used plain mined
+     * materials). Enderium ingots at the corners and a pair of Machine Speed II augments
+     * (crafted, consumed/upgraded like all this mod's other augment-consuming recipes) theme
+     * this one around raw processing speed - nothing here is a raw ore/dust/gem, every
+     * ingredient is itself a crafted item (Enderium is TE's own multi-step alloy, never mined).
      */
     private static void registerAdvancedPulverizerRecipe() {
         // The real Thermal Expansion Pulverizer - metadata is its BlockMachine.Types ordinal.
         ItemStack pulverizer = new ItemStack(TEBlocks.blockMachine, 1, BlockMachine.Types.PULVERIZER.ordinal());
 
-        // I S I      I = Invar ingot, S = Machine Speed I augment (consumed into the frame)
-        // G P G      G = Hardened Glass, P = real Pulverizer
-        // N D N      N = Platinum ingot (rarer/pricier than plain Invar), D = Redstone dust
+        // E G E      E = Enderium ingot, G = Singularity Gear
+        // A P A      A = Machine Speed II augment (crafted, consumed), P = real Pulverizer
+        // E F E      F = Singularity Frame
         GameRegistry.addRecipe(new ShapedOreRecipe(
                 new ItemStack(ModBlocks.advancedPulverizer),
-                "ISI",
-                "GPG",
-                "NDN",
-                'I', "ingotInvar",
-                'S', TEAugments.machineSpeed[0],
-                'G', "blockGlassHardened",
+                "EGE",
+                "APA",
+                "EFE",
+                'E', "ingotEnderium",
+                'G', ModItems.singularityGear,
+                'A', TEAugments.machineSpeed[1],
                 'P', pulverizer,
-                'N', "ingotPlatinum",
-                'D', "dustRedstone"));
+                'F', ModBlocks.singularityFrame));
     }
 
     /**
-     * Crafted from a real Thermal Expansion Cyclic Assembler (there is no "Resonant" tier
-     * in this TE version - TE4 processing machines aren't tiered at all) plus the 3 real TE
-     * "General" augments this block supports, invar and hardened glass for the frame, and
-     * redstone to power it. Now also requires Platinum, on top of everything the original
-     * beta recipe needed, to match the UltimateResonant tier's higher material cost.
+     * Same Singularity Frame + Singularity Gear base as the other two, but themed and shaped
+     * differently: Lumium ingots instead of Enderium, and the assembler's own real Auto
+     * Input/Output augments (crafted) as the flavor ingredients instead of a speed augment -
+     * doubles up on both the Gear and the Frame (2 of each) to mark it as the priciest of the
+     * three, reflecting the Assembler's more complex automation role. Every ingredient is a
+     * crafted item - Lumium is TE's own multi-step alloy, never mined directly.
      */
     private static void registerImprovedAssemblerRecipe() {
         ItemStack cyclicAssembler = new ItemStack(TEBlocks.blockMachine, 1, BlockMachine.Types.ASSEMBLER.ordinal());
 
-        // N A I      N = Platinum ingot, A = Auto Output augment, I = Invar ingot
-        // B C D      B = Auto Input augment, C = real Cyclic Assembler, D = Reconfig Sides augment
-        // G R G      G = Hardened Glass, R = Redstone dust
+        // L O L      L = Lumium ingot, O = Auto Output augment (crafted)
+        // G C G      G = Singularity Gear, C = real Cyclic Assembler
+        // F I F      F = Singularity Frame, I = Auto Input augment (crafted)
         GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(ModBlocks.improvedAssembler),
-                "NAI",
-                "BCD",
-                "GRG",
-                'N', "ingotPlatinum",
-                'A', TEAugments.generalAutoOutput,
-                'I', "ingotInvar",
-                'B', TEAugments.generalAutoInput,
+                "LOL",
+                "GCG",
+                "FIF",
+                'L', "ingotLumium",
+                'O', TEAugments.generalAutoOutput,
+                'G', ModItems.singularityGear,
                 'C', cyclicAssembler,
-                'D', TEAugments.generalReconfigSides,
-                'G', "blockGlassHardened",
-                'R', "dustRedstone"));
+                'F', ModBlocks.singularityFrame,
+                'I', TEAugments.generalAutoInput));
     }
 
     /**
-     * Own design (no real Thermal Expansion equivalent recipe to copy from, since TE's own
-     * Furnace is unlocked from the start): a real TE Furnace at the core, Sulfur dust for the
-     * heat/fire theme, Hardened Glass and Invar for the frame like the other two machines, a
-     * Machine Speed I augment consumed into the build, and Platinum for the UltimateResonant
-     * tier's material cost.
+     * Third variant of the same Singularity Frame + Singularity Gear base: Signalum ingots for
+     * the corners and a pair of crafted Gold Power Coils (TE's own wound/crafted component,
+     * never a raw material) for the heat/power theme, replacing the old Sulfur-dust "fire"
+     * flavor now that raw dusts are off the table. Single Gear + single Frame like the
+     * Pulverizer's recipe, but a different shape/ingredient set entirely.
      */
     private static void registerAdvancedFurnaceRecipe() {
         ItemStack furnace = new ItemStack(TEBlocks.blockMachine, 1, BlockMachine.Types.FURNACE.ordinal());
 
-        // N D N      N = Platinum ingot, D = Sulfur dust (heat/fire theme)
-        // G F G      G = Hardened Glass, F = real Furnace
-        // I A I      I = Invar ingot, A = Machine Speed I augment (consumed into the frame)
+        // S G S      S = Signalum ingot, G = Singularity Gear
+        // P C P      P = Gold Power Coil (crafted), C = real Furnace
+        // S F S      F = Singularity Frame
         GameRegistry.addRecipe(new ShapedOreRecipe(new ItemStack(ModBlocks.advancedFurnace),
-                "NDN",
-                "GFG",
-                "IAI",
-                'N', "ingotPlatinum",
-                'D', "dustSulfur",
-                'G', "blockGlassHardened",
-                'F', furnace,
-                'I', "ingotInvar",
-                'A', TEAugments.machineSpeed[0]));
+                "SGS",
+                "PCP",
+                "SFS",
+                'S', "ingotSignalum",
+                'G', ModItems.singularityGear,
+                'P', TEItems.powerCoilGold,
+                'C', furnace,
+                'F', ModBlocks.singularityFrame));
     }
 
     /**
