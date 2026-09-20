@@ -1,6 +1,7 @@
 package net.thermaladd.mod.waila;
 
 import java.util.List;
+import java.util.Locale;
 
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
@@ -69,7 +70,8 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
             return currenttip;
         }
         TileSingularityCell cell = (TileSingularityCell) te;
-        String line = String.format("%,d", cell.getEnergyStoredLong()) + " / " + String.format("%,d", cell.getCapacityLong()) + " RF";
+        String line = String.format(Locale.ROOT, "%,d", cell.getEnergyStoredLong()) + " / "
+                + String.format(Locale.ROOT, "%,d", cell.getCapacityLong()) + " RF";
 
         if (currenttip instanceof ITaggedList) {
             ITaggedList<String, String> tagged = (ITaggedList<String, String>) currenttip;

@@ -2,6 +2,7 @@ package net.thermaladd.mod.client.gui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.InventoryPlayer;
@@ -178,8 +179,8 @@ public class GuiSingularityCell extends TabbedMachineGui {
         List<String> tooltip = new ArrayList<String>();
         if (mouseX >= left + ENERGY_X && mouseX < left + ENERGY_X + ENERGY_WIDTH
                 && mouseY >= top + ENERGY_Y && mouseY < top + ENERGY_Y + ENERGY_HEIGHT) {
-            tooltip.add(String.format("%,d", tile.getEnergyStoredLong()) + " RF");
-            tooltip.add(String.format("%,d", tile.getCapacityLong()) + " RF " + StatCollector.translateToLocal("gui.thermaladd.cell.capacity"));
+            tooltip.add(String.format(Locale.ROOT, "%,d", tile.getEnergyStoredLong()) + " RF");
+            tooltip.add(String.format(Locale.ROOT, "%,d", tile.getCapacityLong()) + " RF " + StatCollector.translateToLocal("gui.thermaladd.cell.capacity"));
         } else {
             configTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         }
@@ -190,16 +191,16 @@ public class GuiSingularityCell extends TabbedMachineGui {
 
     private static String formatRF(long value) {
         if (value >= 1000000000000L) {
-            return String.format("%.2fT", value / 1000000000000.0);
+            return String.format(Locale.ROOT, "%.2fT", value / 1000000000000.0);
         }
         if (value >= 1000000000L) {
-            return String.format("%.2fB", value / 1000000000.0);
+            return String.format(Locale.ROOT, "%.2fB", value / 1000000000.0);
         }
         if (value >= 1000000L) {
-            return String.format("%.2fM", value / 1000000.0);
+            return String.format(Locale.ROOT, "%.2fM", value / 1000000.0);
         }
         if (value >= 1000L) {
-            return String.format("%.2fK", value / 1000.0);
+            return String.format(Locale.ROOT, "%.2fK", value / 1000.0);
         }
         return String.valueOf(value);
     }

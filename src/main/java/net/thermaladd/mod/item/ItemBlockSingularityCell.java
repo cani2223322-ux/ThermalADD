@@ -1,6 +1,7 @@
 package net.thermaladd.mod.item;
 
 import java.util.List;
+import java.util.Locale;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
@@ -21,6 +22,7 @@ public class ItemBlockSingularityCell extends ItemBlock {
         long energy = stack.hasTagCompound() && stack.getTagCompound().hasKey("Energy")
                 ? stack.getTagCompound().getLong("Energy") : 0L;
         list.add(StatCollector.translateToLocalFormatted("tooltip.thermaladd.singularityCell.charge",
-                String.format("%,d", energy), String.format("%,d", net.thermaladd.mod.tileentity.TileSingularityCell.CAPACITY)));
+                String.format(Locale.ROOT, "%,d", energy),
+                String.format(Locale.ROOT, "%,d", net.thermaladd.mod.tileentity.TileSingularityCell.CAPACITY)));
     }
 }
