@@ -9,13 +9,9 @@ import net.minecraft.util.StatCollector;
 import net.thermaladd.mod.inventory.ContainerAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 
-/** Same self-drawn panel style as {@link GuiAdvancedPulverizer}, laid out for 3 inputs -> 2 stacked outputs (no secondary product). */
+/** Same self-drawn TE-styled panel as {@link GuiAdvancedPulverizer}, laid out for 3 inputs -> 2 stacked outputs (no secondary product). */
 public class GuiAdvancedFurnace extends TabbedMachineGui {
 
-    private static final int PANEL = 0xFFC6C6C6;
-    private static final int PANEL_DARK = 0xFF8B8B8B;
-    private static final int BORDER = 0xFF373737;
-    private static final int SLOT_BG = 0xFF8B8B8B;
     private static final int ENERGY_FILL = 0xFFB01010;
     private static final int PROGRESS_FILL = 0xFF3CA0DC;
     private static final int PROGRESS_DONE = 0xFF3CDC6E;
@@ -73,28 +69,27 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
 
-        drawRect(left, top, left + BASE_WIDTH, top + BASE_HEIGHT, PANEL);
-        drawPanelBorder(left, top, BASE_WIDTH, BASE_HEIGHT);
+        drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 
         drawEnergyBar(left, top);
 
         for (int i = 0; i < TileAdvancedFurnace.INPUT_SLOTS; i++) {
-            drawSlotFrame(left + ContainerAdvancedFurnace.INPUT_X - 1,
+            drawTESlot(left + ContainerAdvancedFurnace.INPUT_X - 1,
                     top + ContainerAdvancedFurnace.INPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE - 1);
             drawProgressBar(left, top, i);
         }
         for (int i = 0; i < TileAdvancedFurnace.OUTPUT_SLOTS; i++) {
-            drawSlotFrame(left + ContainerAdvancedFurnace.OUTPUT_X - 1,
+            drawTESlot(left + ContainerAdvancedFurnace.OUTPUT_X - 1,
                     top + ContainerAdvancedFurnace.OUTPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE - 1);
         }
 
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                drawSlotFrame(left + 8 + col * 18 - 1, top + ContainerAdvancedFurnace.PLAYER_INV_Y + row * 18 - 1);
+                drawTESlot(left + 8 + col * 18 - 1, top + ContainerAdvancedFurnace.PLAYER_INV_Y + row * 18 - 1);
             }
         }
         for (int col = 0; col < 9; col++) {
-            drawSlotFrame(left + 8 + col * 18 - 1, top + ContainerAdvancedFurnace.PLAYER_HOTBAR_Y - 1);
+            drawTESlot(left + 8 + col * 18 - 1, top + ContainerAdvancedFurnace.PLAYER_HOTBAR_Y - 1);
         }
 
         augmentsTab.drawBackground(left, top);
@@ -106,23 +101,8 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         }
     }
 
-    private void drawPanelBorder(int left, int top, int w, int h) {
-        drawRect(left, top, left + w, top + 1, BORDER);
-        drawRect(left, top + h - 1, left + w, top + h, BORDER);
-        drawRect(left, top, left + 1, top + h, BORDER);
-        drawRect(left + w - 1, top, left + w, top + h, BORDER);
-    }
-
-    private void drawSlotFrame(int x, int y) {
-        drawRect(x, y, x + 18, y + 18, BORDER);
-        drawRect(x + 1, y + 1, x + 17, y + 17, SLOT_BG);
-    }
-
     private void drawEnergyBar(int left, int top) {
-        drawRect(left + ENERGY_X - 1, top + ENERGY_Y - 1,
-                left + ENERGY_X + ENERGY_WIDTH + 1, top + ENERGY_Y + ENERGY_HEIGHT + 1, BORDER);
-        drawRect(left + ENERGY_X, top + ENERGY_Y,
-                left + ENERGY_X + ENERGY_WIDTH, top + ENERGY_Y + ENERGY_HEIGHT, PANEL_DARK);
+        drawTESocket(left + ENERGY_X, top + ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT);
 
         int maxEnergy = tile.getMaxEnergy();
         int filled = maxEnergy <= 0 ? 0 : (int) (ENERGY_HEIGHT * ((float) tile.getEnergy() / (float) maxEnergy));
@@ -136,8 +116,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         int x = left + PROGRESS_X;
         int y = top + ContainerAdvancedFurnace.INPUT_Y + line * ContainerAdvancedFurnace.SLOT_SIZE + 4;
 
-        drawRect(x - 1, y - 1, x + PROGRESS_WIDTH + 1, y + PROGRESS_HEIGHT + 1, BORDER);
-        drawRect(x, y, x + PROGRESS_WIDTH, y + PROGRESS_HEIGHT, PANEL_DARK);
+        drawTESocket(x, y, PROGRESS_WIDTH, PROGRESS_HEIGHT);
 
         int max = tile.getProgressMax(line);
         if (max <= 0) {

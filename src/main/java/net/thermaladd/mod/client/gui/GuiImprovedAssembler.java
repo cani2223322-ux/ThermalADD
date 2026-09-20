@@ -3,26 +3,24 @@ package net.thermaladd.mod.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.lwjgl.opengl.GL11;
-
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
-import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.inventory.ContainerImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 
 /**
- * Same visual language as Thermal Expansion's own augmentable-machine GUIs: the normal
- * crafting box on the left, and two real CoFH-style side tabs on the right edge -
- * "Augments" and "Configuration" (hidden until unlocked) - reusing Thermal Expansion's own
- * tab/icon textures for a pixel-accurate look.
+ * Same self-drawn Thermal Expansion-styled panel as the other 3 machine GUIs in this mod (see
+ * {@link TabbedMachineGui#drawTEPanel}), replacing the old one-off "improvedAssembler.png"
+ * texture (a flat, non-TE-styled placeholder from before this mod adopted pixel-matched TE
+ * styling everywhere else). 6 schematic/output slot pairs with a small static direction arrow
+ * between each pair (the real Assembler crafts instantly, no progress timer to animate), the
+ * 9x2 material buffer below, and the vertical RF socket on the right edge.
  */
 public class GuiImprovedAssembler extends TabbedMachineGui {
 
-    private static final ResourceLocation TEXTURE =
-            new ResourceLocation(ThermalADD.MODID, "textures/gui/improvedAssembler.png");
+    private static final int ARROW_COLOR = 0xFF8B8B8B;
+    private static final int ENERGY_FILL = 0xFFB01010;
 
     private static final int BASE_WIDTH = 176;
     private static final int BASE_HEIGHT = 220;
@@ -89,17 +87,38 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
-        GL11.glColor4f(1F, 1F, 1F, 1F);
-        mc.getTextureManager().bindTexture(TEXTURE);
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
-        drawTexturedModalRect(left, top, 0, 0, BASE_WIDTH, BASE_HEIGHT);
 
-        int filled = (int) (ENERGY_HEIGHT * ((float) tile.getEnergy() / (float) TileImprovedAssembler.ENERGY_CAPACITY));
-        if (filled > 0) {
-            drawRect(left + ENERGY_X + 2, top + ENERGY_Y + 2 + (ENERGY_HEIGHT - 4 - filled),
-                    left + ENERGY_X + ENERGY_WIDTH - 2, top + ENERGY_Y + ENERGY_HEIGHT - 2, 0xFFB01010);
+        drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
+
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 2; col++) {
+                int x = left + ContainerImprovedAssembler.PAIR_X[col];
+                int y = top + ContainerImprovedAssembler.ROW_Y[row];
+                drawTESlot(x - 1, y - 1);
+                drawTESlot(x + ContainerImprovedAssembler.OUTPUT_OFFSET - 1, y - 1);
+                drawArrow(x + ContainerImprovedAssembler.SLOT_SIZE + 4, y + 5);
+            }
         }
+
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 9; col++) {
+                drawTESlot(left + ContainerImprovedAssembler.BUFFER_X + col * ContainerImprovedAssembler.SLOT_SIZE - 1,
+                        top + ContainerImprovedAssembler.BUFFER_Y + row * ContainerImprovedAssembler.SLOT_SIZE - 1);
+            }
+        }
+
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                drawTESlot(left + 8 + col * 18 - 1, top + ContainerImprovedAssembler.PLAYER_INV_Y + row * 18 - 1);
+            }
+        }
+        for (int col = 0; col < 9; col++) {
+            drawTESlot(left + 8 + col * 18 - 1, top + ContainerImprovedAssembler.PLAYER_HOTBAR_Y - 1);
+        }
+
+        drawEnergyBar(left, top);
 
         augmentsTab.drawBackground(left, top);
         if (tile.augmentReconfigSides) {
@@ -107,6 +126,24 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         }
         if (tile.augmentRedstoneControl) {
             redstoneTab.drawBackground(left, top);
+        }
+    }
+
+    /** Small static right-pointing triangle (7x7) marking schematic -> output direction; the real Assembler crafts instantly, so there's no progress fraction to animate here. */
+    private void drawArrow(int x, int y) {
+        int[] widths = {1, 2, 3, 4, 3, 2, 1};
+        for (int row = 0; row < widths.length; row++) {
+            drawRect(x, y + row, x + widths[row], y + row + 1, ARROW_COLOR);
+        }
+    }
+
+    private void drawEnergyBar(int left, int top) {
+        drawTESocket(left + ENERGY_X, top + ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT);
+
+        int filled = (int) (ENERGY_HEIGHT * ((float) tile.getEnergy() / (float) TileImprovedAssembler.ENERGY_CAPACITY));
+        if (filled > 0) {
+            drawRect(left + ENERGY_X, top + ENERGY_Y + (ENERGY_HEIGHT - filled),
+                    left + ENERGY_X + ENERGY_WIDTH, top + ENERGY_Y + ENERGY_HEIGHT, ENERGY_FILL);
         }
     }
 

@@ -22,10 +22,6 @@ import net.thermaladd.mod.tileentity.TileSingularityCell;
  */
 public class GuiSingularityCell extends TabbedMachineGui {
 
-    private static final int PANEL = 0xFFC6C6C6;
-    private static final int PANEL_DARK = 0xFF8B8B8B;
-    private static final int BORDER = 0xFF373737;
-    private static final int SLOT_BG = 0xFF8B8B8B;
     private static final int ENERGY_FILL_LOW = 0xFF8B2FD8;
     private static final int ENERGY_FILL_HIGH = 0xFF2FD8C8;
 
@@ -67,39 +63,23 @@ public class GuiSingularityCell extends TabbedMachineGui {
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
 
-        drawRect(left, top, left + BASE_WIDTH, top + BASE_HEIGHT, PANEL);
-        drawPanelBorder(left, top, BASE_WIDTH, BASE_HEIGHT);
+        drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
         drawEnergyBar(left, top);
 
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                drawSlotFrame(left + 8 + col * 18 - 1, top + PLAYER_INV_Y + row * 18 - 1);
+                drawTESlot(left + 8 + col * 18 - 1, top + PLAYER_INV_Y + row * 18 - 1);
             }
         }
         for (int col = 0; col < 9; col++) {
-            drawSlotFrame(left + 8 + col * 18 - 1, top + PLAYER_HOTBAR_Y - 1);
+            drawTESlot(left + 8 + col * 18 - 1, top + PLAYER_HOTBAR_Y - 1);
         }
 
         configTab.drawBackground(left, top);
     }
 
-    private void drawPanelBorder(int left, int top, int w, int h) {
-        drawRect(left, top, left + w, top + 1, BORDER);
-        drawRect(left, top + h - 1, left + w, top + h, BORDER);
-        drawRect(left, top, left + 1, top + h, BORDER);
-        drawRect(left + w - 1, top, left + w, top + h, BORDER);
-    }
-
-    private void drawSlotFrame(int x, int y) {
-        drawRect(x, y, x + 18, y + 18, BORDER);
-        drawRect(x + 1, y + 1, x + 17, y + 17, SLOT_BG);
-    }
-
     private void drawEnergyBar(int left, int top) {
-        drawRect(left + ENERGY_X - 1, top + ENERGY_Y - 1,
-                left + ENERGY_X + ENERGY_WIDTH + 1, top + ENERGY_Y + ENERGY_HEIGHT + 1, BORDER);
-        drawRect(left + ENERGY_X, top + ENERGY_Y,
-                left + ENERGY_X + ENERGY_WIDTH, top + ENERGY_Y + ENERGY_HEIGHT, PANEL_DARK);
+        drawTESocket(left + ENERGY_X, top + ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT);
 
         long energy = tile.getEnergyStoredLong();
         long capacity = tile.getCapacityLong();

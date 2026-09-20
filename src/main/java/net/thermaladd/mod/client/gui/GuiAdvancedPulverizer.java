@@ -10,19 +10,16 @@ import net.thermaladd.mod.inventory.ContainerAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 
 /**
- * Entirely self-drawn main panel (no background texture file): a flat CoFH/TE-styled panel
- * built out of plain rectangles, in the same spirit as the sibling ImprovedAssembler GUI's
- * hand-drawn energy bar, just extended to the whole panel. Draws the RF bar, 3 independent
- * progress bars (one per input line) and frames for all machine slots. The Augments and
- * Configuration side tabs, on the other hand, reuse Thermal Expansion's own real tab/icon
- * textures (see GuiSideTab) for a pixel-accurate look, since CoFHCore is a hard dependency.
+ * Entirely self-drawn main panel (no background texture file): a pixel-matched Thermal
+ * Expansion-styled panel (see {@link TabbedMachineGui#drawTEPanel}) built out of plain
+ * rectangles, since this machine's 3-parallel-input layout is taller/different from any stock
+ * TE machine texture. Draws the RF bar, 3 independent progress bars (one per input line) and
+ * frames for all machine slots. The Augments and Configuration side tabs, on the other hand,
+ * reuse Thermal Expansion's own real tab/icon textures (see GuiSideTab) for a pixel-accurate
+ * look, since CoFHCore is a hard dependency.
  */
 public class GuiAdvancedPulverizer extends TabbedMachineGui {
 
-    private static final int PANEL = 0xFFC6C6C6;
-    private static final int PANEL_DARK = 0xFF8B8B8B;
-    private static final int BORDER = 0xFF373737;
-    private static final int SLOT_BG = 0xFF8B8B8B;
     private static final int ENERGY_FILL = 0xFFB01010;
     private static final int PROGRESS_FILL = 0xFF3CA0DC;
     private static final int PROGRESS_DONE = 0xFF3CDC6E;
@@ -93,31 +90,30 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         // Deliberately BASE_WIDTH/BASE_HEIGHT here, NOT xSize/ySize: xSize is padded to cover
         // the tab flap area for click-detection (see the constructor), but the visible panel
         // itself is still only the original 176x178 box.
-        drawRect(left, top, left + BASE_WIDTH, top + BASE_HEIGHT, PANEL);
-        drawPanelBorder(left, top, BASE_WIDTH, BASE_HEIGHT);
+        drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 
         drawEnergyBar(left, top);
 
         for (int i = 0; i < TileAdvancedPulverizer.INPUT_SLOTS; i++) {
-            drawSlotFrame(left + ContainerAdvancedPulverizer.INPUT_X - 1,
+            drawTESlot(left + ContainerAdvancedPulverizer.INPUT_X - 1,
                     top + ContainerAdvancedPulverizer.INPUT_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1);
             drawProgressBar(left, top, i);
         }
         for (int i = 0; i < TileAdvancedPulverizer.OUTPUT_PRIMARY_SLOTS; i++) {
-            drawSlotFrame(left + ContainerAdvancedPulverizer.OUTPUT_PRIMARY_X - 1,
+            drawTESlot(left + ContainerAdvancedPulverizer.OUTPUT_PRIMARY_X - 1,
                     top + ContainerAdvancedPulverizer.OUTPUT_PRIMARY_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1);
         }
-        drawSlotFrame(left + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_X - 1,
+        drawTESlot(left + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_X - 1,
                 top + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_Y - 1);
 
         // player inventory slot frames
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                drawSlotFrame(left + 8 + col * 18 - 1, top + ContainerAdvancedPulverizer.PLAYER_INV_Y + row * 18 - 1);
+                drawTESlot(left + 8 + col * 18 - 1, top + ContainerAdvancedPulverizer.PLAYER_INV_Y + row * 18 - 1);
             }
         }
         for (int col = 0; col < 9; col++) {
-            drawSlotFrame(left + 8 + col * 18 - 1, top + ContainerAdvancedPulverizer.PLAYER_HOTBAR_Y - 1);
+            drawTESlot(left + 8 + col * 18 - 1, top + ContainerAdvancedPulverizer.PLAYER_HOTBAR_Y - 1);
         }
 
         augmentsTab.drawBackground(left, top);
@@ -129,23 +125,8 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         }
     }
 
-    private void drawPanelBorder(int left, int top, int w, int h) {
-        drawRect(left, top, left + w, top + 1, BORDER);
-        drawRect(left, top + h - 1, left + w, top + h, BORDER);
-        drawRect(left, top, left + 1, top + h, BORDER);
-        drawRect(left + w - 1, top, left + w, top + h, BORDER);
-    }
-
-    private void drawSlotFrame(int x, int y) {
-        drawRect(x, y, x + 18, y + 18, BORDER);
-        drawRect(x + 1, y + 1, x + 17, y + 17, SLOT_BG);
-    }
-
     private void drawEnergyBar(int left, int top) {
-        drawRect(left + ENERGY_X - 1, top + ENERGY_Y - 1,
-                left + ENERGY_X + ENERGY_WIDTH + 1, top + ENERGY_Y + ENERGY_HEIGHT + 1, BORDER);
-        drawRect(left + ENERGY_X, top + ENERGY_Y,
-                left + ENERGY_X + ENERGY_WIDTH, top + ENERGY_Y + ENERGY_HEIGHT, PANEL_DARK);
+        drawTESocket(left + ENERGY_X, top + ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT);
 
         int maxEnergy = tile.getMaxEnergy();
         int filled = maxEnergy <= 0 ? 0 : (int) (ENERGY_HEIGHT * ((float) tile.getEnergy() / (float) maxEnergy));
@@ -159,8 +140,7 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         int x = left + PROGRESS_X;
         int y = top + ContainerAdvancedPulverizer.INPUT_Y + line * ContainerAdvancedPulverizer.SLOT_SIZE + 4;
 
-        drawRect(x - 1, y - 1, x + PROGRESS_WIDTH + 1, y + PROGRESS_HEIGHT + 1, BORDER);
-        drawRect(x, y, x + PROGRESS_WIDTH, y + PROGRESS_HEIGHT, PANEL_DARK);
+        drawTESocket(x, y, PROGRESS_WIDTH, PROGRESS_HEIGHT);
 
         int max = tile.getProgressMax(line);
         if (max <= 0) {
