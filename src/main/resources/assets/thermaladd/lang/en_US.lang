@@ -55,3 +55,14 @@ tooltip.thermaladd.addAugment.secondarySieve4.1=§c+25% RF/t Used§r
 
 tile.singularityCell.name=Singularity Energy Cell
 tooltip.thermaladd.singularityCell.charge=§7Charge: §e%s / %s RF§r
+
+gui.thermaladd.cell.tab.configuration=Configuration
+gui.thermaladd.cell.side.up=Top
+gui.thermaladd.cell.side.down=Bottom
+gui.thermaladd.cell.side.north=North
+gui.thermaladd.cell.side.south=South
+gui.thermaladd.cell.side.east=East
+gui.thermaladd.cell.side.west=West
+gui.thermaladd.cell.side.hint=Left-click: cycle | Right-click: cycle back | Shift: reset
+gui.thermaladd.cell.energyIn=Input: %s RF/t
+gui.thermaladd.cell.energyOut=Output: %s RF/t

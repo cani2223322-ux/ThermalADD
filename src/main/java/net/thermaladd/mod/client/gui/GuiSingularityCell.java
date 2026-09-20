@@ -1,14 +1,25 @@
 package net.thermaladd.mod.client.gui;
 
-import net.minecraft.client.gui.inventory.GuiContainer;
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.util.StatCollector;
 
 import net.thermaladd.mod.inventory.ContainerSingularityCell;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
-/** Same flat hand-drawn panel style as GuiAdvancedPulverizer/GuiAdvancedFurnace - one big energy bar, no tabs (this block has no augments, no side config, nothing else to show). */
-public class GuiSingularityCell extends GuiContainer {
+/**
+ * Same flat hand-drawn panel style as GuiAdvancedPulverizer/GuiAdvancedFurnace, laid out closer
+ * to real Thermal Expansion's own Energy Cell GUI: a tall vertical bar with live RF/t in/out
+ * readouts flanking it, the fill amount printed below, then the player's own inventory - with
+ * enough clearance above it (PLAYER_INV_Y = 136, same as GuiImprovedAssembler's own taller
+ * layout) that nothing overlaps it, unlike the first version of this GUI. One side tab -
+ * Configuration (TabConfigCell), same real-TE-cell 3-mode side config GuiAdvancedPulverizer's
+ * own Configuration tab uses for its machine.
+ */
+public class GuiSingularityCell extends TabbedMachineGui {
 
     private static final int PANEL = 0xFFC6C6C6;
     private static final int PANEL_DARK = 0xFF8B8B8B;
@@ -18,23 +29,36 @@ public class GuiSingularityCell extends GuiContainer {
     private static final int ENERGY_FILL_HIGH = 0xFF2FD8C8;
 
     private static final int BASE_WIDTH = 176;
-    private static final int BASE_HEIGHT = 178;
+    private static final int BASE_HEIGHT = 220;
 
-    private static final int ENERGY_X = 21;
-    private static final int ENERGY_Y = 17;
-    private static final int ENERGY_WIDTH = 134;
-    private static final int ENERGY_HEIGHT = 40;
+    private static final int ENERGY_WIDTH = 20;
+    private static final int ENERGY_HEIGHT = 90;
+    private static final int ENERGY_X = (BASE_WIDTH - ENERGY_WIDTH) / 2;
+    private static final int ENERGY_Y = 18;
 
     private static final int PLAYER_INV_Y = ContainerSingularityCell.PLAYER_INV_Y;
     private static final int PLAYER_HOTBAR_Y = ContainerSingularityCell.PLAYER_HOTBAR_Y;
 
+    private static final int TAB_STACK_X = BASE_WIDTH;
+    private static final int TAB_STACK_Y = 4;
+
     private final TileSingularityCell tile;
+    private final TabConfigCell configTab;
 
     public GuiSingularityCell(InventoryPlayer playerInv, TileSingularityCell tile) {
         super(new ContainerSingularityCell(playerInv, tile));
         this.tile = tile;
-        xSize = BASE_WIDTH;
+        // See GuiAdvancedPulverizer's constructor for why xSize has to cover the tab flap area.
+        xSize = BASE_WIDTH + GuiSideTab.MAX_WIDTH;
         ySize = BASE_HEIGHT;
+        this.configTab = new TabConfigCell(this, tile);
+        configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y);
+    }
+
+    @Override
+    public void updateScreen() {
+        super.updateScreen();
+        configTab.update();
     }
 
     @Override
@@ -54,6 +78,8 @@ public class GuiSingularityCell extends GuiContainer {
         for (int col = 0; col < 9; col++) {
             drawSlotFrame(left + 8 + col * 18 - 1, top + PLAYER_HOTBAR_Y - 1);
         }
+
+        configTab.drawBackground(left, top);
     }
 
     private void drawPanelBorder(int left, int top, int w, int h) {
@@ -77,13 +103,14 @@ public class GuiSingularityCell extends GuiContainer {
         long energy = tile.getEnergyStoredLong();
         long capacity = tile.getCapacityLong();
         double ratio = capacity <= 0 ? 0 : energy / (double) capacity;
-        int filled = (int) (ENERGY_WIDTH * ratio);
+        int filled = (int) (ENERGY_HEIGHT * ratio);
         if (filled > 0) {
-            // Gradient fill (violet -> cyan) matching the block's own gradient texture, left to right.
+            // Gradient fill (violet at the bottom -> cyan at the top), matching the block's own gradient texture.
             for (int i = 0; i < filled; i++) {
-                float t = ENERGY_WIDTH <= 1 ? 0 : (float) i / (ENERGY_WIDTH - 1);
+                float t = ENERGY_HEIGHT <= 1 ? 0 : (float) i / (ENERGY_HEIGHT - 1);
                 int color = lerpColor(ENERGY_FILL_LOW, ENERGY_FILL_HIGH, t);
-                drawRect(left + ENERGY_X + i, top + ENERGY_Y, left + ENERGY_X + i + 1, top + ENERGY_Y + ENERGY_HEIGHT, color);
+                int y = top + ENERGY_Y + ENERGY_HEIGHT - i - 1;
+                drawRect(left + ENERGY_X, y, left + ENERGY_X + ENERGY_WIDTH, y + 1, color);
             }
         }
     }
@@ -100,14 +127,53 @@ public class GuiSingularityCell extends GuiContainer {
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
         fontRendererObj.drawString(StatCollector.translateToLocal("tile.singularityCell.name"), 8, 6, 0x404040);
+
+        long capacity = tile.getCapacityLong();
+        String fillLine1 = formatRF(tile.getEnergyStoredLong()) + " / " + formatRF(capacity) + " RF";
+        String fillLine2 = "(" + String.format("%,d", tile.getEnergyStoredLong()) + ")";
+        drawCenteredString(fontRendererObj, fillLine1, BASE_WIDTH / 2, ENERGY_Y + ENERGY_HEIGHT + 6, 0x404040);
+        drawCenteredString(fontRendererObj, fillLine2, BASE_WIDTH / 2, ENERGY_Y + ENERGY_HEIGHT + 16, 0x707070);
+
+        String inLine = StatCollector.translateToLocalFormatted("gui.thermaladd.cell.energyIn", formatRF(tile.getEnergyInPerTick()));
+        String outLine = StatCollector.translateToLocalFormatted("gui.thermaladd.cell.energyOut", formatRF(tile.getEnergyOutPerTick()));
+        fontRendererObj.drawSplitString(inLine, 6, ENERGY_Y + 4, ENERGY_X - 10, 0x404040);
+        fontRendererObj.drawSplitString(outLine, ENERGY_X + ENERGY_WIDTH + 6, ENERGY_Y + 4, ENERGY_X - 10, 0x404040);
+
         fontRendererObj.drawString(StatCollector.translateToLocal("container.inventory"), 8, PLAYER_INV_Y - 10, 0x404040);
 
-        long energy = tile.getEnergyStoredLong();
-        long capacity = tile.getCapacityLong();
-        String line1 = formatRF(energy) + " / " + formatRF(capacity) + " RF";
-        String line2 = String.format("%,d", energy);
-        drawCenteredString(fontRendererObj, line1, xSize / 2, ENERGY_Y + ENERGY_HEIGHT + 6, 0x404040);
-        drawCenteredString(fontRendererObj, "(" + line2 + ")", xSize / 2, ENERGY_Y + ENERGY_HEIGHT + 16, 0x707070);
+        configTab.drawForeground(0, 0);
+    }
+
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
+        int left = (width - xSize) / 2;
+        int top = (height - ySize) / 2;
+        boolean shift = GuiScreen.isShiftKeyDown();
+
+        if (mouseButton == 0 && configTab.isMouseOverIcon(mouseX, mouseY, left, top)) {
+            configTab.setOpen(!configTab.open);
+            return;
+        }
+        if (configTab.isFullyOpen() && configTab.isMouseOverFlap(mouseX, mouseY, left, top)) {
+            if (configTab.onContentClick(mouseX - left - configTab.getTabX(), mouseY - top - configTab.getTabY(), mouseButton, shift)) {
+                return;
+            }
+        }
+
+        super.mouseClicked(mouseX, mouseY, mouseButton);
+    }
+
+    @Override
+    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        super.drawScreen(mouseX, mouseY, partialTicks);
+        int left = (width - xSize) / 2;
+        int top = (height - ySize) / 2;
+
+        List<String> tooltip = new ArrayList<String>();
+        configTab.addTooltip(mouseX, mouseY, left, top, tooltip);
+        if (!tooltip.isEmpty()) {
+            drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
+        }
     }
 
     private static String formatRF(long value) {

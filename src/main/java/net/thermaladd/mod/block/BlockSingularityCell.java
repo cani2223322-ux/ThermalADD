@@ -23,15 +23,15 @@ import net.thermaladd.mod.util.PendingAugmentDrops;
 
 /**
  * A single-tier "beyond spec" Energy Cell, modeled on real Thermal Expansion's own Resonant
- * Energy Cell (cofh.thermalexpansion.block.cell.BlockCell/TileCell): a plain cube, no facing to
- * track (it accepts and provides energy on every side unconditionally - real TE's own side-
- * configuration/redstone-control tabs are deliberately left out here for the same "no separate
- * tier/upgrade item of its own" simplicity this mod's other blocks already use), one static
- * gradient texture rather than real TE's dynamic charge-meter TESR.
+ * Energy Cell (cofh.thermalexpansion.block.cell.BlockCell/TileCell): no facing to track (it has
+ * no "front" - every side is independently configured, see TileSingularityCell/TabConfigCell),
+ * one static gradient texture rather than real TE's dynamic charge-meter TESR, with the same 3
+ * connection-badge overlay (Disabled/Output/Input) real TE's own Cell shows per face.
  */
 public class BlockSingularityCell extends BlockContainer {
 
-    private IIcon icon;
+    /** Indexed by TileSingularityCell.MODE_* - all 6 faces use the same texture family (unlike a machine, this block has no Top/Bottom/Side distinction). */
+    private final IIcon[] icons = new IIcon[TileSingularityCell.MODE_COUNT];
 
     public BlockSingularityCell() {
         super(Material.iron);
@@ -44,12 +44,23 @@ public class BlockSingularityCell extends BlockContainer {
 
     @Override
     public void registerBlockIcons(IIconRegister register) {
-        icon = register.registerIcon(ThermalADD.MODID + ":singularityCell");
+        icons[TileSingularityCell.MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":singularityCell");
+        icons[TileSingularityCell.MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":CellOutput");
+        icons[TileSingularityCell.MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":CellInput");
     }
 
+    /** Inventory/item-form rendering: no world context, so always the plain (no badge) face. */
     @Override
     public IIcon getIcon(int side, int meta) {
-        return icon;
+        return icons[TileSingularityCell.MODE_DISABLED];
+    }
+
+    /** In-world rendering: shows the same Disabled/Output/Input badge on each face that the Configuration tab shows for it. */
+    @Override
+    public IIcon getIcon(IBlockAccess world, int x, int y, int z, int side) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        int mode = te instanceof TileSingularityCell ? ((TileSingularityCell) te).getSideMode(side) : TileSingularityCell.MODE_DISABLED;
+        return icons[mode];
     }
 
     @Override
@@ -84,17 +95,27 @@ public class BlockSingularityCell extends BlockContainer {
     }
 
     /**
-     * Same "the charge survives being picked back up" behavior real TE's own Energy Cells have
-     * (they double as portable battery packs, not just fixed storage) - captures the tile's
-     * true long-valued charge into PendingAugmentDrops (see BlockAdvancedPulverizer's own use
-     * of it for augments) just before the tile is destroyed, for getDrops() to pick up.
+     * Same "the charge (and now side config) survive being picked back up" behavior real TE's
+     * own Energy Cells have (they double as portable battery packs, not just fixed storage) -
+     * captures the tile's true long-valued charge and its per-side modes into
+     * PendingAugmentDrops (see BlockAdvancedPulverizer's own use of it for augments) just
+     * before the tile is destroyed, for getDrops() to pick up. Deliberately only copies these
+     * two specific tags rather than reusing writeToNBT() wholesale - that also serializes the
+     * tile's own x/y/z, which would be stale/wrong once the item is carried somewhere else and
+     * placed again.
      */
     @Override
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileSingularityCell) {
+            TileSingularityCell tile = (TileSingularityCell) te;
             NBTTagCompound tag = new NBTTagCompound();
-            tag.setLong("Energy", ((TileSingularityCell) te).getEnergyStoredLong());
+            tag.setLong("Energy", tile.getEnergyStoredLong());
+            byte[] sides = new byte[6];
+            for (int i = 0; i < 6; i++) {
+                sides[i] = (byte) tile.getSideMode(i);
+            }
+            tag.setByteArray("Sides", sides);
             PendingAugmentDrops.put(x, y, z, tag);
         }
         super.breakBlock(world, x, y, z, block, meta);
@@ -104,9 +125,14 @@ public class BlockSingularityCell extends BlockContainer {
     public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
         ItemStack drop = new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata));
         NBTTagCompound tag = PendingAugmentDrops.take(x, y, z);
-        if (tag != null && tag.hasKey("Energy")) {
+        if (tag != null) {
             NBTTagCompound itemTag = new NBTTagCompound();
-            itemTag.setLong("Energy", tag.getLong("Energy"));
+            if (tag.hasKey("Energy")) {
+                itemTag.setLong("Energy", tag.getLong("Energy"));
+            }
+            if (tag.hasKey("Sides")) {
+                itemTag.setByteArray("Sides", tag.getByteArray("Sides"));
+            }
             drop.setTagCompound(itemTag);
         }
         ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
@@ -117,8 +143,16 @@ public class BlockSingularityCell extends BlockContainer {
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
         TileEntity te = world.getTileEntity(x, y, z);
-        if (te instanceof TileSingularityCell && stack.hasTagCompound() && stack.getTagCompound().hasKey("Energy")) {
-            ((TileSingularityCell) te).setEnergyStoredLong(stack.getTagCompound().getLong("Energy"));
+        if (!(te instanceof TileSingularityCell) || !stack.hasTagCompound()) {
+            return;
+        }
+        TileSingularityCell tile = (TileSingularityCell) te;
+        NBTTagCompound tag = stack.getTagCompound();
+        if (tag.hasKey("Energy")) {
+            tile.setEnergyStoredLong(tag.getLong("Energy"));
+        }
+        if (tag.hasKey("Sides")) {
+            tile.setSideModes(tag.getByteArray("Sides"));
         }
     }
 }

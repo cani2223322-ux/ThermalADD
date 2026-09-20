@@ -55,3 +55,14 @@ tooltip.thermaladd.addAugment.secondarySieve4.1=§c+25% к расходу RF/т�
 
 tile.singularityCell.name=Сингулярная ячейка
 tooltip.thermaladd.singularityCell.charge=§7Заряд: §e%s / %s RF§r
+
+gui.thermaladd.cell.tab.configuration=Конфигурация
+gui.thermaladd.cell.side.up=Верх
+gui.thermaladd.cell.side.down=Низ
+gui.thermaladd.cell.side.north=Север
+gui.thermaladd.cell.side.south=Юг
+gui.thermaladd.cell.side.east=Восток
+gui.thermaladd.cell.side.west=Запад
+gui.thermaladd.cell.side.hint=ЛКМ: вперёд | ПКМ: назад | Shift: сброс
+gui.thermaladd.cell.energyIn=Вход: %s RF/т
+gui.thermaladd.cell.energyOut=Выход: %s RF/т

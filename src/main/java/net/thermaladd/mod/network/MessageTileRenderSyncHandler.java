@@ -9,6 +9,7 @@ import net.minecraft.world.World;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
+import net.thermaladd.mod.tileentity.TileSingularityCell;
 
 /**
  * Runs on the client, applying the synced facing/side-cache and repainting the block on the
@@ -42,6 +43,11 @@ public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTile
         } else if (te instanceof TileAdvancedFurnace) {
             TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
             tile.setFacingClient(message.getFacing());
+            for (int i = 0; i < sides.length; i++) {
+                tile.setSideModeClient(i, sides[i]);
+            }
+        } else if (te instanceof TileSingularityCell) {
+            TileSingularityCell tile = (TileSingularityCell) te;
             for (int i = 0; i < sides.length; i++) {
                 tile.setSideModeClient(i, sides[i]);
             }

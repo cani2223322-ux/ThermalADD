@@ -8,6 +8,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
+import net.thermaladd.mod.tileentity.TileSingularityCell;
 
 /**
  * One shared "cycle this side's mode" message for every machine in the mod that has a
@@ -64,6 +65,24 @@ public class MessageCycleSideHandler implements IMessageHandler<MessageCycleSide
             }
         } else if (te instanceof TileAdvancedFurnace) {
             TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
+            switch (message.getAction()) {
+                case MessageCycleSide.ACTION_FORWARD:
+                    tile.cycleSideMode(message.getSide(), 1);
+                    break;
+                case MessageCycleSide.ACTION_BACKWARD:
+                    tile.cycleSideMode(message.getSide(), -1);
+                    break;
+                case MessageCycleSide.ACTION_RESET_ONE:
+                    tile.resetSideMode(message.getSide());
+                    break;
+                case MessageCycleSide.ACTION_RESET_ALL:
+                    tile.resetAllSideModes();
+                    break;
+                default:
+                    break;
+            }
+        } else if (te instanceof TileSingularityCell) {
+            TileSingularityCell tile = (TileSingularityCell) te;
             switch (message.getAction()) {
                 case MessageCycleSide.ACTION_FORWARD:
                     tile.cycleSideMode(message.getSide(), 1);

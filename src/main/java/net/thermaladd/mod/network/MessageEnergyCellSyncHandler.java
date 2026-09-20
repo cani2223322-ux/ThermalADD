@@ -19,7 +19,7 @@ public class MessageEnergyCellSyncHandler implements IMessageHandler<MessageEner
         }
         TileEntity te = world.getTileEntity(message.getX(), message.getY(), message.getZ());
         if (te instanceof TileSingularityCell) {
-            ((TileSingularityCell) te).setEnergyStoredClient(message.getEnergy());
+            ((TileSingularityCell) te).setEnergyStoredClient(message.getEnergy(), message.getEnergyIn(), message.getEnergyOut());
         }
         return null;
     }
