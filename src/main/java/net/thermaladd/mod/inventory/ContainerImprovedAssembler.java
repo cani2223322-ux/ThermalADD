@@ -8,6 +8,8 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.ICrafting;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fluids.FluidStack;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 
 public class ContainerImprovedAssembler extends Container {
@@ -42,6 +44,8 @@ public class ContainerImprovedAssembler extends Container {
     private int lastEnergyPerTick = -1;
     private int lastRedstoneControl = -1;
     private int lastControlMode = -1;
+    private int lastFluidId = -1;
+    private int lastFluidAmount = -1;
 
     public ContainerImprovedAssembler(InventoryPlayer playerInv, TileImprovedAssembler tile) {
         this.tile = tile;
@@ -144,6 +148,9 @@ public class ContainerImprovedAssembler extends Container {
         int autoInput = tile.augmentAutoInput ? 1 : 0;
         int autoOutput = tile.augmentAutoOutput ? 1 : 0;
         int redstoneControl = tile.augmentRedstoneControl ? 1 : 0;
+        FluidStack tankFluid = tile.getTankFluid();
+        int fluidId = tankFluid != null ? FluidRegistry.getFluidID(tankFluid.getFluid()) : -1;
+        int fluidAmount = tankFluid != null ? tankFluid.amount : 0;
 
         for (int i = 0; i < list.size(); i++) {
             ICrafting crafter = list.get(i);
@@ -176,6 +183,12 @@ public class ContainerImprovedAssembler extends Container {
             if (lastControlMode != controlMode) {
                 crafter.sendProgressBarUpdate(this, 12, controlMode);
             }
+            if (lastFluidId != fluidId) {
+                crafter.sendProgressBarUpdate(this, 13, fluidId);
+            }
+            if (lastFluidAmount != fluidAmount) {
+                crafter.sendProgressBarUpdate(this, 14, fluidAmount);
+            }
         }
 
         lastEnergy = energyScaled;
@@ -188,6 +201,8 @@ public class ContainerImprovedAssembler extends Container {
         lastEnergyPerTick = tile.getEnergyPerTick();
         lastRedstoneControl = redstoneControl;
         lastControlMode = tile.getControl().ordinal();
+        lastFluidId = fluidId;
+        lastFluidAmount = fluidAmount;
     }
 
     @Override
@@ -208,6 +223,10 @@ public class ContainerImprovedAssembler extends Container {
             tile.augmentRedstoneControl = value != 0;
         } else if (id == 12) {
             tile.setControlClient(value);
+        } else if (id == 13) {
+            tile.setTankFluidIdClient(value);
+        } else if (id == 14) {
+            tile.setTankFluidAmountClient(value);
         }
     }
 }

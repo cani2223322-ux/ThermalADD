@@ -18,6 +18,13 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidContainerRegistry;
+import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidTank;
+import net.minecraftforge.fluids.FluidTankInfo;
+import net.minecraftforge.fluids.IFluidHandler;
 import net.minecraftforge.oredict.OreDictionary;
 
 import cofh.api.energy.IEnergyReceiver;
@@ -44,7 +51,7 @@ import net.thermaladd.mod.network.PacketHandler;
  * one job at a time), has 6 schematic slots that are all evaluated - and can all
  * craft - every single tick, so several schematics run truly in parallel.
  */
-public class TileImprovedAssembler extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo {
+public class TileImprovedAssembler extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo, IFluidHandler {
 
     public static final int SCHEMATIC_SLOTS = 6;
     public static final int INPUT_SLOTS = 18;
@@ -71,6 +78,20 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public static final int ENERGY_CAPACITY = 500000;
     /** Was 800 RF/t - bumped to match the mod's UltimateResonant tier (6 slots at 20 RF/craft each need only 120 RF/t at most, so this is pure headroom, not a starvation fix like the Pulverizer's). */
     public static final int ENERGY_RECEIVE_PER_TICK = 5000;
+
+    /**
+     * Same fluid tank real Thermal Expansion's own Assembler has (decompiled
+     * {@code TileAssembler}: {@code new FluidTankAdv(10000)}) - as instructed, matching the
+     * stock machine's own capacity exactly rather than scaling it up with the rest of this
+     * mod's "beyond spec" theme. Used exactly like real TE does: a schematic cell that calls
+     * for a filled container item (a bucket of water, etc.) can be satisfied by draining the
+     * matching fluid from this tank instead, without needing the actual bucket in the material
+     * buffer - see {@link #matchGrid}.
+     */
+    public static final int TANK_CAPACITY = 10000;
+    private final FluidTank tank = new FluidTank(TANK_CAPACITY);
+    /** matchGrid()'s usedSlot[] sentinel marking a cell satisfied by draining the tank rather than a material buffer slot. */
+    private static final int FLUID_CELL = -2;
 
     // -------------------------------------------------- augments (TE-compatible)
 
@@ -212,6 +233,91 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     @Override
     public int getInfoMaxEnergyStored() {
         return ENERGY_CAPACITY;
+    }
+
+    // ---------------------------------------------------------------- fluid tank (real TE-compatible)
+
+    /**
+     * Same side-config gate the material buffer's own insert/extract checks use
+     * (modeInsertsRow1/modeInsertsRow2/modeExtractsOutput) - real TE's own {@code fill}/
+     * {@code drain} check the identical {@code sideConfig.allowInsertionSide}/
+     * {@code allowExtractionSide} arrays the item slots use, not a separate fluid-only
+     * permission set, so a side configured for material input accepts fluid too.
+     */
+    @Override
+    public int fill(ForgeDirection from, FluidStack resource, boolean doFill) {
+        if (from != ForgeDirection.UNKNOWN && !(modeInsertsRow1(sideCache[from.ordinal()]) || modeInsertsRow2(sideCache[from.ordinal()]))) {
+            return 0;
+        }
+        return tank.fill(resource, doFill);
+    }
+
+    @Override
+    public FluidStack drain(ForgeDirection from, FluidStack resource, boolean doDrain) {
+        if (from != ForgeDirection.UNKNOWN && !modeExtractsOutput(sideCache[from.ordinal()])) {
+            return null;
+        }
+        if (resource == null || !resource.isFluidEqual(tank.getFluid())) {
+            return null;
+        }
+        return tank.drain(resource.amount, doDrain);
+    }
+
+    @Override
+    public FluidStack drain(ForgeDirection from, int maxDrain, boolean doDrain) {
+        if (from != ForgeDirection.UNKNOWN && !modeExtractsOutput(sideCache[from.ordinal()])) {
+            return null;
+        }
+        return tank.drain(maxDrain, doDrain);
+    }
+
+    @Override
+    public boolean canFill(ForgeDirection from, Fluid fluid) {
+        return true;
+    }
+
+    @Override
+    public boolean canDrain(ForgeDirection from, Fluid fluid) {
+        return true;
+    }
+
+    @Override
+    public FluidTankInfo[] getTankInfo(ForgeDirection from) {
+        return new FluidTankInfo[] { tank.getInfo() };
+    }
+
+    public FluidStack getTankFluid() {
+        return tank.getFluid();
+    }
+
+    public int getTankCapacity() {
+        return TANK_CAPACITY;
+    }
+
+    // Client-side only: the fluid registry id and amount arrive as 2 separate windowProperty
+    // updates (each only sent when it actually changes, possibly on different ticks - see
+    // ContainerImprovedAssembler), so each setter caches its own half and re-derives the
+    // FluidStack from both cached halves rather than assuming they arrive together.
+    private int clientFluidId = -1;
+    private int clientFluidAmount = 0;
+
+    public void setTankFluidIdClient(int fluidId) {
+        clientFluidId = fluidId;
+        rebuildClientTank();
+    }
+
+    public void setTankFluidAmountClient(int amount) {
+        clientFluidAmount = amount;
+        rebuildClientTank();
+    }
+
+    private void rebuildClientTank() {
+        if (clientFluidId < 0 || clientFluidAmount <= 0) {
+            tank.setFluid(null);
+            return;
+        }
+        Fluid fluid = FluidRegistry.getFluid(clientFluidId);
+        tank.setFluid(fluid == null ? null : new FluidStack(fluid, clientFluidAmount));
     }
 
     // ---------------------------------------------------------------- redstone control (TE-compatible)
@@ -739,6 +845,16 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
 
         for (int cell = 0; cell < 9; cell++) {
             int bufferIndex = usedBufferSlot[cell];
+            if (bufferIndex == FLUID_CELL) {
+                // Re-derive from the schematic's own recorded ingredient rather than trusting
+                // any state carried over from matchGrid() - deterministic either way, since
+                // nothing else touches the schematic or the tank between the two calls.
+                FluidStack needed = FluidContainerRegistry.getFluidForFilledItem(getSchematicSlot(schematic, cell));
+                if (needed != null) {
+                    tank.drain(needed.amount, true);
+                }
+                continue;
+            }
             if (bufferIndex < 0) {
                 continue;
             }
@@ -773,6 +889,11 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
             ItemStack buf = inventory[INPUT_START + i];
             remaining[i] = buf != null ? buf.stackSize : 0;
         }
+        // Mutable running total, same idea as remaining[] above but for the tank - a schematic
+        // needing 2 buckets of the same fluid across 2 different cells has to actually have
+        // 2x the fluid available, not just enough for one.
+        FluidStack tankFluid = tank.getFluid();
+        int fluidRemaining = tankFluid != null ? tankFluid.amount : 0;
 
         boolean anyRequired = false;
         for (int cell = 0; cell < 9; cell++) {
@@ -783,6 +904,18 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
                 continue;
             }
             anyRequired = true;
+
+            // Mirrors real TE's TileAssembler#createItem: a schematic cell asking for a filled
+            // container item (a bucket of water, etc.) can be satisfied by draining the
+            // equivalent fluid from the tank instead of needing that actual item in the buffer.
+            FluidStack neededFluid = FluidContainerRegistry.getFluidForFilledItem(sample);
+            if (neededFluid != null && tankFluid != null && tankFluid.isFluidEqual(neededFluid) && fluidRemaining >= neededFluid.amount) {
+                fluidRemaining -= neededFluid.amount;
+                usedSlot[cell] = FLUID_CELL;
+                grid.setInventorySlotContents(cell, sample.copy());
+                continue;
+            }
+
             String ore = getSchematicOreSlot(schematic, cell);
 
             int found = -1;
@@ -1037,6 +1170,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         tag.setInteger("Energy", energyStored);
         tag.setByteArray("Sides", sideCache);
         tag.setByte("RSControl", (byte) rsMode.ordinal());
+        NBTTagCompound tankTag = new NBTTagCompound();
+        tank.writeToNBT(tankTag);
+        tag.setTag("Tank", tankTag);
 
         NBTTagList items = new NBTTagList();
         for (int i = 0; i < inventory.length; i++) {
@@ -1063,6 +1199,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
             if (sides.length == sideCache.length) {
                 sideCache = sides;
             }
+        }
+        if (tag.hasKey("Tank")) {
+            tank.readFromNBT(tag.getCompoundTag("Tank"));
         }
 
         NBTTagList items = tag.getTagList("Items", 10);

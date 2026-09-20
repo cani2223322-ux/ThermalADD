@@ -6,6 +6,7 @@ import java.util.List;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.util.StatCollector;
+import net.minecraftforge.fluids.FluidStack;
 import net.thermaladd.mod.inventory.ContainerImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 
@@ -29,6 +30,14 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
     private static final int ENERGY_Y = 17;
     private static final int ENERGY_WIDTH = 14;
     private static final int ENERGY_HEIGHT = 58;
+
+    /** Same fluid tank real TE's own Assembler shows (GuiAssembler's ElementFluidTank) - sized/positioned to fit the gap between the 2nd output slot column and the RF socket. */
+    private static final int TANK_X = 130;
+    private static final int TANK_Y = 17;
+    private static final int TANK_WIDTH = 14;
+    private static final int TANK_HEIGHT = 58;
+    /** Used whenever a fluid reports a plain white tint (most vanilla-style fluids bake their actual color into the texture, not this multiplier) so the bar isn't just a blank white sliver. */
+    private static final int TANK_FALLBACK_COLOR = 0xFF3060C0;
 
     private static final int TAB_STACK_X = BASE_WIDTH;
     private static final int TAB_STACK_Y = 4;
@@ -137,6 +146,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         }
 
         drawEnergyBar(left, top);
+        drawFluidTank(left, top);
 
         augmentsTab.drawBackground(left, top);
         if (tile.augmentReconfigSides) {
@@ -164,6 +174,23 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             drawRect(left + ENERGY_X, top + ENERGY_Y + (ENERGY_HEIGHT - filled),
                     left + ENERGY_X + ENERGY_WIDTH, top + ENERGY_Y + ENERGY_HEIGHT, ENERGY_FILL);
         }
+    }
+
+    private void drawFluidTank(int left, int top) {
+        drawTESocket(left + TANK_X, top + TANK_Y, TANK_WIDTH, TANK_HEIGHT);
+
+        FluidStack fluid = tile.getTankFluid();
+        if (fluid == null || fluid.amount <= 0) {
+            return;
+        }
+        int filled = (int) (TANK_HEIGHT * ((float) fluid.amount / (float) tile.getTankCapacity()));
+        if (filled <= 0) {
+            return;
+        }
+        int rawColor = fluid.getFluid().getColor();
+        int color = (rawColor & 0xFFFFFF) == 0xFFFFFF ? TANK_FALLBACK_COLOR : (0xFF000000 | (rawColor & 0xFFFFFF));
+        drawRect(left + TANK_X, top + TANK_Y + (TANK_HEIGHT - filled),
+                left + TANK_X + TANK_WIDTH, top + TANK_Y + TANK_HEIGHT, color);
     }
 
     @Override
@@ -216,6 +243,20 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         super.drawScreen(mouseX, mouseY, partialTicks);
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
+
+        if (mouseX >= left + TANK_X && mouseX < left + TANK_X + TANK_WIDTH
+                && mouseY >= top + TANK_Y && mouseY < top + TANK_Y + TANK_HEIGHT) {
+            List<String> tankTooltip = new ArrayList<String>();
+            FluidStack fluid = tile.getTankFluid();
+            if (fluid != null && fluid.amount > 0) {
+                tankTooltip.add(fluid.getFluid().getLocalizedName(fluid));
+                tankTooltip.add(fluid.amount + " / " + tile.getTankCapacity() + " mB");
+            } else {
+                tankTooltip.add(StatCollector.translateToLocal("gui.thermaladd.tank.empty"));
+            }
+            drawHoveringText(tankTooltip, mouseX, mouseY, fontRendererObj);
+            return;
+        }
 
         List<String> tooltip = new ArrayList<String>();
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);
