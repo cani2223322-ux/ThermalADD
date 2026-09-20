@@ -22,14 +22,17 @@ import net.thermaladd.mod.tileentity.TileSingularityCell;
  */
 public class GuiSingularityCell extends TabbedMachineGui {
 
-    private static final int ENERGY_FILL_LOW = 0xFF8B2FD8;
-    private static final int ENERGY_FILL_HIGH = 0xFF2FD8C8;
-
     private static final int BASE_WIDTH = 176;
     private static final int BASE_HEIGHT = 220;
 
-    private static final int ENERGY_WIDTH = 20;
-    private static final int ENERGY_HEIGHT = 78;
+    /**
+     * Real TE's own Resonant/Redstone Energy Cell GUI (decompiled {@code GuiCell}) draws its bar
+     * with the exact same {@code ElementEnergyStored} widget the machine GUIs use, at (80, 18) -
+     * which is just this panel's own {@code (BASE_WIDTH - ENERGY_WIDTH) / 2}, 18 formula once
+     * ENERGY_WIDTH is real TE's fixed 16, so no separate positioning override is needed.
+     */
+    private static final int ENERGY_WIDTH = ENERGY_BAR_WIDTH;
+    private static final int ENERGY_HEIGHT = ENERGY_BAR_HEIGHT;
     private static final int ENERGY_X = (BASE_WIDTH - ENERGY_WIDTH) / 2;
     private static final int ENERGY_Y = 18;
 
@@ -78,39 +81,21 @@ public class GuiSingularityCell extends TabbedMachineGui {
         configTab.drawBackground(left, top);
     }
 
+    /** Same real-TE {@code Energy.png} art the 3 machine GUIs use (see TabbedMachineGui#drawEnergyStored) - real TE's own Energy Cell GUI draws its bar with the identical ElementEnergyStored widget, just at this panel's own size/position. */
     private void drawEnergyBar(int left, int top) {
-        drawTESocket(left + ENERGY_X, top + ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT);
-
         long energy = tile.getEnergyStoredLong();
         long capacity = tile.getCapacityLong();
         double ratio = capacity <= 0 ? 0 : energy / (double) capacity;
         int filled = (int) (ENERGY_HEIGHT * ratio);
         // Capacity is astronomically larger than any realistic charge rate can fill on a
-        // linear scale (even hundreds of millions of RF round down to 0 of 78 pixels against a
+        // linear scale (even hundreds of millions of RF round down to 0 of 42 pixels against a
         // 1-trillion cap) - guarantee at least a 1px sliver whenever there's any charge at all,
         // so the bar doesn't read as "completely empty" for a cell that very much isn't. The
         // exact numbers below (and the tooltip) stay the real, unrounded ground truth either way.
         if (filled <= 0 && energy > 0) {
             filled = 1;
         }
-        if (filled > 0) {
-            // Gradient fill (violet at the bottom -> cyan at the top), matching the block's own gradient texture.
-            for (int i = 0; i < filled; i++) {
-                float t = ENERGY_HEIGHT <= 1 ? 0 : (float) i / (ENERGY_HEIGHT - 1);
-                int color = lerpColor(ENERGY_FILL_LOW, ENERGY_FILL_HIGH, t);
-                int y = top + ENERGY_Y + ENERGY_HEIGHT - i - 1;
-                drawRect(left + ENERGY_X, y, left + ENERGY_X + ENERGY_WIDTH, y + 1, color);
-            }
-        }
-    }
-
-    private static int lerpColor(int from, int to, float t) {
-        int fr = (from >> 16) & 0xFF, fg = (from >> 8) & 0xFF, fb = from & 0xFF;
-        int tr = (to >> 16) & 0xFF, tg = (to >> 8) & 0xFF, tb = to & 0xFF;
-        int r = (int) (fr + (tr - fr) * t);
-        int g = (int) (fg + (tg - fg) * t);
-        int b = (int) (fb + (tb - fb) * t);
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
+        drawEnergyStoredFilled(left + ENERGY_X, top + ENERGY_Y, filled);
     }
 
     @Override

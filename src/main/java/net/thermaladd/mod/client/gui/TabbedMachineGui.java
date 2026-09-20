@@ -142,6 +142,19 @@ public abstract class TabbedMachineGui extends GuiContainer {
         if (filled > ENERGY_BAR_HEIGHT) {
             filled = ENERGY_BAR_HEIGHT;
         }
+        drawEnergyStoredFilled(x, y, filled);
+    }
+
+    /**
+     * Same art as {@link #drawEnergyStored(int, int, int, int)}, but takes an already-computed
+     * fill height directly - for callers whose own stored/capacity values don't fit an int (the
+     * Singularity Energy Cell's capacity runs well past Integer.MAX_VALUE, so it works out its
+     * own fill fraction from a pair of longs first).
+     */
+    protected void drawEnergyStoredFilled(int x, int y, int filled) {
+        if (filled > ENERGY_BAR_HEIGHT) {
+            filled = ENERGY_BAR_HEIGHT;
+        }
         mc.getTextureManager().bindTexture(ENERGY_TEXTURE);
         GL11.glColor4f(1F, 1F, 1F, 1F);
         drawEnergyQuad(x, y, 0, 0, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT);
