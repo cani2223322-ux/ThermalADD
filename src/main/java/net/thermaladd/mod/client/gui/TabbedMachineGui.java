@@ -1,8 +1,12 @@
 package net.thermaladd.mod.client.gui;
 
+import org.lwjgl.opengl.GL11;
+
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.inventory.Container;
+import net.minecraft.util.ResourceLocation;
 
 /**
  * Thin common base for every machine GUI in this mod that has CoFH-style side tabs
@@ -114,6 +118,50 @@ public abstract class TabbedMachineGui extends GuiContainer {
         drawRect(x, y, x + w, y + h, TE_PANEL_DARK);
         drawRect(x + w, y - 1, x + w + 1, y + h + 1, TE_HIGHLIGHT);
         drawRect(x - 1, y + h, x + w + 1, y + h + 1, TE_HIGHLIGHT);
+    }
+
+    /**
+     * Real Thermal Expansion's own RF gauge art, verified via the decompiled
+     * {@code cofh.lib.gui.element.ElementEnergyStored}: {@code cofh:textures/gui/elements/
+     * Energy.png} is a 32x64 sheet whose left half (0,0)-(16,42) is the always-drawn empty-bar
+     * frame/casing, and whose right half (16,0)-(32,42) is the filled-bar art, revealed only for
+     * the bottom {@code filled} pixels of it (so the fill rises from the bottom exactly like
+     * every other TE gauge). {@code drawTexturedModalRect} assumes a 256x256 sheet unconditionally,
+     * so - same as {@link GuiSideTab#drawIcon16} and this mod's own fluid tank frame - this blits
+     * both pieces by hand with explicit UV fractions instead. 16x42 is real TE's own fixed size
+     * for this element (it's never resized), so every caller draws it at that size.
+     */
+    protected static final ResourceLocation ENERGY_TEXTURE = new ResourceLocation("cofh", "textures/gui/elements/Energy.png");
+    protected static final int ENERGY_BAR_WIDTH = 16;
+    protected static final int ENERGY_BAR_HEIGHT = 42;
+    private static final int ENERGY_TEX_W = 32;
+    private static final int ENERGY_TEX_H = 64;
+
+    protected void drawEnergyStored(int x, int y, int energy, int maxEnergy) {
+        int filled = maxEnergy <= 0 ? 0 : (int) ((long) energy * ENERGY_BAR_HEIGHT / maxEnergy);
+        if (filled > ENERGY_BAR_HEIGHT) {
+            filled = ENERGY_BAR_HEIGHT;
+        }
+        mc.getTextureManager().bindTexture(ENERGY_TEXTURE);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        drawEnergyQuad(x, y, 0, 0, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT);
+        if (filled > 0) {
+            drawEnergyQuad(x, y + ENERGY_BAR_HEIGHT - filled, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT - filled, ENERGY_BAR_WIDTH, filled);
+        }
+    }
+
+    private void drawEnergyQuad(int x, int y, int u, int v, int w, int h) {
+        float u1 = u / (float) ENERGY_TEX_W;
+        float u2 = (u + w) / (float) ENERGY_TEX_W;
+        float v1 = v / (float) ENERGY_TEX_H;
+        float v2 = (v + h) / (float) ENERGY_TEX_H;
+        Tessellator t = Tessellator.instance;
+        t.startDrawingQuads();
+        t.addVertexWithUV(x, y + h, zLevel, u1, v2);
+        t.addVertexWithUV(x + w, y + h, zLevel, u2, v2);
+        t.addVertexWithUV(x + w, y, zLevel, u2, v1);
+        t.addVertexWithUV(x, y, zLevel, u1, v1);
+        t.draw();
     }
 
     public FontRenderer getTabFontRenderer() {

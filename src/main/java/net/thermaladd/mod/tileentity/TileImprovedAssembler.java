@@ -27,6 +27,7 @@ import net.minecraftforge.fluids.FluidTankInfo;
 import net.minecraftforge.fluids.IFluidHandler;
 import net.minecraftforge.oredict.OreDictionary;
 
+import cofh.api.energy.IEnergyContainerItem;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
 import cofh.api.tileentity.IEnergyInfo;
@@ -58,12 +59,15 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public static final int OUTPUT_SLOTS = 6;
     /** Same 9 slots as the Advanced Pulverizer/Furnace (real TE's own TileAugmentable caps at 3-6; this mod's machines all get 9, fixed, since none has a separate tier/upgrade item). */
     public static final int AUGMENT_SLOTS = 9;
-    public static final int TOTAL_SLOTS = SCHEMATIC_SLOTS + INPUT_SLOTS + OUTPUT_SLOTS + AUGMENT_SLOTS;
+    /** See TileAdvancedPulverizer#CHARGE_SLOTS - same "drain an RF-storing item into the buffer" slot real TE gives every powered machine. */
+    public static final int CHARGE_SLOTS = 1;
+    public static final int TOTAL_SLOTS = SCHEMATIC_SLOTS + INPUT_SLOTS + OUTPUT_SLOTS + AUGMENT_SLOTS + CHARGE_SLOTS;
 
     public static final int SCHEMATIC_START = 0;
     public static final int INPUT_START = SCHEMATIC_SLOTS;
     public static final int OUTPUT_START = SCHEMATIC_SLOTS + INPUT_SLOTS;
     public static final int AUGMENT_START = SCHEMATIC_SLOTS + INPUT_SLOTS + OUTPUT_SLOTS;
+    public static final int CHARGE_SLOT = AUGMENT_START + AUGMENT_SLOTS;
 
     /** Same flat per-craft cost as the real Thermal Expansion Assembler (TileAssembler.PROCESS_ENERGY). */
     public static final int PROCESS_ENERGY = 20;
@@ -359,6 +363,10 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         boolean dirty = false;
         energyPerTick = 0;
 
+        if (chargeFromItem()) {
+            dirty = true;
+        }
+
         // Same 3-way control real TE uses - see TileAdvancedPulverizer#updateEntity for details.
         setPowered(worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord));
         boolean redstoneAllows = !augmentRedstoneControl || rsMode.isDisabled() || rsMode.isHigh() == isPowered();
@@ -388,6 +396,28 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         if (dirty) {
             markDirty();
         }
+    }
+
+    /** See TileAdvancedPulverizer#chargeFromItem - same real-TE {@code TilePowered#chargeEnergy} behavior, adapted to this tile's plain int energy field (it has no EnergyStorage object). */
+    private boolean chargeFromItem() {
+        ItemStack stack = inventory[CHARGE_SLOT];
+        if (stack == null || !(stack.getItem() instanceof IEnergyContainerItem)) {
+            return false;
+        }
+        int receive = Math.min(ENERGY_RECEIVE_PER_TICK, ENERGY_CAPACITY - energyStored);
+        if (receive <= 0) {
+            return false;
+        }
+        IEnergyContainerItem energyItem = (IEnergyContainerItem) stack.getItem();
+        int extracted = energyItem.extractEnergy(stack, receive, false);
+        if (extracted <= 0) {
+            return false;
+        }
+        energyStored += extracted;
+        if (stack.stackSize <= 0) {
+            inventory[CHARGE_SLOT] = null;
+        }
+        return true;
     }
 
     // ------------------------------------------------------ augments & side config
@@ -1102,6 +1132,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
 
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
+        if (slot == CHARGE_SLOT) {
+            return stack.getItem() instanceof IEnergyContainerItem;
+        }
         if (isAugmentSlot(slot)) {
             return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }

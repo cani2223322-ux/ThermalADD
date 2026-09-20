@@ -15,6 +15,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import cofh.api.energy.EnergyStorage;
+import cofh.api.energy.IEnergyContainerItem;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
 import cofh.api.tileentity.IEnergyInfo;
@@ -53,12 +54,15 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     public static final int OUTPUT_PRIMARY_SLOTS = 3;
     public static final int OUTPUT_SECONDARY_SLOTS = 2;
     public static final int AUGMENT_SLOTS = 9;
-    public static final int TOTAL_SLOTS = INPUT_SLOTS + OUTPUT_PRIMARY_SLOTS + OUTPUT_SECONDARY_SLOTS + AUGMENT_SLOTS;
+    /** Real TE's own "charge slot" - see {@link #chargeFromItem}: accepts any RF-storing item (Capacitors, charged tools, etc.) and continuously drains it into this machine's own buffer. */
+    public static final int CHARGE_SLOTS = 1;
+    public static final int TOTAL_SLOTS = INPUT_SLOTS + OUTPUT_PRIMARY_SLOTS + OUTPUT_SECONDARY_SLOTS + AUGMENT_SLOTS + CHARGE_SLOTS;
 
     public static final int INPUT_START = 0;
     public static final int OUTPUT_PRIMARY_START = INPUT_SLOTS;
     public static final int OUTPUT_SECONDARY_START = INPUT_SLOTS + OUTPUT_PRIMARY_SLOTS;
     public static final int AUGMENT_START = INPUT_SLOTS + OUTPUT_PRIMARY_SLOTS + OUTPUT_SECONDARY_SLOTS;
+    public static final int CHARGE_SLOT = AUGMENT_START + AUGMENT_SLOTS;
 
     /**
      * RF spent per tick per active processing line while its recipe is being worked on -
@@ -670,6 +674,10 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         boolean dirty = false;
         energyPerTick = 0;
 
+        if (chargeFromItem()) {
+            dirty = true;
+        }
+
         // Same 3-way control real TE uses (cofh.api.tileentity.IRedstoneControl.ControlMode):
         // Disabled ignores redstone entirely, Low only crafts while NOT powered, High only
         // crafts WHILE powered - selectable from the Redstone Control tab (see
@@ -717,6 +725,35 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         if (dirty) {
             markDirty();
         }
+    }
+
+    /**
+     * Mirrors real Thermal Expansion's own {@code TilePowered#chargeEnergy}: whatever's sitting
+     * in the charge slot (a Redstone/Resonant/etc. Capacitor, or any other RF-storing item) is
+     * drained into this machine's own buffer every tick, up to whichever is smaller - the item's
+     * own discharge rate or the buffer's remaining room/receive rate - and discarded once empty.
+     * Unlike crafting, this runs regardless of Redstone Control - real TE never gates charging
+     * behind it either.
+     */
+    private boolean chargeFromItem() {
+        ItemStack stack = inventory[CHARGE_SLOT];
+        if (stack == null || !(stack.getItem() instanceof IEnergyContainerItem)) {
+            return false;
+        }
+        int receive = Math.min(energyStorage.getMaxReceive(), energyStorage.getMaxEnergyStored() - energyStorage.getEnergyStored());
+        if (receive <= 0) {
+            return false;
+        }
+        IEnergyContainerItem energyItem = (IEnergyContainerItem) stack.getItem();
+        int extracted = energyItem.extractEnergy(stack, receive, false);
+        if (extracted <= 0) {
+            return false;
+        }
+        energyStorage.receiveEnergy(extracted, false);
+        if (stack.stackSize <= 0) {
+            inventory[CHARGE_SLOT] = null;
+        }
+        return true;
     }
 
     /**
@@ -1104,6 +1141,9 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
+        if (slot == CHARGE_SLOT) {
+            return stack.getItem() instanceof IEnergyContainerItem;
+        }
         if (isAugmentSlot(slot)) {
             return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }

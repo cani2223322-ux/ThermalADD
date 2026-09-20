@@ -20,7 +20,6 @@ import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
  */
 public class GuiAdvancedPulverizer extends TabbedMachineGui {
 
-    private static final int ENERGY_FILL = 0xFFB01010;
     private static final int PROGRESS_FILL = 0xFF3CA0DC;
     private static final int PROGRESS_DONE = 0xFF3CDC6E;
 
@@ -29,8 +28,12 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
 
     private static final int ENERGY_X = 8;
     private static final int ENERGY_Y = 17;
-    private static final int ENERGY_WIDTH = 14;
-    private static final int ENERGY_HEIGHT = 54;
+    /** Real TE's own {@code ElementEnergyStored} size - see TabbedMachineGui#drawEnergyStored, never resized. */
+    private static final int ENERGY_WIDTH = ENERGY_BAR_WIDTH;
+    private static final int ENERGY_HEIGHT = ENERGY_BAR_HEIGHT;
+    /** Real TE's own charge-slot offset from the bar's origin (bar at Y+0, slot at Y+45) - see ContainerAdvancedPulverizer.CHARGE_X/CHARGE_Y, which this must stay in sync with. */
+    private static final int CHARGE_SLOT_X = ENERGY_X;
+    private static final int CHARGE_SLOT_Y = ENERGY_Y + 45;
 
     private static final int PROGRESS_X = 66;
     private static final int PROGRESS_WIDTH = 46;
@@ -100,6 +103,7 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 
         drawEnergyBar(left, top);
+        drawTESlot(left + CHARGE_SLOT_X - 1, top + CHARGE_SLOT_Y - 1);
 
         // Matches real Thermal Expansion: the colored role ring only appears once the player
         // has actually configured a side to grant that role - not just because the
@@ -144,14 +148,7 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
     }
 
     private void drawEnergyBar(int left, int top) {
-        drawTESocket(left + ENERGY_X, top + ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT);
-
-        int maxEnergy = tile.getMaxEnergy();
-        int filled = maxEnergy <= 0 ? 0 : (int) (ENERGY_HEIGHT * ((float) tile.getEnergy() / (float) maxEnergy));
-        if (filled > 0) {
-            drawRect(left + ENERGY_X, top + ENERGY_Y + (ENERGY_HEIGHT - filled),
-                    left + ENERGY_X + ENERGY_WIDTH, top + ENERGY_Y + ENERGY_HEIGHT, ENERGY_FILL);
-        }
+        drawEnergyStored(left + ENERGY_X, top + ENERGY_Y, tile.getEnergy(), tile.getMaxEnergy());
     }
 
     private void drawProgressBar(int left, int top, int line) {
@@ -237,6 +234,15 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         super.drawScreen(mouseX, mouseY, partialTicks);
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
+
+        if (mouseX >= left + ENERGY_X && mouseX < left + ENERGY_X + ENERGY_WIDTH
+                && mouseY >= top + ENERGY_Y && mouseY < top + ENERGY_Y + ENERGY_HEIGHT) {
+            // Matches real ElementEnergyStored#addTooltip exactly: just "stored / max RF", always.
+            List<String> energyTooltip = new ArrayList<String>();
+            energyTooltip.add(tile.getEnergy() + " / " + tile.getMaxEnergy() + " RF");
+            drawHoveringText(energyTooltip, mouseX, mouseY, fontRendererObj);
+            return;
+        }
 
         List<String> tooltip = new ArrayList<String>();
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);

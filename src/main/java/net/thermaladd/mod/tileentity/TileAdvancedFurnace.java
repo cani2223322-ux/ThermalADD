@@ -15,6 +15,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import cofh.api.energy.EnergyStorage;
+import cofh.api.energy.IEnergyContainerItem;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
 import cofh.api.tileentity.IEnergyInfo;
@@ -44,11 +45,14 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
     /** One output slot per input line, matching the Pulverizer's own per-line output design. */
     public static final int OUTPUT_SLOTS = 3;
     public static final int AUGMENT_SLOTS = 9;
-    public static final int TOTAL_SLOTS = INPUT_SLOTS + OUTPUT_SLOTS + AUGMENT_SLOTS;
+    /** See TileAdvancedPulverizer#CHARGE_SLOTS - same "drain an RF-storing item into the buffer" slot real TE gives every powered machine. */
+    public static final int CHARGE_SLOTS = 1;
+    public static final int TOTAL_SLOTS = INPUT_SLOTS + OUTPUT_SLOTS + AUGMENT_SLOTS + CHARGE_SLOTS;
 
     public static final int INPUT_START = 0;
     public static final int OUTPUT_START = INPUT_SLOTS;
     public static final int AUGMENT_START = INPUT_SLOTS + OUTPUT_SLOTS;
+    public static final int CHARGE_SLOT = AUGMENT_START + AUGMENT_SLOTS;
 
     /** Same "UltimateResonant" tier and per-line processing rate as the Advanced Pulverizer. */
     public static final String TIER_NAME = "UltimateResonant";
@@ -530,6 +534,10 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         boolean dirty = false;
         energyPerTick = 0;
 
+        if (chargeFromItem()) {
+            dirty = true;
+        }
+
         setPowered(worldObj.isBlockIndirectlyGettingPowered(xCoord, yCoord, zCoord));
         boolean redstoneAllows = !augmentRedstoneControl || rsMode.isDisabled() || rsMode.isHigh() == isPowered();
         if (redstoneAllows) {
@@ -568,6 +576,28 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
         if (dirty) {
             markDirty();
         }
+    }
+
+    /** See TileAdvancedPulverizer#chargeFromItem - same real-TE {@code TilePowered#chargeEnergy} behavior. */
+    private boolean chargeFromItem() {
+        ItemStack stack = inventory[CHARGE_SLOT];
+        if (stack == null || !(stack.getItem() instanceof IEnergyContainerItem)) {
+            return false;
+        }
+        int receive = Math.min(energyStorage.getMaxReceive(), energyStorage.getMaxEnergyStored() - energyStorage.getEnergyStored());
+        if (receive <= 0) {
+            return false;
+        }
+        IEnergyContainerItem energyItem = (IEnergyContainerItem) stack.getItem();
+        int extracted = energyItem.extractEnergy(stack, receive, false);
+        if (extracted <= 0) {
+            return false;
+        }
+        energyStorage.receiveEnergy(extracted, false);
+        if (stack.stackSize <= 0) {
+            inventory[CHARGE_SLOT] = null;
+        }
+        return true;
     }
 
     private boolean tryProcess(int line) {
@@ -884,6 +914,9 @@ public class TileAdvancedFurnace extends TileEntity implements ISidedInventory, 
 
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
+        if (slot == CHARGE_SLOT) {
+            return stack.getItem() instanceof IEnergyContainerItem;
+        }
         if (isAugmentSlot(slot)) {
             return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }

@@ -10,6 +10,8 @@ import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 
+import cofh.api.energy.IEnergyContainerItem;
+import cofh.lib.gui.slot.SlotEnergy;
 import cofh.thermalexpansion.util.crafting.FurnaceManager;
 
 /** Same layout family as {@link ContainerAdvancedPulverizer}, minus the secondary-output slot this machine has no use for. */
@@ -26,6 +28,10 @@ public class ContainerAdvancedFurnace extends Container {
 
     public static final int PLAYER_INV_Y = 92;
     public static final int PLAYER_HOTBAR_Y = 150;
+
+    /** See ContainerAdvancedPulverizer.CHARGE_X/CHARGE_Y - real TE's own charge-slot offset from its energy bar's origin. */
+    public static final int CHARGE_X = 8;
+    public static final int CHARGE_Y = 17 + 45;
 
     private static final int PARKED = -1000;
 
@@ -65,6 +71,8 @@ public class ContainerAdvancedFurnace extends Container {
             addSlotToContainer(augmentSlots[i]);
         }
 
+        addSlotToContainer(new SlotEnergy(tile, TileAdvancedFurnace.CHARGE_SLOT, CHARGE_X, CHARGE_Y));
+
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlotToContainer(new Slot(playerInv, col + row * 9 + 9,
@@ -101,6 +109,10 @@ public class ContainerAdvancedFurnace extends Container {
             } else if (TileAdvancedFurnace.isValidAugment(stackInSlot)) {
                 if (!mergeItemStack(stackInSlot, TileAdvancedFurnace.AUGMENT_START,
                         TileAdvancedFurnace.AUGMENT_START + TileAdvancedFurnace.AUGMENT_SLOTS, false)) {
+                    return null;
+                }
+            } else if (stackInSlot.getItem() instanceof IEnergyContainerItem) {
+                if (!mergeItemStack(stackInSlot, TileAdvancedFurnace.CHARGE_SLOT, TileAdvancedFurnace.CHARGE_SLOT + 1, false)) {
                     return null;
                 }
             } else if (FurnaceManager.recipeExists(stackInSlot)) {

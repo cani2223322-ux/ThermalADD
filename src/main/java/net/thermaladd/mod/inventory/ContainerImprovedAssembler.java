@@ -12,6 +12,9 @@ import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 
+import cofh.api.energy.IEnergyContainerItem;
+import cofh.lib.gui.slot.SlotEnergy;
+
 public class ContainerImprovedAssembler extends Container {
 
     // shared layout constants - GuiImprovedAssembler and the placeholder texture
@@ -26,6 +29,10 @@ public class ContainerImprovedAssembler extends Container {
 
     public static final int PLAYER_INV_Y = 136;
     public static final int PLAYER_HOTBAR_Y = 194;
+
+    /** See ContainerAdvancedPulverizer.CHARGE_X/CHARGE_Y - real TE's own charge-slot offset from its energy bar's origin (GuiImprovedAssembler's own ENERGY_X/ENERGY_Y). */
+    public static final int CHARGE_X = 150;
+    public static final int CHARGE_Y = 17 + 45;
 
     /** Parked position for the augment Slots while their tab is closed (off-screen, like TE's own trick). */
     private static final int PARKED = -1000;
@@ -82,6 +89,8 @@ public class ContainerImprovedAssembler extends Container {
             addSlotToContainer(augmentSlots[i]);
         }
 
+        addSlotToContainer(new SlotEnergy(tile, TileImprovedAssembler.CHARGE_SLOT, CHARGE_X, CHARGE_Y));
+
         // player inventory
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -119,6 +128,10 @@ public class ContainerImprovedAssembler extends Container {
             } else if (TileImprovedAssembler.isValidAugment(stackInSlot)) {
                 if (!mergeItemStack(stackInSlot, TileImprovedAssembler.AUGMENT_START,
                         TileImprovedAssembler.AUGMENT_START + TileImprovedAssembler.AUGMENT_SLOTS, false)) {
+                    return null;
+                }
+            } else if (stackInSlot.getItem() instanceof IEnergyContainerItem) {
+                if (!mergeItemStack(stackInSlot, TileImprovedAssembler.CHARGE_SLOT, TileImprovedAssembler.CHARGE_SLOT + 1, false)) {
                     return null;
                 }
             } else {

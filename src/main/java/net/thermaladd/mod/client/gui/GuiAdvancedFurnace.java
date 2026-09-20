@@ -12,7 +12,6 @@ import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 /** Same self-drawn TE-styled panel as {@link GuiAdvancedPulverizer}, laid out for 3 inputs -> 3 stacked outputs, one per line (no secondary product). */
 public class GuiAdvancedFurnace extends TabbedMachineGui {
 
-    private static final int ENERGY_FILL = 0xFFB01010;
     private static final int PROGRESS_FILL = 0xFF3CA0DC;
     private static final int PROGRESS_DONE = 0xFF3CDC6E;
 
@@ -21,8 +20,12 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
 
     private static final int ENERGY_X = 8;
     private static final int ENERGY_Y = 17;
-    private static final int ENERGY_WIDTH = 14;
-    private static final int ENERGY_HEIGHT = 54;
+    /** Real TE's own {@code ElementEnergyStored} size - see TabbedMachineGui#drawEnergyStored, never resized. */
+    private static final int ENERGY_WIDTH = ENERGY_BAR_WIDTH;
+    private static final int ENERGY_HEIGHT = ENERGY_BAR_HEIGHT;
+    /** See ContainerAdvancedFurnace.CHARGE_X/CHARGE_Y, which this must stay in sync with. */
+    private static final int CHARGE_SLOT_X = ENERGY_X;
+    private static final int CHARGE_SLOT_Y = ENERGY_Y + 45;
 
     private static final int PROGRESS_X = 66;
     private static final int PROGRESS_WIDTH = 46;
@@ -79,6 +82,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 
         drawEnergyBar(left, top);
+        drawTESlot(left + CHARGE_SLOT_X - 1, top + CHARGE_SLOT_Y - 1);
 
         // See GuiAdvancedPulverizer's own copy of this comment: the colored role ring tracks
         // live side configuration, not merely whether the Reconfigurable Sides augment is
@@ -116,14 +120,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
     }
 
     private void drawEnergyBar(int left, int top) {
-        drawTESocket(left + ENERGY_X, top + ENERGY_Y, ENERGY_WIDTH, ENERGY_HEIGHT);
-
-        int maxEnergy = tile.getMaxEnergy();
-        int filled = maxEnergy <= 0 ? 0 : (int) (ENERGY_HEIGHT * ((float) tile.getEnergy() / (float) maxEnergy));
-        if (filled > 0) {
-            drawRect(left + ENERGY_X, top + ENERGY_Y + (ENERGY_HEIGHT - filled),
-                    left + ENERGY_X + ENERGY_WIDTH, top + ENERGY_Y + ENERGY_HEIGHT, ENERGY_FILL);
-        }
+        drawEnergyStored(left + ENERGY_X, top + ENERGY_Y, tile.getEnergy(), tile.getMaxEnergy());
     }
 
     private void drawProgressBar(int left, int top, int line) {
@@ -202,6 +199,14 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         super.drawScreen(mouseX, mouseY, partialTicks);
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
+
+        if (mouseX >= left + ENERGY_X && mouseX < left + ENERGY_X + ENERGY_WIDTH
+                && mouseY >= top + ENERGY_Y && mouseY < top + ENERGY_Y + ENERGY_HEIGHT) {
+            List<String> energyTooltip = new ArrayList<String>();
+            energyTooltip.add(tile.getEnergy() + " / " + tile.getMaxEnergy() + " RF");
+            drawHoveringText(energyTooltip, mouseX, mouseY, fontRendererObj);
+            return;
+        }
 
         List<String> tooltip = new ArrayList<String>();
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);
