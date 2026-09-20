@@ -100,12 +100,16 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
 
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 
+        // See GuiAdvancedPulverizer's own copy of this comment: the colored role ring is part
+        // of the side-config feature, gated behind the same augment as the Configuration tab.
+        int inputHighlight = tile.augmentReconfigSides ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
+        int outputHighlight = tile.augmentReconfigSides ? HIGHLIGHT_OUTPUT : HIGHLIGHT_NONE;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 2; col++) {
                 int x = left + ContainerImprovedAssembler.PAIR_X[col];
                 int y = top + ContainerImprovedAssembler.ROW_Y[row];
-                drawTESlot(x - 1, y - 1, HIGHLIGHT_INPUT);
-                drawTESlot(x + ContainerImprovedAssembler.OUTPUT_OFFSET - 1, y - 1, HIGHLIGHT_OUTPUT);
+                drawTESlot(x - 1, y - 1, inputHighlight);
+                drawTESlot(x + ContainerImprovedAssembler.OUTPUT_OFFSET - 1, y - 1, outputHighlight);
                 drawArrow(x + ContainerImprovedAssembler.SLOT_SIZE + 4, y + 5);
             }
         }
@@ -113,7 +117,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 9; col++) {
                 drawTESlot(left + ContainerImprovedAssembler.BUFFER_X + col * ContainerImprovedAssembler.SLOT_SIZE - 1,
-                        top + ContainerImprovedAssembler.BUFFER_Y + row * ContainerImprovedAssembler.SLOT_SIZE - 1, HIGHLIGHT_INPUT);
+                        top + ContainerImprovedAssembler.BUFFER_Y + row * ContainerImprovedAssembler.SLOT_SIZE - 1, inputHighlight);
             }
         }
 

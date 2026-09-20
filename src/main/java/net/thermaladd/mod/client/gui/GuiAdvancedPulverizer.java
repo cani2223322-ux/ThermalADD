@@ -101,18 +101,25 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
 
         drawEnergyBar(left, top);
 
+        // Matches real Thermal Expansion: the colored role ring is part of the side-config
+        // feature, so it only shows up once the Reconfigurable Sides augment actually unlocks
+        // that feature - without it, slots stay plain, same as the Configuration tab itself
+        // being hidden.
+        int inputHighlight = tile.augmentReconfigSides ? HIGHLIGHT_INPUT : HIGHLIGHT_NONE;
+        int primaryHighlight = tile.augmentReconfigSides ? HIGHLIGHT_OUTPUT_PRIMARY : HIGHLIGHT_NONE;
+        int secondaryHighlight = tile.augmentReconfigSides ? HIGHLIGHT_OUTPUT_SECONDARY : HIGHLIGHT_NONE;
         for (int i = 0; i < TileAdvancedPulverizer.INPUT_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedPulverizer.INPUT_X - 1,
-                    top + ContainerAdvancedPulverizer.INPUT_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1, HIGHLIGHT_INPUT);
+                    top + ContainerAdvancedPulverizer.INPUT_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1, inputHighlight);
             drawProgressBar(left, top, i);
         }
         for (int i = 0; i < TileAdvancedPulverizer.OUTPUT_PRIMARY_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedPulverizer.OUTPUT_PRIMARY_X - 1,
-                    top + ContainerAdvancedPulverizer.OUTPUT_PRIMARY_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1, HIGHLIGHT_OUTPUT_PRIMARY);
+                    top + ContainerAdvancedPulverizer.OUTPUT_PRIMARY_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1, primaryHighlight);
         }
         for (int i = 0; i < TileAdvancedPulverizer.OUTPUT_SECONDARY_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_X - 1,
-                    top + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1, HIGHLIGHT_OUTPUT_SECONDARY);
+                    top + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1, secondaryHighlight);
         }
 
         // player inventory slot frames

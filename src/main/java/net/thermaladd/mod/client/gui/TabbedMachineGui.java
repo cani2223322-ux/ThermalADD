@@ -41,6 +41,8 @@ public abstract class TabbedMachineGui extends GuiContainer {
     protected static final int HIGHLIGHT_OUTPUT_PRIMARY = 0xFFD22C15;
     protected static final int HIGHLIGHT_OUTPUT_SECONDARY = 0xFFD2AA15;
     protected static final int HIGHLIGHT_OUTPUT = 0xFFD26C16;
+    /** Fully transparent - draws no ring at all, same as the plain 2-arg drawTESlot. Pass this (rather than branching between the two overloads) when the Reconfigurable Sides augment isn't installed, so slot highlighting turns off along with the rest of the side-config feature. */
+    protected static final int HIGHLIGHT_NONE = 0x00000000;
 
     protected TabbedMachineGui(Container container) {
         super(container);
