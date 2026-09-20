@@ -9,14 +9,19 @@ import cofh.api.tileentity.IEnergyInfo;
 
 /**
  * "Energy" tab - same design as real Thermal Expansion's own cofh.core.gui.element.TabEnergy:
- * a dedicated right-edge tab (not a hover tooltip on the RF bar) showing Consumption/Max
- * Energy per tick/Stored, replacing the hover-only info box every machine GUI in this mod used
- * to show. Colors match TabEnergy's own decompiled defaults exactly - header 0xE1C92F,
- * subheader 0xAAAFB8, text black, tint 0x0A76D0 (TabEnergy.defaultBackgroundColorIn, the
- * "consumer" color real TE uses for machines that draw power rather than produce it, which is
- * every machine in this mod). The real Icon_Energy.png icon (cofh:textures/items/icons/
+ * a dedicated tab (not a hover tooltip on the RF bar) showing Consumption/Max Energy per
+ * tick/Stored, replacing the hover-only info box every machine GUI in this mod used to show.
+ * Colors match TabEnergy's own decompiled defaults exactly - header 0xE1C92F, subheader
+ * 0xAAAFB8, text black, tint 0x0A76D0 (TabEnergy.defaultBackgroundColorIn, the "consumer"
+ * color real TE uses for machines that draw power rather than produce it, which is every
+ * machine in this mod). The real Icon_Energy.png icon (cofh:textures/items/icons/
  * Icon_Energy.png) is used directly, same "reference the real PNG" trick the Configuration/
  * Redstone Control tabs already use.
+ *
+ * Docked on the LEFT edge (the {@code leftSide=true} GuiSideTab constructor) rather than
+ * stacked with the other 3 tabs on the right - real TE's own TabEnergy defaults to the left
+ * side too ({@code TabEnergy.defaultSide == LEFT}), keeping it visually separate from the
+ * augment/configuration/redstone cluster.
  */
 public class TabEnergy extends GuiSideTab {
 
@@ -31,7 +36,7 @@ public class TabEnergy extends GuiSideTab {
     private final IEnergyInfo tile;
 
     public TabEnergy(TabbedMachineGui gui, IEnergyInfo tile) {
-        super(gui, ICON_ENERGY, TINT, HEADER, StatCollector.translateToLocal("gui.thermaladd.energy.title"));
+        super(gui, ICON_ENERGY, TINT, HEADER, StatCollector.translateToLocal("gui.thermaladd.energy.title"), true);
         this.gui = gui;
         this.tile = tile;
     }

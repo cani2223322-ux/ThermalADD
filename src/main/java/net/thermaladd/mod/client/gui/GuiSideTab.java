@@ -10,15 +10,25 @@ import net.minecraft.util.ResourceLocation;
 /**
  * The same tab widget every real Thermal Expansion augmentable-machine GUI uses
  * (cofh.lib.gui.element.TabBase / cofh.core.gui.element.TabAugment / TabConfiguration): a
- * 22x22 icon button stacked against the right edge of the main box that expands into a
- * 100x92 colored flap when clicked, one tab open at a time. Since CoFHCore is a hard
- * dependency of this addon, the real {@code cofh:textures/gui/elements/Tab_Right.png}
- * (256x256, corner-sliced) is used directly - no bundled copy needed.
+ * 22x22 icon button stacked against an edge of the main box that expands into a 100x92
+ * colored flap when clicked, one tab open at a time. Since CoFHCore is a hard dependency of
+ * this addon, the real {@code cofh:textures/gui/elements/Tab_Right.png}/{@code Tab_Left.png}
+ * (256x256, corner-sliced) are used directly - no bundled copy needed.
+ *
+ * Right-side tabs (the default, and every tab in this mod except {@link TabEnergy}) anchor
+ * their box's LEFT edge at a fixed {@code tabX} and grow the box rightward, away from the
+ * panel, as they open - the icon (drawn near that fixed edge) never moves. A left-side tab
+ * mirrors this: {@code tabX} instead anchors the box's RIGHT edge (flush against the panel's
+ * own left edge) and the box grows further left as it opens, so the icon - fixed at
+ * {@code tabX - MIN_SIZE}, independent of the animating width - stays put right where it
+ * meets the panel, exactly like a right tab's icon does.
  */
 public abstract class GuiSideTab {
 
-    private static final ResourceLocation TAB_TEXTURE =
+    private static final ResourceLocation TAB_TEXTURE_RIGHT =
             new ResourceLocation("cofh", "textures/gui/elements/Tab_Right.png");
+    private static final ResourceLocation TAB_TEXTURE_LEFT =
+            new ResourceLocation("cofh", "textures/gui/elements/Tab_Left.png");
 
     static final int MIN_SIZE = 22;
     /** Package-visible: GuiAdvancedPulverizer needs this to size xSize to cover the tab flap. */
@@ -31,6 +41,7 @@ public abstract class GuiSideTab {
     private final int tintColor;
     private final int headerColor;
     private final String title;
+    private final boolean leftSide;
 
     private int tabX;
     private int tabY;
@@ -39,13 +50,25 @@ public abstract class GuiSideTab {
     private int currentHeight = MIN_SIZE;
 
     protected GuiSideTab(TabbedMachineGui gui, ResourceLocation icon, int tintColor, int headerColor, String title) {
+        this(gui, icon, tintColor, headerColor, title, false);
+    }
+
+    protected GuiSideTab(TabbedMachineGui gui, ResourceLocation icon, int tintColor, int headerColor, String title, boolean leftSide) {
         this.gui = gui;
         this.icon = icon;
         this.tintColor = tintColor;
         this.headerColor = headerColor;
         this.title = title;
+        this.leftSide = leftSide;
     }
 
+    /**
+     * The raw stack anchor as passed to {@link #setStackPosition} - the box's own left edge
+     * for a right tab, but for a left tab this is NOT where the box visually starts on
+     * screen (see {@link #getContentX()} for that). Kept for the existing right-tab-only
+     * callers (e.g. TabAugments moving real Slots) that already assume tabX == the box's
+     * left edge.
+     */
     public void setStackPosition(int x, int y) {
         this.tabX = x;
         this.tabY = y;
@@ -57,6 +80,20 @@ public abstract class GuiSideTab {
 
     public int getTabY() {
         return tabY;
+    }
+
+    /** The box's actual on-screen left edge - identical to {@link #getTabX()} for a right tab, but shifted left by the current (animating) width for a left tab. Use this, not getTabX(), for anything meant to line up with what drawBackground/drawContentForeground actually draw. */
+    public int getContentX() {
+        return boxX();
+    }
+
+    private int boxX() {
+        return leftSide ? tabX - currentWidth : tabX;
+    }
+
+    /** Where the always-visible 22x22 icon button sits - fixed at the edge that meets the panel, regardless of side or animation state. */
+    private int iconX() {
+        return leftSide ? tabX - MIN_SIZE : tabX;
     }
 
     public boolean isFullyOpen() {
@@ -83,22 +120,22 @@ public abstract class GuiSideTab {
 
     /** True while the mouse is over the always-visible 22x22 icon button. */
     public boolean isMouseOverIcon(int mouseX, int mouseY, int left, int top) {
-        int x = left + tabX;
+        int x = left + iconX();
         int y = top + tabY;
         return mouseX >= x && mouseX < x + MIN_SIZE && mouseY >= y && mouseY < y + MIN_SIZE;
     }
 
     public boolean isMouseOverFlap(int mouseX, int mouseY, int left, int top) {
-        int x = left + tabX;
+        int x = left + boxX();
         int y = top + tabY;
         return mouseX >= x && mouseX < x + currentWidth && mouseY >= y && mouseY < y + currentHeight;
     }
 
     public void drawBackground(int left, int top) {
-        int x = left + tabX;
+        int x = left + boxX();
         int y = top + tabY;
 
-        gui.mc.getTextureManager().bindTexture(TAB_TEXTURE);
+        gui.mc.getTextureManager().bindTexture(leftSide ? TAB_TEXTURE_LEFT : TAB_TEXTURE_RIGHT);
         float r = (tintColor >> 16 & 0xFF) / 255F;
         float g = (tintColor >> 8 & 0xFF) / 255F;
         float b = (tintColor & 0xFF) / 255F;
@@ -116,10 +153,11 @@ public abstract class GuiSideTab {
     }
 
     public void drawForeground(int left, int top) {
-        int x = left + tabX;
+        int iconScreenX = left + iconX();
         int y = top + tabY;
-        drawIcon16(icon, x + 3, y + 3);
+        drawIcon16(icon, iconScreenX + 3, y + 3);
         if (isFullyOpen()) {
+            int x = left + boxX();
             gui.getTabFontRenderer().drawString(title, x + 18, y + 6, headerColor);
             drawContentForeground(x, y);
         }
@@ -132,7 +170,7 @@ public abstract class GuiSideTab {
             }
             return;
         }
-        addContentTooltip(mouseX - (left + tabX), mouseY - (top + tabY), tooltip);
+        addContentTooltip(mouseX - (left + boxX()), mouseY - (top + tabY), tooltip);
     }
 
     protected void addContentTooltip(int relX, int relY, List<String> tooltip) {

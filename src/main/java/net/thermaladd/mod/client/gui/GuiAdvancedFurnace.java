@@ -31,6 +31,9 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
     private static final int TAB_STACK_X = BASE_WIDTH;
     private static final int TAB_STACK_Y = 4;
     private static final int TAB_STACK_STEP = 22;
+    /** Energy is docked on the LEFT edge (tabX=0, the panel's own left edge), not stacked with the other 3 right-side tabs - see TabEnergy's own javadoc. */
+    private static final int LEFT_TAB_X = 0;
+    private static final int LEFT_TAB_Y = 4;
 
     private final TileAdvancedFurnace tile;
     private final TabAugmentsFurnace augmentsTab;
@@ -50,7 +53,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         augmentsTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y);
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
         redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
-        energyTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 3);
+        energyTab.setStackPosition(LEFT_TAB_X, LEFT_TAB_Y);
     }
 
     @Override
@@ -183,7 +186,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {
-            return tab.onContentClick(mouseX - left - tab.getTabX(), mouseY - top - tab.getTabY(), mouseButton, shift);
+            return tab.onContentClick(mouseX - left - tab.getContentX(), mouseY - top - tab.getTabY(), mouseButton, shift);
         }
         return false;
     }
