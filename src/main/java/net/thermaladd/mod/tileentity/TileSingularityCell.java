@@ -9,6 +9,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import cofh.api.energy.IEnergyHandler;
+import cofh.api.energy.IEnergyReceiver;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
@@ -200,11 +201,48 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler {
 
     // ---------------------------------------------------------------- tick
 
+    /**
+     * Real TE's own TileCell doesn't just sit and wait to be asked - every tick it actively
+     * pushes into whatever IEnergyReceiver sits against an Output-configured face (see its
+     * decompiled updateEntity/transferEnergy). Without this, our own extractEnergy() only ever
+     * fires if the NEIGHBOR pulls first - most machines (this mod's own included) only
+     * implement IEnergyReceiver and never call extractEnergy on anything themselves, so a cell
+     * set to Output with a passive machine or a passive conduit segment against it would just
+     * sit there fully charged, "connected" but never actually transferring: two ends both
+     * waiting for the other to ask. This is exactly that missing push, and why the user
+     * reported "Output does nothing" despite the side being set correctly and the cell full.
+     */
     @Override
     public void updateEntity() {
         if (worldObj == null || worldObj.isRemote) {
             return;
         }
+
+        if (energyStored > 0) {
+            for (int side = 0; side < 6 && energyStored > 0; side++) {
+                if (sideCache[side] != MODE_OUTPUT) {
+                    continue;
+                }
+                ForgeDirection dir = ForgeDirection.getOrientation(side);
+                TileEntity neighbor = worldObj.getTileEntity(xCoord + dir.offsetX, yCoord + dir.offsetY, zCoord + dir.offsetZ);
+                if (!(neighbor instanceof IEnergyReceiver)) {
+                    continue;
+                }
+                IEnergyReceiver receiver = (IEnergyReceiver) neighbor;
+                ForgeDirection fromNeighborSide = dir.getOpposite();
+                if (!receiver.canConnectEnergy(fromNeighborSide)) {
+                    continue;
+                }
+                int offered = (int) Math.min(energyStored, Integer.MAX_VALUE);
+                int accepted = receiver.receiveEnergy(fromNeighborSide, offered, false);
+                if (accepted > 0) {
+                    energyStored -= accepted;
+                    energyOutThisTick += accepted;
+                    markDirty();
+                }
+            }
+        }
+
         energyInLastTick = energyInThisTick;
         energyOutLastTick = energyOutThisTick;
         energyInThisTick = 0L;
