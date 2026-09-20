@@ -41,10 +41,12 @@ gui.improvedassembler.side.back=Зад
 gui.improvedassembler.side.left=Лево
 gui.improvedassembler.side.right=Право
 
-gui.improvedassembler.mode.auto=Авто
-gui.improvedassembler.mode.input=Вход
+gui.improvedassembler.mode.input=Вход (весь буфер)
 gui.improvedassembler.mode.output=Выход
-gui.improvedassembler.mode.disabled=Выключено
+gui.improvedassembler.mode.inputRow1=Вход (ряд 1)
+gui.improvedassembler.mode.inputRow2=Вход (ряд 2)
+gui.improvedassembler.mode.all=Все
+gui.improvedassembler.mode.disabled=Отключено
 
 gui.improvedassembler.side.hint=ЛКМ: вперёд  ПКМ: назад  Shift: сброс
 

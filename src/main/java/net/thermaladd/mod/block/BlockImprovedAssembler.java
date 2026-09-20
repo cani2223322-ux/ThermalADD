@@ -33,10 +33,14 @@ import net.thermaladd.mod.util.PendingAugmentDrops;
 public class BlockImprovedAssembler extends BlockContainer {
 
     private IIcon iconFace;
-    /** Indexed by SIDE_MODE_* (Auto/Input/Output/Disabled) - Auto is just the plain casing texture for that face. */
-    private final IIcon[] iconsTop = new IIcon[4];
-    private final IIcon[] iconsBottom = new IIcon[4];
-    private final IIcon[] iconsSide = new IIcon[4];
+    /**
+     * Indexed by SIDE_MODE_* (Disabled/Input/Output/InputRow1/InputRow2/All) - Disabled is just
+     * the plain casing texture for that face, matching real Thermal Expansion's own blank
+     * Config_None badge.
+     */
+    private final IIcon[] iconsTop = new IIcon[TileImprovedAssembler.SIDE_MODE_COUNT];
+    private final IIcon[] iconsBottom = new IIcon[TileImprovedAssembler.SIDE_MODE_COUNT];
+    private final IIcon[] iconsSide = new IIcon[TileImprovedAssembler.SIDE_MODE_COUNT];
 
     public BlockImprovedAssembler() {
         super(Material.iron);
@@ -49,36 +53,47 @@ public class BlockImprovedAssembler extends BlockContainer {
 
     @Override
     public void registerBlockIcons(IIconRegister register) {
-        iconsTop[TileImprovedAssembler.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Top");
-        iconsBottom[TileImprovedAssembler.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Bottom");
-        iconsSide[TileImprovedAssembler.SIDE_MODE_AUTO] = register.registerIcon("thermalexpansion:machine/Machine_Side");
+        iconsTop[TileImprovedAssembler.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Top");
+        iconsBottom[TileImprovedAssembler.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Bottom");
+        iconsSide[TileImprovedAssembler.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Side");
         iconFace = register.registerIcon("thermalexpansion:machine/Machine_Face_Assembler");
+        // Same composited connection badges as the other 2 machines (see
+        // BlockAdvancedPulverizer's javadoc): Blue=Input(whole buffer), Orange=Output,
+        // Green=Input Row 1, Purple=Input Row 2, Open=All - colors verified against the
+        // decompiled TileAssembler/BlockMachine. Real TE's Assembler is the only one of the
+        // 3 machines with a material buffer split into individually addressable rows.
         iconsTop[TileImprovedAssembler.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":TopInput");
         iconsTop[TileImprovedAssembler.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":TopOutput");
-        iconsTop[TileImprovedAssembler.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":TopDisabled");
+        iconsTop[TileImprovedAssembler.SIDE_MODE_INPUT_ROW1] = register.registerIcon(ThermalADD.MODID + ":TopInputRow1");
+        iconsTop[TileImprovedAssembler.SIDE_MODE_INPUT_ROW2] = register.registerIcon(ThermalADD.MODID + ":TopInputRow2");
+        iconsTop[TileImprovedAssembler.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":TopAll");
         iconsBottom[TileImprovedAssembler.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":BottomInput");
         iconsBottom[TileImprovedAssembler.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":BottomOutput");
-        iconsBottom[TileImprovedAssembler.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":BottomDisabled");
+        iconsBottom[TileImprovedAssembler.SIDE_MODE_INPUT_ROW1] = register.registerIcon(ThermalADD.MODID + ":BottomInputRow1");
+        iconsBottom[TileImprovedAssembler.SIDE_MODE_INPUT_ROW2] = register.registerIcon(ThermalADD.MODID + ":BottomInputRow2");
+        iconsBottom[TileImprovedAssembler.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":BottomAll");
         iconsSide[TileImprovedAssembler.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":SideInput");
         iconsSide[TileImprovedAssembler.SIDE_MODE_OUTPUT] = register.registerIcon(ThermalADD.MODID + ":SideOutput");
-        iconsSide[TileImprovedAssembler.SIDE_MODE_DISABLED] = register.registerIcon(ThermalADD.MODID + ":SideDisabled");
+        iconsSide[TileImprovedAssembler.SIDE_MODE_INPUT_ROW1] = register.registerIcon(ThermalADD.MODID + ":SideInputRow1");
+        iconsSide[TileImprovedAssembler.SIDE_MODE_INPUT_ROW2] = register.registerIcon(ThermalADD.MODID + ":SideInputRow2");
+        iconsSide[TileImprovedAssembler.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":SideAll");
     }
 
     /** Inventory / item-form rendering: no world context, so always show the plain face. */
     @Override
     public IIcon getIcon(int side, int meta) {
         if (side == 0) {
-            return iconsBottom[TileImprovedAssembler.SIDE_MODE_AUTO];
+            return iconsBottom[TileImprovedAssembler.SIDE_MODE_DISABLED];
         }
         if (side == 1) {
-            return iconsTop[TileImprovedAssembler.SIDE_MODE_AUTO];
+            return iconsTop[TileImprovedAssembler.SIDE_MODE_DISABLED];
         }
-        return side == meta ? iconFace : iconsSide[TileImprovedAssembler.SIDE_MODE_AUTO];
+        return side == meta ? iconFace : iconsSide[TileImprovedAssembler.SIDE_MODE_DISABLED];
     }
 
     /**
-     * In-world rendering: swaps any face, including top/bottom, to a connection badge (blue/
-     * orange/red) whenever that side's mode isn't Auto - same as
+     * In-world rendering: swaps any face, including top/bottom, to a connection badge whenever
+     * that side's mode isn't Disabled - same as
      * {@code BlockAdvancedPulverizer}/{@code BlockAdvancedFurnace}, wired to this block's own
      * side config (its facing lives in block metadata, not a separate tile field).
      */
@@ -92,7 +107,7 @@ public class BlockImprovedAssembler extends BlockContainer {
         TileEntity te = world.getTileEntity(x, y, z);
         int mode = te instanceof TileImprovedAssembler
                 ? ((TileImprovedAssembler) te).getSideMode(side)
-                : TileImprovedAssembler.SIDE_MODE_AUTO;
+                : TileImprovedAssembler.SIDE_MODE_DISABLED;
         if (side == 0) {
             return iconsBottom[mode];
         }
@@ -125,6 +140,7 @@ public class BlockImprovedAssembler extends BlockContainer {
             TileEntity te = world.getTileEntity(x, y, z);
             if (te instanceof TileImprovedAssembler) {
                 TileImprovedAssembler tile = (TileImprovedAssembler) te;
+                tile.setDefaultSides();
                 if (stack.hasTagCompound() && stack.getTagCompound().hasKey("Augments")) {
                     tile.readAugmentsFromNBT(stack.getTagCompound());
                 } else {

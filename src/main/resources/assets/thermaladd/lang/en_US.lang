@@ -41,9 +41,11 @@ gui.improvedassembler.side.back=Back
 gui.improvedassembler.side.left=Left
 gui.improvedassembler.side.right=Right
 
-gui.improvedassembler.mode.auto=Auto
-gui.improvedassembler.mode.input=Input
+gui.improvedassembler.mode.input=Input (whole buffer)
 gui.improvedassembler.mode.output=Output
+gui.improvedassembler.mode.inputRow1=Input (Row 1)
+gui.improvedassembler.mode.inputRow2=Input (Row 2)
+gui.improvedassembler.mode.all=All
 gui.improvedassembler.mode.disabled=Disabled
 
 gui.improvedassembler.side.hint=LMB: next  RMB: previous  Shift: reset

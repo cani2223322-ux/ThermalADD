@@ -82,11 +82,39 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     /** Matches cofh.thermalexpansion.item.TEAugments.GENERAL_REDSTONE_CONTROL. */
     public static final String AUG_REDSTONE_CONTROL = "generalRedstoneControl";
 
-    public static final int SIDE_MODE_AUTO = 0;
+    /**
+     * Side config modes, verified against real Thermal Expansion's own Cyclic Assembler
+     * (decompiled {@code cofh.thermalexpansion.block.machine.TileAssembler#initialize}: 6
+     * modes - {@code sideTex = {0,1,4,5,6,7}} indexing real TE's own {@code Config_None/Blue/
+     * Orange/Green/Purple/Open} badge textures). Mode 0 ("no badge, plain casing") is TE's
+     * actual DISABLED state, forced onto the front face permanently, not an "accept everything"
+     * default. Real TE's material buffer (18 slots, same 9x2 layout this mod's own buffer
+     * uses) can be fed as a whole (Input, Blue) or split into its two rows individually - Row 1
+     * (Green) and Row 2 (Purple) - for wiring different item pipelines to each half; Output
+     * (Orange) is extraction-only. Unlike the Pulverizer/Furnace, real TE's Assembler Input
+     * modes (plain Input, Row 1, Row 2) never allow extraction back out, only insertion -
+     * verified via {@code allowExtractionSide = {false,false,true,false,false,true}}.
+     */
+    public static final int SIDE_MODE_DISABLED = 0;
     public static final int SIDE_MODE_INPUT = 1;
     public static final int SIDE_MODE_OUTPUT = 2;
-    public static final int SIDE_MODE_DISABLED = 3;
-    public static final int SIDE_MODE_COUNT = 4;
+    public static final int SIDE_MODE_INPUT_ROW1 = 3;
+    public static final int SIDE_MODE_INPUT_ROW2 = 4;
+    public static final int SIDE_MODE_ALL = 5;
+    public static final int SIDE_MODE_COUNT = 6;
+
+    /**
+     * Absolute-side defaults (index = ForgeDirection ordinal), matching real TE's own
+     * TileAssembler defaultSides table ({@code {1,1,2,2,2,2}}) exactly: both top AND bottom
+     * default to (whole-buffer) Input, all 4 walls default to Output.
+     */
+    private static final int[] DEFAULT_SIDE_MODE = {
+            SIDE_MODE_INPUT, SIDE_MODE_INPUT,
+            SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT, SIDE_MODE_OUTPUT
+    };
+
+    /** The material buffer is a 9x2 grid; Row 1/Row 2 side modes address one half each. */
+    private static final int BUFFER_ROW_SIZE = 9;
 
     private static final int AUTO_IO_INTERVAL = 8;
 
@@ -281,9 +309,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
 
         if (augmentReconfigSides && !reconfigSides) {
             // the augment that unlocked side reconfiguration was removed - lock back to defaults
-            for (int i = 0; i < sideCache.length; i++) {
-                sideCache[i] = SIDE_MODE_AUTO;
-            }
+            setDefaultSides();
         }
         if (!redstoneControl) {
             rsMode = ControlMode.DISABLED;
@@ -375,7 +401,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         if (!augmentReconfigSides || side == getFacing()) {
             return false;
         }
-        sideCache[side] = SIDE_MODE_AUTO;
+        sideCache[side] = (byte) DEFAULT_SIDE_MODE[side];
         markDirty();
         syncRenderState();
         return true;
@@ -385,12 +411,18 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         if (!augmentReconfigSides) {
             return false;
         }
+        setDefaultSides();
+        return true;
+    }
+
+    /** Real TE-accurate defaults (see {@link #DEFAULT_SIDE_MODE}'s javadoc). */
+    public void setDefaultSides() {
         for (int i = 0; i < sideCache.length; i++) {
-            sideCache[i] = SIDE_MODE_AUTO;
+            sideCache[i] = (byte) DEFAULT_SIDE_MODE[i];
         }
+        sideCache[getFacing()] = SIDE_MODE_DISABLED;
         markDirty();
         syncRenderState();
-        return true;
     }
 
     /**
@@ -415,20 +447,33 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         sideCache[side] = (byte) mode;
     }
 
-    private boolean sideAllowsInput(int side) {
-        int mode = sideCache[side];
-        return mode == SIDE_MODE_AUTO || mode == SIDE_MODE_INPUT;
+    /** Whole-buffer Input, Row 1 alone, or All all insert into the buffer's first 9 slots. */
+    private static boolean modeInsertsRow1(int mode) {
+        return mode == SIDE_MODE_INPUT || mode == SIDE_MODE_INPUT_ROW1 || mode == SIDE_MODE_ALL;
     }
 
-    private boolean sideAllowsOutput(int side) {
-        int mode = sideCache[side];
-        return mode == SIDE_MODE_AUTO || mode == SIDE_MODE_OUTPUT;
+    /** Whole-buffer Input, Row 2 alone, or All all insert into the buffer's second 9 slots. */
+    private static boolean modeInsertsRow2(int mode) {
+        return mode == SIDE_MODE_INPUT || mode == SIDE_MODE_INPUT_ROW2 || mode == SIDE_MODE_ALL;
+    }
+
+    /**
+     * Real TE quirk, verified against the decompiled {@code TileAssembler}
+     * ({@code allowExtractionSide = {false,false,true,false,false,true}}): unlike the
+     * Pulverizer/Furnace, none of this machine's Input-flavored modes ever allow extraction -
+     * only Output and All do.
+     */
+    private static boolean modeExtractsOutput(int mode) {
+        return mode == SIDE_MODE_OUTPUT || mode == SIDE_MODE_ALL;
     }
 
     private boolean autoPullInputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
-            if (sideAllowsInput(side) && pullFromSide(ForgeDirection.getOrientation(side))) {
+            int mode = sideCache[side];
+            boolean row1 = modeInsertsRow1(mode);
+            boolean row2 = modeInsertsRow2(mode);
+            if ((row1 || row2) && pullFromSide(ForgeDirection.getOrientation(side), row1, row2)) {
                 moved = true;
             }
         }
@@ -438,15 +483,15 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     private boolean autoPushOutputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
-            if (sideAllowsOutput(side) && pushToSide(ForgeDirection.getOrientation(side))) {
+            if (modeExtractsOutput(sideCache[side]) && pushToSide(ForgeDirection.getOrientation(side))) {
                 moved = true;
             }
         }
         return moved;
     }
 
-    /** Pulls a single item from the neighboring inventory on {@code dir} into the material buffer. */
-    private boolean pullFromSide(ForgeDirection dir) {
+    /** Pulls a single item from the neighboring inventory on {@code dir} into the material buffer - only into row 1 and/or row 2 as permitted by the side's own mode. */
+    private boolean pullFromSide(ForgeDirection dir, boolean row1, boolean row2) {
         TileEntity neighbor = worldObj.getTileEntity(xCoord + dir.offsetX, yCoord + dir.offsetY, zCoord + dir.offsetZ);
         if (!(neighbor instanceof IInventory)) {
             return false;
@@ -466,7 +511,7 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
                     && !((ISidedInventory) neighborInv).canExtractItem(slotIdx, candidate, fromSide.ordinal())) {
                 continue;
             }
-            int bufferSlot = findBufferSlotFor(candidate);
+            int bufferSlot = findBufferSlotFor(candidate, row1, row2);
             if (bufferSlot < 0) {
                 continue;
             }
@@ -510,9 +555,12 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
         return false;
     }
 
-    private int findBufferSlotFor(ItemStack stack) {
+    private int findBufferSlotFor(ItemStack stack, boolean row1, boolean row2) {
         int emptySlot = -1;
         for (int i = 0; i < INPUT_SLOTS; i++) {
+            if (i < BUFFER_ROW_SIZE ? !row1 : !row2) {
+                continue;
+            }
             ItemStack buf = inventory[INPUT_START + i];
             if (buf == null) {
                 if (emptySlot < 0) {
@@ -836,16 +884,24 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
 
     @Override
     public int[] getAccessibleSlotsFromSide(int side) {
-        boolean in = sideAllowsInput(side);
-        boolean out = sideAllowsOutput(side);
-        int[] slots = new int[(in ? INPUT_SLOTS : 0) + (out ? OUTPUT_SLOTS : 0)];
+        int mode = sideCache[side];
+        boolean row1 = modeInsertsRow1(mode);
+        boolean row2 = modeInsertsRow2(mode);
+        boolean output = modeExtractsOutput(mode);
+
+        int[] slots = new int[(row1 ? BUFFER_ROW_SIZE : 0) + (row2 ? BUFFER_ROW_SIZE : 0) + (output ? OUTPUT_SLOTS : 0)];
         int idx = 0;
-        if (in) {
-            for (int i = 0; i < INPUT_SLOTS; i++) {
+        if (row1) {
+            for (int i = 0; i < BUFFER_ROW_SIZE; i++) {
                 slots[idx++] = INPUT_START + i;
             }
         }
-        if (out) {
+        if (row2) {
+            for (int i = BUFFER_ROW_SIZE; i < INPUT_SLOTS; i++) {
+                slots[idx++] = INPUT_START + i;
+            }
+        }
+        if (output) {
             for (int i = 0; i < OUTPUT_SLOTS; i++) {
                 slots[idx++] = OUTPUT_START + i;
             }
@@ -855,12 +911,17 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
 
     @Override
     public boolean canInsertItem(int slot, ItemStack stack, int side) {
-        return slot >= INPUT_START && slot < OUTPUT_START && sideAllowsInput(side);
+        if (slot < INPUT_START || slot >= OUTPUT_START) {
+            return false;
+        }
+        int mode = sideCache[side];
+        int rel = slot - INPUT_START;
+        return rel < BUFFER_ROW_SIZE ? modeInsertsRow1(mode) : modeInsertsRow2(mode);
     }
 
     @Override
     public boolean canExtractItem(int slot, ItemStack stack, int side) {
-        return slot >= OUTPUT_START && slot < AUGMENT_START && sideAllowsOutput(side);
+        return slot >= OUTPUT_START && slot < AUGMENT_START && modeExtractsOutput(sideCache[side]);
     }
 
     @Override

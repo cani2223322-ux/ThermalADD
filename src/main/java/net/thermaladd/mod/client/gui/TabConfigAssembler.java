@@ -50,13 +50,19 @@ public class TabConfigAssembler extends GuiSideTab {
 
     private static final ResourceLocation TEX_TOP_INPUT = badge("TopInput");
     private static final ResourceLocation TEX_TOP_OUTPUT = badge("TopOutput");
-    private static final ResourceLocation TEX_TOP_DISABLED = badge("TopDisabled");
+    private static final ResourceLocation TEX_TOP_INPUT_ROW1 = badge("TopInputRow1");
+    private static final ResourceLocation TEX_TOP_INPUT_ROW2 = badge("TopInputRow2");
+    private static final ResourceLocation TEX_TOP_ALL = badge("TopAll");
     private static final ResourceLocation TEX_BOTTOM_INPUT = badge("BottomInput");
     private static final ResourceLocation TEX_BOTTOM_OUTPUT = badge("BottomOutput");
-    private static final ResourceLocation TEX_BOTTOM_DISABLED = badge("BottomDisabled");
+    private static final ResourceLocation TEX_BOTTOM_INPUT_ROW1 = badge("BottomInputRow1");
+    private static final ResourceLocation TEX_BOTTOM_INPUT_ROW2 = badge("BottomInputRow2");
+    private static final ResourceLocation TEX_BOTTOM_ALL = badge("BottomAll");
     private static final ResourceLocation TEX_SIDE_INPUT = badge("SideInput");
     private static final ResourceLocation TEX_SIDE_OUTPUT = badge("SideOutput");
-    private static final ResourceLocation TEX_SIDE_DISABLED = badge("SideDisabled");
+    private static final ResourceLocation TEX_SIDE_INPUT_ROW1 = badge("SideInputRow1");
+    private static final ResourceLocation TEX_SIDE_INPUT_ROW2 = badge("SideInputRow2");
+    private static final ResourceLocation TEX_SIDE_ALL = badge("SideAll");
 
     private static ResourceLocation badge(String name) {
         return new ResourceLocation(ThermalADD.MODID, "textures/blocks/" + name + ".png");
@@ -89,18 +95,15 @@ public class TabConfigAssembler extends GuiSideTab {
         };
     }
 
+    /**
+     * The front face itself always shows the live machine face regardless of mode - it can
+     * never actually be reconfigured (permanently forced to Disabled, see
+     * {@code TileImprovedAssembler#setDefaultSides}) - exactly like real Thermal Expansion's
+     * own TabConfiguration.
+     */
     private ResourceLocation iconForButton(int index, int mode) {
         if (index == FRONT_INDEX) {
-            switch (mode) {
-                case TileImprovedAssembler.SIDE_MODE_INPUT:
-                    return TEX_SIDE_INPUT;
-                case TileImprovedAssembler.SIDE_MODE_OUTPUT:
-                    return TEX_SIDE_OUTPUT;
-                case TileImprovedAssembler.SIDE_MODE_DISABLED:
-                    return TEX_SIDE_DISABLED;
-                default:
-                    return TEX_FACE;
-            }
+            return TEX_FACE;
         }
         if (index == TOP_INDEX) {
             switch (mode) {
@@ -108,8 +111,12 @@ public class TabConfigAssembler extends GuiSideTab {
                     return TEX_TOP_INPUT;
                 case TileImprovedAssembler.SIDE_MODE_OUTPUT:
                     return TEX_TOP_OUTPUT;
-                case TileImprovedAssembler.SIDE_MODE_DISABLED:
-                    return TEX_TOP_DISABLED;
+                case TileImprovedAssembler.SIDE_MODE_INPUT_ROW1:
+                    return TEX_TOP_INPUT_ROW1;
+                case TileImprovedAssembler.SIDE_MODE_INPUT_ROW2:
+                    return TEX_TOP_INPUT_ROW2;
+                case TileImprovedAssembler.SIDE_MODE_ALL:
+                    return TEX_TOP_ALL;
                 default:
                     return TEX_TOP;
             }
@@ -120,8 +127,12 @@ public class TabConfigAssembler extends GuiSideTab {
                     return TEX_BOTTOM_INPUT;
                 case TileImprovedAssembler.SIDE_MODE_OUTPUT:
                     return TEX_BOTTOM_OUTPUT;
-                case TileImprovedAssembler.SIDE_MODE_DISABLED:
-                    return TEX_BOTTOM_DISABLED;
+                case TileImprovedAssembler.SIDE_MODE_INPUT_ROW1:
+                    return TEX_BOTTOM_INPUT_ROW1;
+                case TileImprovedAssembler.SIDE_MODE_INPUT_ROW2:
+                    return TEX_BOTTOM_INPUT_ROW2;
+                case TileImprovedAssembler.SIDE_MODE_ALL:
+                    return TEX_BOTTOM_ALL;
                 default:
                     return TEX_BOTTOM;
             }
@@ -131,8 +142,12 @@ public class TabConfigAssembler extends GuiSideTab {
                 return TEX_SIDE_INPUT;
             case TileImprovedAssembler.SIDE_MODE_OUTPUT:
                 return TEX_SIDE_OUTPUT;
-            case TileImprovedAssembler.SIDE_MODE_DISABLED:
-                return TEX_SIDE_DISABLED;
+            case TileImprovedAssembler.SIDE_MODE_INPUT_ROW1:
+                return TEX_SIDE_INPUT_ROW1;
+            case TileImprovedAssembler.SIDE_MODE_INPUT_ROW2:
+                return TEX_SIDE_INPUT_ROW2;
+            case TileImprovedAssembler.SIDE_MODE_ALL:
+                return TEX_SIDE_ALL;
             default:
                 return TEX_SIDE;
         }
@@ -194,10 +209,14 @@ public class TabConfigAssembler extends GuiSideTab {
                 return StatCollector.translateToLocal("gui.improvedassembler.mode.input");
             case TileImprovedAssembler.SIDE_MODE_OUTPUT:
                 return StatCollector.translateToLocal("gui.improvedassembler.mode.output");
-            case TileImprovedAssembler.SIDE_MODE_DISABLED:
-                return StatCollector.translateToLocal("gui.improvedassembler.mode.disabled");
+            case TileImprovedAssembler.SIDE_MODE_INPUT_ROW1:
+                return StatCollector.translateToLocal("gui.improvedassembler.mode.inputRow1");
+            case TileImprovedAssembler.SIDE_MODE_INPUT_ROW2:
+                return StatCollector.translateToLocal("gui.improvedassembler.mode.inputRow2");
+            case TileImprovedAssembler.SIDE_MODE_ALL:
+                return StatCollector.translateToLocal("gui.improvedassembler.mode.all");
             default:
-                return StatCollector.translateToLocal("gui.improvedassembler.mode.auto");
+                return StatCollector.translateToLocal("gui.improvedassembler.mode.disabled");
         }
     }
 }
