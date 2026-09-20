@@ -48,7 +48,8 @@ import net.thermaladd.mod.network.PacketHandler;
 public class TileAdvancedPulverizer extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl {
 
     public static final int INPUT_SLOTS = 3;
-    public static final int OUTPUT_PRIMARY_SLOTS = 2;
+    /** One primary-output slot per input line, as instructed - not a fixed 2 regardless of INPUT_SLOTS. */
+    public static final int OUTPUT_PRIMARY_SLOTS = 3;
     public static final int OUTPUT_SECONDARY_SLOTS = 2;
     public static final int AUGMENT_SLOTS = 9;
     public static final int TOTAL_SLOTS = INPUT_SLOTS + OUTPUT_PRIMARY_SLOTS + OUTPUT_SECONDARY_SLOTS + AUGMENT_SLOTS;
@@ -696,7 +697,14 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
     private boolean canFitOutput(RecipePulverizer recipe) {
         ItemStack primary = recipe.getPrimaryOutput();
-        if (!canFitStack(OUTPUT_PRIMARY_START, primary) && !canFitStack(OUTPUT_PRIMARY_START + 1, primary)) {
+        boolean primaryFits = false;
+        for (int i = 0; i < OUTPUT_PRIMARY_SLOTS; i++) {
+            if (canFitStack(OUTPUT_PRIMARY_START + i, primary)) {
+                primaryFits = true;
+                break;
+            }
+        }
+        if (!primaryFits) {
             return false;
         }
         ItemStack secondary = recipe.getSecondaryOutput();

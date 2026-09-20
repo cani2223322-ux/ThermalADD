@@ -29,12 +29,13 @@ public class ContainerAdvancedPulverizer extends Container {
     public static final int INPUT_X = 44;
     public static final int INPUT_Y = 17;
 
+    /** One primary-output slot per input line (3), stacked in its own column exactly like the input column. */
     public static final int OUTPUT_PRIMARY_X = 116;
     public static final int OUTPUT_PRIMARY_Y = 17;
 
-    /** Bottom-right corner of the panel, right next to the primary output column - 2 slots side by side. */
-    public static final int[] OUTPUT_SECONDARY_X = {116, 134};
-    public static final int OUTPUT_SECONDARY_Y = 53;
+    /** Bottom-right corner of the panel: its own column right next to primary output, only 2 rows tall. */
+    public static final int OUTPUT_SECONDARY_X = 134;
+    public static final int OUTPUT_SECONDARY_Y = 35;
 
     public static final int PLAYER_INV_Y = 92;
     public static final int PLAYER_HOTBAR_Y = 150;
@@ -74,7 +75,7 @@ public class ContainerAdvancedPulverizer extends Container {
         }
         for (int i = 0; i < TileAdvancedPulverizer.OUTPUT_SECONDARY_SLOTS; i++) {
             addSlotToContainer(new Slot(tile, TileAdvancedPulverizer.OUTPUT_SECONDARY_START + i,
-                    OUTPUT_SECONDARY_X[i], OUTPUT_SECONDARY_Y));
+                    OUTPUT_SECONDARY_X, OUTPUT_SECONDARY_Y + i * SLOT_SIZE));
         }
 
         // 9 augment slots - same design/functionality as Thermal Expansion's TileAugmentable,

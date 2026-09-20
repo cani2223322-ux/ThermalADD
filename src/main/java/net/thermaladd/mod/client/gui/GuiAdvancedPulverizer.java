@@ -104,8 +104,8 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
                     top + ContainerAdvancedPulverizer.OUTPUT_PRIMARY_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1);
         }
         for (int i = 0; i < TileAdvancedPulverizer.OUTPUT_SECONDARY_SLOTS; i++) {
-            drawTESlot(left + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_X[i] - 1,
-                    top + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_Y - 1);
+            drawTESlot(left + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_X - 1,
+                    top + ContainerAdvancedPulverizer.OUTPUT_SECONDARY_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1);
         }
 
         // player inventory slot frames
