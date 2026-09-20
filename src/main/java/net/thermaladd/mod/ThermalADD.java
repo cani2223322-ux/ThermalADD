@@ -6,6 +6,7 @@ import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.Mod.Instance;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLInterModComms;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
@@ -85,5 +86,11 @@ public class ThermalADD {
             // mod (and every other postInit mod) down with it - just skip the recipe(s).
             FMLLog.severe("[%s] Failed to register recipes: %s", NAME, t);
         }
+
+        // Deliberately a bare string, not a class reference - see
+        // net.thermaladd.mod.waila.ThermalADDWailaPlugin's own javadoc for why that class must
+        // never be imported/touched anywhere else in this mod, Waila installed or not. Harmless
+        // no-op if Waila isn't present: an IMC message with no listening mod just goes nowhere.
+        FMLInterModComms.sendMessage("Waila", "register", "net.thermaladd.mod.waila.ThermalADDWailaPlugin.callbackRegister");
     }
 }

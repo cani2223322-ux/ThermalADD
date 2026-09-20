@@ -46,7 +46,11 @@ dependencies {
             // Not referenced directly by our code, but ThermalExpansion's recipe managers
             // touch ThermalFoundation classes (TFItems, VanillaEquipment) internally, so it
             // needs to be on the classpath for TE's own classes to resolve/verify.
-            'libs/ThermalFoundation-1.7.10-1.2.6-118.jar'
+            'libs/ThermalFoundation-1.7.10-1.2.6-118.jar',
+            // Compile-only, for net.thermaladd.mod.waila.ThermalADDWailaPlugin - see
+            // libs/README.txt and that class's own javadoc for why the mod builds and runs
+            // fine with or without Waila actually present at runtime.
+            'libs/Waila-1.5.10_1.7.10.jar'
     )
 }
 
