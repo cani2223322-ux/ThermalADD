@@ -66,3 +66,4 @@ gui.thermaladd.cell.side.west=Запад
 gui.thermaladd.cell.side.hint=ЛКМ: вперёд | ПКМ: назад | Shift: сброс
 gui.thermaladd.cell.energyIn=Вход: %s RF/т
 gui.thermaladd.cell.energyOut=Выход: %s RF/т
+gui.thermaladd.cell.capacity=вместимость

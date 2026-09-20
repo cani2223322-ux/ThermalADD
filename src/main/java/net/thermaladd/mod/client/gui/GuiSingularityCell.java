@@ -32,7 +32,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
     private static final int BASE_HEIGHT = 220;
 
     private static final int ENERGY_WIDTH = 20;
-    private static final int ENERGY_HEIGHT = 90;
+    private static final int ENERGY_HEIGHT = 78;
     private static final int ENERGY_X = (BASE_WIDTH - ENERGY_WIDTH) / 2;
     private static final int ENERGY_Y = 18;
 
@@ -104,6 +104,14 @@ public class GuiSingularityCell extends TabbedMachineGui {
         long capacity = tile.getCapacityLong();
         double ratio = capacity <= 0 ? 0 : energy / (double) capacity;
         int filled = (int) (ENERGY_HEIGHT * ratio);
+        // Capacity is astronomically larger than any realistic charge rate can fill on a
+        // linear scale (even hundreds of millions of RF round down to 0 of 78 pixels against a
+        // 1-trillion cap) - guarantee at least a 1px sliver whenever there's any charge at all,
+        // so the bar doesn't read as "completely empty" for a cell that very much isn't. The
+        // exact numbers below (and the tooltip) stay the real, unrounded ground truth either way.
+        if (filled <= 0 && energy > 0) {
+            filled = 1;
+        }
         if (filled > 0) {
             // Gradient fill (violet at the bottom -> cyan at the top), matching the block's own gradient texture.
             for (int i = 0; i < filled; i++) {
@@ -129,10 +137,8 @@ public class GuiSingularityCell extends TabbedMachineGui {
         fontRendererObj.drawString(StatCollector.translateToLocal("tile.singularityCell.name"), 8, 6, 0x404040);
 
         long capacity = tile.getCapacityLong();
-        String fillLine1 = formatRF(tile.getEnergyStoredLong()) + " / " + formatRF(capacity) + " RF";
-        String fillLine2 = "(" + String.format("%,d", tile.getEnergyStoredLong()) + ")";
-        drawCenteredString(fontRendererObj, fillLine1, BASE_WIDTH / 2, ENERGY_Y + ENERGY_HEIGHT + 6, 0x404040);
-        drawCenteredString(fontRendererObj, fillLine2, BASE_WIDTH / 2, ENERGY_Y + ENERGY_HEIGHT + 16, 0x707070);
+        String fillLine = formatRF(tile.getEnergyStoredLong()) + " / " + formatRF(capacity) + " RF";
+        drawCenteredString(fontRendererObj, fillLine, BASE_WIDTH / 2, ENERGY_Y + ENERGY_HEIGHT + 8, 0x404040);
 
         String inLine = StatCollector.translateToLocalFormatted("gui.thermaladd.cell.energyIn", formatRF(tile.getEnergyInPerTick()));
         String outLine = StatCollector.translateToLocalFormatted("gui.thermaladd.cell.energyOut", formatRF(tile.getEnergyOutPerTick()));
@@ -170,7 +176,13 @@ public class GuiSingularityCell extends TabbedMachineGui {
         int top = (height - ySize) / 2;
 
         List<String> tooltip = new ArrayList<String>();
-        configTab.addTooltip(mouseX, mouseY, left, top, tooltip);
+        if (mouseX >= left + ENERGY_X && mouseX < left + ENERGY_X + ENERGY_WIDTH
+                && mouseY >= top + ENERGY_Y && mouseY < top + ENERGY_Y + ENERGY_HEIGHT) {
+            tooltip.add(String.format("%,d", tile.getEnergyStoredLong()) + " RF");
+            tooltip.add(String.format("%,d", tile.getCapacityLong()) + " RF " + StatCollector.translateToLocal("gui.thermaladd.cell.capacity"));
+        } else {
+            configTab.addTooltip(mouseX, mouseY, left, top, tooltip);
+        }
         if (!tooltip.isEmpty()) {
             drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
         }

@@ -66,3 +66,4 @@ gui.thermaladd.cell.side.west=West
 gui.thermaladd.cell.side.hint=Left-click: cycle | Right-click: cycle back | Shift: reset
 gui.thermaladd.cell.energyIn=Input: %s RF/t
 gui.thermaladd.cell.energyOut=Output: %s RF/t
+gui.thermaladd.cell.capacity=capacity
