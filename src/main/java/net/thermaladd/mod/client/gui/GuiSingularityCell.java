@@ -60,15 +60,15 @@ public class GuiSingularityCell extends TabbedMachineGui {
     }
 
     @Override
-    public void updateScreen() {
-        super.updateScreen();
-        configTab.update();
-    }
-
-    @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
+
+        // See GuiAdvancedPulverizer's own copy of this comment: stepped once per rendered frame
+        // (not once per game tick, which is what calling this from updateScreen() would mean) to
+        // match real Thermal Expansion's own GuiBase#drawTabs - this is what makes the tab
+        // animation look smooth and open at the expected speed regardless of framerate.
+        configTab.update();
 
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
         drawEnergyBar(left, top);

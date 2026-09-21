@@ -62,22 +62,27 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
     @Override
     public void updateScreen() {
         super.updateScreen();
-        augmentsTab.update();
         if (!tile.augmentReconfigSides) {
             configTab.setOpen(false);
         }
-        configTab.update();
         if (!tile.augmentRedstoneControl) {
             redstoneTab.setOpen(false);
         }
-        redstoneTab.update();
-        energyTab.update();
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
+
+        // See GuiAdvancedPulverizer's own copy of this comment: stepped once per rendered frame
+        // (not once per game tick, like updateScreen() runs at) to match real Thermal
+        // Expansion's own GuiBase#drawTabs - this is what actually makes the tab animation look
+        // smooth and open at the expected speed regardless of framerate.
+        augmentsTab.update();
+        configTab.update();
+        redstoneTab.update();
+        energyTab.update();
 
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 

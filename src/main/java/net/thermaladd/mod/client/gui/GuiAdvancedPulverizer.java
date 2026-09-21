@@ -80,22 +80,29 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
     @Override
     public void updateScreen() {
         super.updateScreen();
-        augmentsTab.update();
         if (!tile.augmentReconfigSides) {
             configTab.setOpen(false);
         }
-        configTab.update();
         if (!tile.augmentRedstoneControl) {
             redstoneTab.setOpen(false);
         }
-        redstoneTab.update();
-        energyTab.update();
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
+
+        // Tab open/close animation is stepped here, once per rendered FRAME - not in
+        // updateScreen(), which Minecraft only calls once per game TICK (a fixed 20/sec,
+        // regardless of framerate). Real Thermal Expansion's own GuiBase#drawTabs does the same
+        // (calls TabBase#update() from inside its own per-frame draw path) - stepping this from
+        // updateScreen() instead is exactly why the tabs used to look choppier and open more
+        // slowly than real TE's at any framerate above 20 FPS.
+        augmentsTab.update();
+        configTab.update();
+        redstoneTab.update();
+        energyTab.update();
 
         // Deliberately BASE_WIDTH/BASE_HEIGHT here, NOT xSize/ySize: xSize is padded to cover
         // the tab flap area for click-detection (see the constructor), but the visible panel

@@ -92,16 +92,12 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
     @Override
     public void updateScreen() {
         super.updateScreen();
-        augmentsTab.update();
         if (!tile.augmentReconfigSides) {
             configTab.setOpen(false);
         }
-        configTab.update();
         if (!tile.augmentRedstoneControl) {
             redstoneTab.setOpen(false);
         }
-        redstoneTab.update();
-        energyTab.update();
     }
 
     @Override
@@ -123,6 +119,13 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
+
+        // See GuiAdvancedPulverizer's own copy of this comment: stepped once per rendered frame
+        // (not once per game tick) to match real Thermal Expansion's own GuiBase#drawTabs.
+        augmentsTab.update();
+        configTab.update();
+        redstoneTab.update();
+        energyTab.update();
 
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 
