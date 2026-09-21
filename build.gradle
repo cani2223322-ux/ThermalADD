@@ -11,7 +11,7 @@ buildscript {
 
 apply plugin: 'forge'
 
-version = "1.7.10-beta.3"
+version = "1.7.10-beta.3.1.1"
 group = "net.thermaladd"
 archivesBaseName = "thermaladd"
 
