@@ -1,0 +1,241 @@
+package net.thermaladd.mod.block;
+
+import java.util.ArrayList;
+
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockContainer;
+import net.minecraft.block.material.Material;
+import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.IIcon;
+import net.minecraft.util.MathHelper;
+import net.minecraft.world.IBlockAccess;
+import net.minecraft.world.World;
+
+import cofh.api.item.IToolHammer;
+import net.thermaladd.mod.ThermalADD;
+import net.thermaladd.mod.init.ModCreativeTab;
+import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
+import net.thermaladd.mod.util.PendingAugmentDrops;
+
+/**
+ * Reuses Thermal Expansion's own real machine-casing and Sawmill textures directly from its
+ * resource domain (top/bottom/side casing + the Sawmill's own idle/active face icon) - real
+ * Thermal Expansion 1.7.10 does ship a genuine Sawmill (verified directly against the vendored
+ * jar: {@code assets/thermalexpansion/textures/blocks/machine/Machine_Face_Sawmill.png} and
+ * {@code Machine_Active_Sawmill.png} both exist), so this gets a pixel-identical look for free,
+ * same as {@link BlockAdvancedPulverizer}.
+ *
+ * The side-config badge textures are the exact same PNGs {@code BlockAdvancedPulverizer} already
+ * uses (TopInput/TopOutputPrimary/.../SideAll under the {@code thermaladd:} domain) - see
+ * {@link TileAdvancedSawmill}'s own javadoc for why the Sawmill's side-mode set is numerically
+ * and color-wise identical to the Pulverizer's, so no new badge art was needed.
+ */
+public class BlockAdvancedSawmill extends BlockContainer {
+
+    private IIcon iconFaceIdle;
+    private IIcon iconFaceActive;
+    private final IIcon[] iconsTop = new IIcon[TileAdvancedSawmill.SIDE_MODE_COUNT];
+    private final IIcon[] iconsBottom = new IIcon[TileAdvancedSawmill.SIDE_MODE_COUNT];
+    private final IIcon[] iconsSide = new IIcon[TileAdvancedSawmill.SIDE_MODE_COUNT];
+
+    public BlockAdvancedSawmill() {
+        super(Material.iron);
+        setBlockName("advancedSawmill");
+        setCreativeTab(ModCreativeTab.TAB);
+        setHardness(5.0F);
+        setResistance(10.0F);
+        setStepSound(soundTypeMetal);
+    }
+
+    @Override
+    public void registerBlockIcons(IIconRegister register) {
+        iconsTop[TileAdvancedSawmill.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Top");
+        iconsBottom[TileAdvancedSawmill.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Bottom");
+        iconsSide[TileAdvancedSawmill.SIDE_MODE_DISABLED] = register.registerIcon("thermalexpansion:machine/Machine_Side");
+        iconFaceIdle = register.registerIcon("thermalexpansion:machine/Machine_Face_Sawmill");
+        iconFaceActive = register.registerIcon("thermalexpansion:machine/Machine_Active_Sawmill");
+
+        iconsTop[TileAdvancedSawmill.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":TopInput");
+        iconsTop[TileAdvancedSawmill.SIDE_MODE_OUTPUT_PRIMARY] = register.registerIcon(ThermalADD.MODID + ":TopOutputPrimary");
+        iconsTop[TileAdvancedSawmill.SIDE_MODE_OUTPUT_SECONDARY] = register.registerIcon(ThermalADD.MODID + ":TopOutputSecondary");
+        iconsTop[TileAdvancedSawmill.SIDE_MODE_OUTPUT_BOTH] = register.registerIcon(ThermalADD.MODID + ":TopOutputBoth");
+        iconsTop[TileAdvancedSawmill.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":TopAll");
+        iconsBottom[TileAdvancedSawmill.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":BottomInput");
+        iconsBottom[TileAdvancedSawmill.SIDE_MODE_OUTPUT_PRIMARY] = register.registerIcon(ThermalADD.MODID + ":BottomOutputPrimary");
+        iconsBottom[TileAdvancedSawmill.SIDE_MODE_OUTPUT_SECONDARY] = register.registerIcon(ThermalADD.MODID + ":BottomOutputSecondary");
+        iconsBottom[TileAdvancedSawmill.SIDE_MODE_OUTPUT_BOTH] = register.registerIcon(ThermalADD.MODID + ":BottomOutputBoth");
+        iconsBottom[TileAdvancedSawmill.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":BottomAll");
+        iconsSide[TileAdvancedSawmill.SIDE_MODE_INPUT] = register.registerIcon(ThermalADD.MODID + ":SideInput");
+        iconsSide[TileAdvancedSawmill.SIDE_MODE_OUTPUT_PRIMARY] = register.registerIcon(ThermalADD.MODID + ":SideOutputPrimary");
+        iconsSide[TileAdvancedSawmill.SIDE_MODE_OUTPUT_SECONDARY] = register.registerIcon(ThermalADD.MODID + ":SideOutputSecondary");
+        iconsSide[TileAdvancedSawmill.SIDE_MODE_OUTPUT_BOTH] = register.registerIcon(ThermalADD.MODID + ":SideOutputBoth");
+        iconsSide[TileAdvancedSawmill.SIDE_MODE_ALL] = register.registerIcon(ThermalADD.MODID + ":SideAll");
+    }
+
+    @Override
+    public IIcon getIcon(int side, int meta) {
+        if (side == 0) {
+            return iconsBottom[TileAdvancedSawmill.SIDE_MODE_DISABLED];
+        }
+        if (side == 1) {
+            return iconsTop[TileAdvancedSawmill.SIDE_MODE_DISABLED];
+        }
+        return side == meta ? iconFaceIdle : iconsSide[TileAdvancedSawmill.SIDE_MODE_DISABLED];
+    }
+
+    @Override
+    public IIcon getIcon(IBlockAccess world, int x, int y, int z, int side) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        int facing = te instanceof TileAdvancedSawmill ? ((TileAdvancedSawmill) te).getFacing() : -1;
+        if (side == facing) {
+            boolean active = te instanceof TileAdvancedSawmill && ((TileAdvancedSawmill) te).isActive();
+            return active ? iconFaceActive : iconFaceIdle;
+        }
+
+        int mode = te instanceof TileAdvancedSawmill
+                ? ((TileAdvancedSawmill) te).getSideMode(side)
+                : TileAdvancedSawmill.SIDE_MODE_DISABLED;
+        if (side == 0) {
+            return iconsBottom[mode];
+        }
+        if (side == 1) {
+            return iconsTop[mode];
+        }
+        return iconsSide[mode];
+    }
+
+    @Override
+    public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
+        int rotation = MathHelper.floor_double(placer.rotationYaw * 4.0F / 360.0F + 0.5D) & 3;
+        int meta;
+        switch (rotation) {
+            case 0:
+                meta = 2; // north
+                break;
+            case 1:
+                meta = 5; // east
+                break;
+            case 2:
+                meta = 3; // south
+                break;
+            default:
+                meta = 4; // west
+                break;
+        }
+        world.setBlockMetadataWithNotify(x, y, z, meta, 2);
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileAdvancedSawmill) {
+            TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
+            tile.setFacing(meta);
+            tile.setDefaultSides();
+            if (!world.isRemote) {
+                if (stack.hasTagCompound() && stack.getTagCompound().hasKey("Augments")) {
+                    tile.readAugmentsFromNBT(stack.getTagCompound());
+                } else {
+                    tile.installDefaultAugments();
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean isOpaqueCube() {
+        return true;
+    }
+
+    @Override
+    public boolean renderAsNormalBlock() {
+        return true;
+    }
+
+    @Override
+    public TileEntity createNewTileEntity(World world, int meta) {
+        return new TileAdvancedSawmill();
+    }
+
+    /** Crescent Hammer support - see BlockAdvancedPulverizer's own copy of this comment for the full rationale. */
+    @Override
+    public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side,
+            float hitX, float hitY, float hitZ) {
+        ItemStack held = player.getHeldItem();
+        if (held != null && held.getItem() instanceof IToolHammer) {
+            IToolHammer hammer = (IToolHammer) held.getItem();
+            if (hammer.isUsable(held, player, x, y, z)) {
+                if (!world.isRemote) {
+                    TileEntity te = world.getTileEntity(x, y, z);
+                    if (te instanceof TileAdvancedSawmill) {
+                        TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
+                        int next = nextFacing(tile.getFacing());
+                        world.setBlockMetadataWithNotify(x, y, z, next, 3);
+                        tile.setFacing(next);
+                    }
+                    hammer.toolUsed(held, player, x, y, z);
+                }
+                return true;
+            }
+        }
+
+        if (!world.isRemote) {
+            player.openGui(ThermalADD.instance, ThermalADD.GUI_ID_ADVANCED_SAWMILL, world, x, y, z);
+        }
+        return true;
+    }
+
+    private static int nextFacing(int facing) {
+        int[] order = TileAdvancedSawmill.FACING_META;
+        for (int i = 0; i < order.length; i++) {
+            if (order[i] == facing) {
+                return order[(i + 1) % order.length];
+            }
+        }
+        return order[0];
+    }
+
+    @Override
+    public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileAdvancedSawmill) {
+            TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
+
+            NBTTagCompound augNbt = tile.writeAugmentsToNBT(new NBTTagCompound());
+            PendingAugmentDrops.put(x, y, z, augNbt);
+
+            for (int i = 0; i < tile.getSizeInventory(); i++) {
+                if (i >= TileAdvancedSawmill.AUGMENT_START
+                        && i < TileAdvancedSawmill.AUGMENT_START + TileAdvancedSawmill.AUGMENT_SLOTS) {
+                    continue;
+                }
+                ItemStack stack = tile.getStackInSlot(i);
+                if (stack != null) {
+                    float rx = world.rand.nextFloat() * 0.8F + 0.1F;
+                    float ry = world.rand.nextFloat() * 0.8F + 0.1F;
+                    float rz = world.rand.nextFloat() * 0.8F + 0.1F;
+                    EntityItem entityItem = new EntityItem(world, x + rx, y + ry, z + rz, stack.copy());
+                    world.spawnEntityInWorld(entityItem);
+                }
+            }
+        }
+        super.breakBlock(world, x, y, z, block, meta);
+    }
+
+    @Override
+    public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
+        ItemStack drop = new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata));
+        NBTTagCompound augNbt = PendingAugmentDrops.take(x, y, z);
+        if (augNbt != null && augNbt.hasKey("Augments")) {
+            NBTTagCompound tag = new NBTTagCompound();
+            tag.setTag("Augments", augNbt.getTag("Augments"));
+            drop.setTagCompound(tag);
+        }
+        ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
+        drops.add(drop);
+        return drops;
+    }
+}

@@ -7,6 +7,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.tileentity.TileEntity;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
+import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
@@ -83,6 +84,24 @@ public class MessageCycleSideHandler implements IMessageHandler<MessageCycleSide
             }
         } else if (te instanceof TileSingularityCell) {
             TileSingularityCell tile = (TileSingularityCell) te;
+            switch (message.getAction()) {
+                case MessageCycleSide.ACTION_FORWARD:
+                    tile.cycleSideMode(message.getSide(), 1);
+                    break;
+                case MessageCycleSide.ACTION_BACKWARD:
+                    tile.cycleSideMode(message.getSide(), -1);
+                    break;
+                case MessageCycleSide.ACTION_RESET_ONE:
+                    tile.resetSideMode(message.getSide());
+                    break;
+                case MessageCycleSide.ACTION_RESET_ALL:
+                    tile.resetAllSideModes();
+                    break;
+                default:
+                    break;
+            }
+        } else if (te instanceof TileAdvancedSawmill) {
+            TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
             switch (message.getAction()) {
                 case MessageCycleSide.ACTION_FORWARD:
                     tile.cycleSideMode(message.getSide(), 1);

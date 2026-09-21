@@ -1,5 +1,6 @@
 tile.advancedPulverizer.name=Сингулярный измельчитель
 tile.advancedFurnace.name=Циклическая красная печь
+tile.advancedSawmill.name=Сингулярная лесопилка
 itemGroup.thermaladd=ThermalADD
 
 gui.thermaladd.tab.augments=Расширения
@@ -53,10 +54,12 @@ gui.improvedassembler.side.hint=ЛКМ: вперёд  ПКМ: назад  Shift:
 item.thermaladd.addAugment.speedLevel4.name=Расширение: Скорость Уровень 4
 tooltip.thermaladd.addAugment.speedLevel4.0=§aСкорость обработки x10§r
 tooltip.thermaladd.addAugment.speedLevel4.1=§c+200% к расходу RF/т (сверх Уровня 3)§r
+tooltip.thermaladd.addAugment.speedLevel4.2=§7Работает на Измельчителе, Печи и Лесопилке§r
 
 item.thermaladd.addAugment.secondarySieve4.name=Расширение: Вторичное сито уровень 4
 tooltip.thermaladd.addAugment.secondarySieve4.0=§a+200% к шансу вторичного выхода§r
 tooltip.thermaladd.addAugment.secondarySieve4.1=§c+25% к расходу RF/т§r
+tooltip.thermaladd.addAugment.secondarySieve4.2=§7Работает на Измельчителе и Лесопилке§r
 
 tile.singularityCell.name=Сингулярная ячейка
 tooltip.thermaladd.singularityCell.charge=§7Заряд: §e%s / %s RF§r

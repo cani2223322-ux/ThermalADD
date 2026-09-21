@@ -35,7 +35,8 @@ public class ModAugments {
         item.addAugment(META_SPEED_4, TileAdvancedPulverizer.AUG_MACHINE_SPEED, 4, "speedLevel4",
                 new String[]{
                         "tooltip.thermaladd.addAugment.speedLevel4.0",
-                        "tooltip.thermaladd.addAugment.speedLevel4.1"
+                        "tooltip.thermaladd.addAugment.speedLevel4.1",
+                        "tooltip.thermaladd.addAugment.speedLevel4.2"
                 });
         speedLevel4 = item.getStack(META_SPEED_4);
 
@@ -47,7 +48,8 @@ public class ModAugments {
         item.addAugment(META_SECONDARY_4, TileAdvancedPulverizer.AUG_MACHINE_SECONDARY, 4, "secondarySieve4",
                 new String[]{
                         "tooltip.thermaladd.addAugment.secondarySieve4.0",
-                        "tooltip.thermaladd.addAugment.secondarySieve4.1"
+                        "tooltip.thermaladd.addAugment.secondarySieve4.1",
+                        "tooltip.thermaladd.addAugment.secondarySieve4.2"
                 });
         secondarySieve4 = item.getStack(META_SECONDARY_4);
     }

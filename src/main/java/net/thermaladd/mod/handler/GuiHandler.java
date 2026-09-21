@@ -7,14 +7,17 @@ import net.minecraft.world.World;
 import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.client.gui.GuiAdvancedFurnace;
 import net.thermaladd.mod.client.gui.GuiAdvancedPulverizer;
+import net.thermaladd.mod.client.gui.GuiAdvancedSawmill;
 import net.thermaladd.mod.client.gui.GuiImprovedAssembler;
 import net.thermaladd.mod.client.gui.GuiSingularityCell;
 import net.thermaladd.mod.inventory.ContainerAdvancedFurnace;
 import net.thermaladd.mod.inventory.ContainerAdvancedPulverizer;
+import net.thermaladd.mod.inventory.ContainerAdvancedSawmill;
 import net.thermaladd.mod.inventory.ContainerImprovedAssembler;
 import net.thermaladd.mod.inventory.ContainerSingularityCell;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
+import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
@@ -35,6 +38,9 @@ public class GuiHandler implements IGuiHandler {
         if (id == ThermalADD.GUI_ID_SINGULARITY_CELL && te instanceof TileSingularityCell) {
             return new ContainerSingularityCell(player.inventory, (TileSingularityCell) te);
         }
+        if (id == ThermalADD.GUI_ID_ADVANCED_SAWMILL && te instanceof TileAdvancedSawmill) {
+            return new ContainerAdvancedSawmill(player.inventory, (TileAdvancedSawmill) te);
+        }
         return null;
     }
 
@@ -52,6 +58,9 @@ public class GuiHandler implements IGuiHandler {
         }
         if (id == ThermalADD.GUI_ID_SINGULARITY_CELL && te instanceof TileSingularityCell) {
             return new GuiSingularityCell(player.inventory, (TileSingularityCell) te);
+        }
+        if (id == ThermalADD.GUI_ID_ADVANCED_SAWMILL && te instanceof TileAdvancedSawmill) {
+            return new GuiAdvancedSawmill(player.inventory, (TileAdvancedSawmill) te);
         }
         return null;
     }

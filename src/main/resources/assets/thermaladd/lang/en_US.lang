@@ -1,5 +1,6 @@
 tile.advancedPulverizer.name=Singularity Pulverizer
 tile.advancedFurnace.name=Cyclic Furnace
+tile.advancedSawmill.name=Singularity Sawmill
 itemGroup.thermaladd=ThermalADD
 
 gui.thermaladd.tab.augments=Augments
@@ -53,10 +54,12 @@ gui.improvedassembler.side.hint=LMB: next  RMB: previous  Shift: reset
 item.thermaladd.addAugment.speedLevel4.name=Augment: Speed Level 4
 tooltip.thermaladd.addAugment.speedLevel4.0=§ax10 Processing Speed§r
 tooltip.thermaladd.addAugment.speedLevel4.1=§c+200% RF/t Used (over Level 3)§r
+tooltip.thermaladd.addAugment.speedLevel4.2=§7Works on the Pulverizer, Furnace and Sawmill§r
 
 item.thermaladd.addAugment.secondarySieve4.name=Augment: Secondary Sieve Level 4
 tooltip.thermaladd.addAugment.secondarySieve4.0=§a+200% Secondary Output Chance§r
 tooltip.thermaladd.addAugment.secondarySieve4.1=§c+25% RF/t Used§r
+tooltip.thermaladd.addAugment.secondarySieve4.2=§7Works on the Pulverizer and Sawmill§r
 
 tile.singularityCell.name=Singularity Energy Cell
 tooltip.thermaladd.singularityCell.charge=§7Charge: §e%s / %s RF§r

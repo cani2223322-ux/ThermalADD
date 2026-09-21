@@ -8,6 +8,7 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
+import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
@@ -48,6 +49,12 @@ public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTile
             }
         } else if (te instanceof TileSingularityCell) {
             TileSingularityCell tile = (TileSingularityCell) te;
+            for (int i = 0; i < sides.length; i++) {
+                tile.setSideModeClient(i, sides[i]);
+            }
+        } else if (te instanceof TileAdvancedSawmill) {
+            TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
+            tile.setFacingClient(message.getFacing());
             for (int i = 0; i < sides.length; i++) {
                 tile.setSideModeClient(i, sides[i]);
             }

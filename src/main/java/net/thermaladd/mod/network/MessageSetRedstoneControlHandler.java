@@ -8,9 +8,10 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.tileentity.TileEntity;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
+import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 
-/** All 3 machines implement the real cofh.api.tileentity.IRedstoneControl, so one handler covers them all. */
+/** All machines implement the real cofh.api.tileentity.IRedstoneControl, so one handler covers them all. */
 public class MessageSetRedstoneControlHandler implements IMessageHandler<MessageSetRedstoneControl, IMessage> {
 
     @Override
@@ -23,7 +24,8 @@ public class MessageSetRedstoneControlHandler implements IMessageHandler<Message
 
         boolean augmentInstalled = (te instanceof TileAdvancedPulverizer && ((TileAdvancedPulverizer) te).augmentRedstoneControl)
                 || (te instanceof TileAdvancedFurnace && ((TileAdvancedFurnace) te).augmentRedstoneControl)
-                || (te instanceof TileImprovedAssembler && ((TileImprovedAssembler) te).augmentRedstoneControl);
+                || (te instanceof TileImprovedAssembler && ((TileImprovedAssembler) te).augmentRedstoneControl)
+                || (te instanceof TileAdvancedSawmill && ((TileAdvancedSawmill) te).augmentRedstoneControl);
         if (!augmentInstalled || !(te instanceof IRedstoneControl)) {
             return null;
         }

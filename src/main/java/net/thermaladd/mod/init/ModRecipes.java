@@ -33,6 +33,7 @@ public class ModRecipes {
         registerAdvancedPulverizerRecipe();
         registerImprovedAssemblerRecipe();
         registerAdvancedFurnaceRecipe();
+        registerAdvancedSawmillRecipe();
         registerSpeedLevel4AugmentRecipe();
         registerSecondarySieve4AugmentRecipe();
         registerSingularityCellRecipe();
@@ -114,6 +115,33 @@ public class ModRecipes {
                 'G', ModItems.singularityGear,
                 'P', TEItems.powerCoilGold,
                 'C', furnace,
+                'F', ModBlocks.singularityFrame));
+    }
+
+    /**
+     * Fourth variant of the same Singularity Frame + Singularity Gear base: Invar ingots (a
+     * base-tier crafted TE alloy, never used by the other 3 recipes) and a pair of real
+     * Reconfigurable Sides augments (crafted, consumed/upgraded like every other augment
+     * ingredient in this class) as the flavor - the one general-purpose augment none of the
+     * other 3 machine recipes happened to consume yet. Single Gear + single Frame, same shape
+     * as the Pulverizer's own recipe. Every ingredient is a crafted item - Invar is smelted from
+     * iron + nickel dust via a real Induction Smelter, never mined directly.
+     */
+    private static void registerAdvancedSawmillRecipe() {
+        ItemStack sawmill = new ItemStack(TEBlocks.blockMachine, 1, BlockMachine.Types.SAWMILL.ordinal());
+
+        // I R I      I = Invar ingot, R = Reconfigurable Sides augment (crafted)
+        // G S G      G = Singularity Gear, S = real Sawmill
+        // I F I      F = Singularity Frame
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModBlocks.advancedSawmill),
+                "IRI",
+                "GSG",
+                "IFI",
+                'I', "ingotInvar",
+                'R', TEAugments.generalReconfigSides,
+                'G', ModItems.singularityGear,
+                'S', sawmill,
                 'F', ModBlocks.singularityFrame));
     }
 

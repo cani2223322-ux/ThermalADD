@@ -20,6 +20,7 @@ import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.proxy.CommonProxy;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
+import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
@@ -51,6 +52,7 @@ public class ThermalADD {
     public static final int GUI_ID_IMPROVED_ASSEMBLER = 1;
     public static final int GUI_ID_ADVANCED_FURNACE = 2;
     public static final int GUI_ID_SINGULARITY_CELL = 3;
+    public static final int GUI_ID_ADVANCED_SAWMILL = 4;
 
     @Instance(MODID)
     public static ThermalADD instance;
@@ -71,6 +73,7 @@ public class ThermalADD {
         GameRegistry.registerTileEntity(TileImprovedAssembler.class, MODID + "_improved_assembler_tile");
         GameRegistry.registerTileEntity(TileAdvancedFurnace.class, MODID + "_advanced_furnace_tile");
         GameRegistry.registerTileEntity(TileSingularityCell.class, MODID + "_singularity_cell_tile");
+        GameRegistry.registerTileEntity(TileAdvancedSawmill.class, MODID + "_advanced_sawmill_tile");
         proxy.registerRenderers();
         PacketHandler.init();
     }
