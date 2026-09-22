@@ -21,16 +21,31 @@ public class MessageTileRenderSync implements IMessage {
     private int x, y, z;
     private byte facing;
     private byte[] sideCache;
+    /**
+     * Whether the tile is actively processing right now - carried so the client can both
+     * repaint the idle/active face icon and (for the 3 machines with a real TE ambient sound -
+     * see MessageTileRenderSyncHandler) start/stop the looping machine sound, without needing a
+     * player to have the GUI open (windowProperty sync only reaches a client whose GUI is open;
+     * this packet reaches every nearby client). Machines/blocks with no such concept (the
+     * Assembler, the Singularity Cell) just use the short constructor, which defaults this to
+     * false and is otherwise ignored on the receiving end.
+     */
+    private boolean active;
 
     public MessageTileRenderSync() {
     }
 
     public MessageTileRenderSync(int x, int y, int z, byte facing, byte[] sideCache) {
+        this(x, y, z, facing, sideCache, false);
+    }
+
+    public MessageTileRenderSync(int x, int y, int z, byte facing, byte[] sideCache, boolean active) {
         this.x = x;
         this.y = y;
         this.z = z;
         this.facing = facing;
         this.sideCache = sideCache;
+        this.active = active;
     }
 
     @Override
@@ -40,6 +55,7 @@ public class MessageTileRenderSync implements IMessage {
         buf.writeInt(z);
         buf.writeByte(facing);
         buf.writeBytes(sideCache);
+        buf.writeBoolean(active);
     }
 
     @Override
@@ -50,6 +66,7 @@ public class MessageTileRenderSync implements IMessage {
         facing = buf.readByte();
         sideCache = new byte[6];
         buf.readBytes(sideCache);
+        active = buf.readBoolean();
     }
 
     public int getX() {
@@ -70,5 +87,9 @@ public class MessageTileRenderSync implements IMessage {
 
     public byte[] getSideCache() {
         return sideCache;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 }

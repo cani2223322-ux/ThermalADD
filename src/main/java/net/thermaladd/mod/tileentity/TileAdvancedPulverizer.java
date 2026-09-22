@@ -102,6 +102,17 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     public static final int ENERGY_SYNC_SCALE = 256;
 
     /**
+     * Real Thermal Expansion's own ambient "machine working" sound event (verified against the
+     * vendored jar's own {@code assets/thermalexpansion/sounds.json}: {@code blockMachinePulverizer}
+     * maps to {@code blocks/machine/pulverizer.ogg}) - reused directly rather than shipping a
+     * copy, same as this mod's own machine face textures. See
+     * {@link net.thermaladd.mod.network.MessageTileRenderSyncHandler} for where this actually
+     * gets played - client-only code, deliberately kept out of this class (which loads on the
+     * server too) to avoid ever linking a client-only sound type there.
+     */
+    public static final String SOUND_NAME = "thermalexpansion:blockMachinePulverizer";
+
+    /**
      * Side config modes, verified against real Thermal Expansion's own Pulverizer (decompiled
      * {@code cofh.thermalexpansion.block.machine.TilePulverizer#initialize}: 6 modes, numbered
      * and colored exactly this way - {@code sideTex = {0,1,2,3,4,7}} indexing real TE's own
@@ -309,7 +320,7 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         if (worldObj == null || worldObj.isRemote) {
             return;
         }
-        PacketHandler.INSTANCE.sendToAllAround(new MessageTileRenderSync(xCoord, yCoord, zCoord, facing, sideCache),
+        PacketHandler.INSTANCE.sendToAllAround(new MessageTileRenderSync(xCoord, yCoord, zCoord, facing, sideCache, isActive),
                 new NetworkRegistry.TargetPoint(worldObj.provider.dimensionId, xCoord, yCoord, zCoord, 64.0));
     }
 
@@ -319,6 +330,11 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
 
     public void setSideModeClient(int side, int mode) {
         sideCache[side] = (byte) mode;
+    }
+
+    /** Client-side only: applied by MessageTileRenderSyncHandler, which also uses the false->true edge of this same value to start the ambient machine sound. */
+    public void setActiveClient(boolean active) {
+        isActive = active;
     }
 
     /** Sides in Input or All mode accept items pushed/pulled into the 3 input slots. */
@@ -750,6 +766,12 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
             // chunk for saving. A full block update is more expensive than that, which is
             // exactly why it is gated behind this state-change check.
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            // Pushes the new isActive to every nearby client via the same packet the facing/
+            // side-cache already uses - without this, a client who never opens this machine's
+            // GUI would never actually learn isActive changed (windowProperty sync only reaches
+            // a client with the GUI open), so its face icon would stay stuck and the ambient
+            // "machine working" sound (see MessageTileRenderSyncHandler) would never start.
+            syncRenderState();
             dirty = true;
         }
 

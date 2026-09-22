@@ -85,6 +85,9 @@ public class TileAdvancedSawmill extends TileEntity implements ISidedInventory, 
     /** See TileAdvancedPulverizer#ENERGY_SYNC_SCALE - same windowProperty short-overflow fix, same capacity ceiling (BASE_ENERGY_CAPACITY * 8 with a maxed Energy Storage augment). */
     public static final int ENERGY_SYNC_SCALE = 256;
 
+    /** See TileAdvancedPulverizer#SOUND_NAME - same real Thermal Expansion ambient sound reuse, verified against the vendored jar's own sounds.json (blockMachineSawmill -> blocks/machine/sawmill.ogg). */
+    public static final String SOUND_NAME = "thermalexpansion:blockMachineSawmill";
+
     /**
      * Side config modes - see this class's own javadoc: numerically and color-wise identical to
      * {@link TileAdvancedPulverizer}'s own (verified against the decompiled
@@ -237,7 +240,7 @@ public class TileAdvancedSawmill extends TileEntity implements ISidedInventory, 
         if (worldObj == null || worldObj.isRemote) {
             return;
         }
-        PacketHandler.INSTANCE.sendToAllAround(new MessageTileRenderSync(xCoord, yCoord, zCoord, facing, sideCache),
+        PacketHandler.INSTANCE.sendToAllAround(new MessageTileRenderSync(xCoord, yCoord, zCoord, facing, sideCache, isActive),
                 new NetworkRegistry.TargetPoint(worldObj.provider.dimensionId, xCoord, yCoord, zCoord, 64.0));
     }
 
@@ -247,6 +250,11 @@ public class TileAdvancedSawmill extends TileEntity implements ISidedInventory, 
 
     public void setSideModeClient(int side, int mode) {
         sideCache[side] = (byte) mode;
+    }
+
+    /** Client-side only: applied by MessageTileRenderSyncHandler, which also uses the false->true edge of this same value to start the ambient machine sound. */
+    public void setActiveClient(boolean active) {
+        isActive = active;
     }
 
     private static boolean modeAllowsInsertInput(int mode) {
@@ -619,6 +627,10 @@ public class TileAdvancedSawmill extends TileEntity implements ISidedInventory, 
         if (nowActive != isActive) {
             isActive = nowActive;
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            // See TileAdvancedPulverizer's own copy of this comment: without this, a client
+            // without the GUI open never learns isActive changed, so its face icon stays stuck
+            // and the ambient machine sound never starts.
+            syncRenderState();
             dirty = true;
         }
 
