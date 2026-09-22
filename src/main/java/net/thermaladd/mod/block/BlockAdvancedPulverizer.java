@@ -154,6 +154,9 @@ public class BlockAdvancedPulverizer extends BlockContainer implements IDismantl
             TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;
             tile.setFacing(meta);
             tile.setDefaultSides();
+            if (stack.hasDisplayName()) {
+                tile.setCustomName(stack.getDisplayName());
+            }
             if (!world.isRemote) {
                 // A block picked back up after being broken carries its previous augments (and
                 // only those) in its own NBT - only a genuinely fresh item (creative menu, a

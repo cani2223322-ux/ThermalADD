@@ -2,11 +2,15 @@ package net.thermaladd.mod.client.gui;
 
 import org.lwjgl.opengl.GL11;
 
+import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.inventory.Container;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.StatCollector;
+import net.thermaladd.mod.config.ModConfig;
 
 /**
  * Thin common base for every machine GUI in this mod that has CoFH-style side tabs
@@ -41,10 +45,20 @@ public abstract class TabbedMachineGui extends GuiContainer {
      * output's red, a secondary output's yellow, and a machine with only one generic output
      * (Furnace/Assembler) uses orange, exactly like their own side badges do.
      */
-    protected static final int HIGHLIGHT_INPUT = 0xFF0A76CF;
-    protected static final int HIGHLIGHT_OUTPUT_PRIMARY = 0xFFD22C15;
-    protected static final int HIGHLIGHT_OUTPUT_SECONDARY = 0xFFD2AA15;
-    protected static final int HIGHLIGHT_OUTPUT = 0xFFD26C16;
+    /**
+     * Picked once, when this client-only class first loads, from the config flag. Real Thermal
+     * Expansion answers the same accessibility problem by swapping its Slots.png for a SlotsCB.png;
+     * this mod draws its rings in code, so what swaps is the palette - to the Okabe-Ito set, chosen
+     * so the four roles stay distinguishable under the common forms of colour blindness.
+     */
+    protected static final int HIGHLIGHT_INPUT =
+            ModConfig.colorBlindPalette ? 0xFF0072B2 : 0xFF0A76CF;
+    protected static final int HIGHLIGHT_OUTPUT_PRIMARY =
+            ModConfig.colorBlindPalette ? 0xFFD55E00 : 0xFFD22C15;
+    protected static final int HIGHLIGHT_OUTPUT_SECONDARY =
+            ModConfig.colorBlindPalette ? 0xFFF0E442 : 0xFFD2AA15;
+    protected static final int HIGHLIGHT_OUTPUT =
+            ModConfig.colorBlindPalette ? 0xFFCC79A7 : 0xFFD26C16;
     /** Fully transparent - draws no ring at all, same as the plain 2-arg drawTESlot. Pass this (rather than branching between the two overloads) when the Reconfigurable Sides augment isn't installed, so slot highlighting turns off along with the rest of the side-config feature. */
     protected static final int HIGHLIGHT_NONE = 0x00000000;
 
@@ -241,6 +255,88 @@ public abstract class TabbedMachineGui extends GuiContainer {
         t.addVertexWithUV(x, y + screenH, zLevel, u1, v2);
         t.addVertexWithUV(x + screenW, y + screenH, zLevel, u2, v2);
         t.addVertexWithUV(x + screenW, y, zLevel, u2, v1);
+        t.addVertexWithUV(x, y, zLevel, u1, v1);
+        t.draw();
+    }
+
+    /**
+     * Real Thermal Expansion's own GUI click feedback (cofh.lib.gui.GuiBase#playSound): the
+     * vanilla "random.click" at full volume, with the PITCH carrying which action happened -
+     * see the PITCH_* constants. Without this the tabs were completely silent, and there was no
+     * confirmation that a click on a side-config or redstone button had registered at all.
+     */
+    protected static final float PITCH_CYCLE_FORWARD = 0.8F;
+    protected static final float PITCH_CYCLE_BACKWARD = 0.6F;
+    protected static final float PITCH_SET_DISABLED = 0.4F;
+    protected static final float PITCH_RESET_ALL = 0.2F;
+
+    /**
+     * The machine's title, centred over the panel the way real Thermal Expansion's own GuiBase
+     * draws it, and read from the tile's inventory name rather than a hardcoded lang key - so a
+     * machine renamed in an anvil before placement shows that name instead of the generic one.
+     * Tiles return their lang KEY when unnamed, which is why the translate call is conditional.
+     */
+    protected void drawMachineTitle(IInventory tile, int panelWidth) {
+        String title = tile.hasCustomInventoryName()
+                ? tile.getInventoryName()
+                : StatCollector.translateToLocal(tile.getInventoryName());
+        fontRendererObj.drawString(title, (panelWidth - fontRendererObj.getStringWidth(title)) / 2, 6, 0x404040);
+    }
+
+    public void playClick(float pitch) {
+        mc.getSoundHandler().playSound(
+                PositionedSoundRecord.func_147674_a(new ResourceLocation("random.click"), pitch));
+    }
+
+    /**
+     * True while the player is carrying a stack on the cursor. Real TE suppresses all of its
+     * tooltips in that state (cofh.lib.gui.GuiBase#func_73863_a) - a tooltip box popping up under
+     * a dragged stack covers the very slot the player is aiming at.
+     */
+    protected boolean isHoldingItem() {
+        return mc.thePlayer != null && mc.thePlayer.inventory.getItemStack() != null;
+    }
+
+    /**
+     * Real Thermal Expansion's per-machine "activity" icon - the little crushing/flame/saw glyph
+     * TE draws under the input slot (an {@code ElementDualScaled} in its default mode 0, filling
+     * bottom to top). Same two-frame layout as the progress arrow, but a 32x16 sheet of two 16x16
+     * frames: the dark idle glyph at u=0 and the lit one at u=16, of which only the bottom
+     * {@code filled} pixels are revealed. Frame backdrops are the same 198/198/198 panel grey as
+     * everything else, so no socket is drawn behind it.
+     */
+    protected static final int ACTIVITY_SCALE_SIZE = 16;
+    private static final int ACTIVITY_SCALE_TEX_W = 32;
+    private static final int ACTIVITY_SCALE_TEX_H = 16;
+
+    protected void drawActivityScale(ResourceLocation texture, int x, int y, int progress, int maxProgress) {
+        int filled = maxProgress <= 0 ? 0 : (int) ((long) progress * ACTIVITY_SCALE_SIZE / maxProgress);
+        if (filled > ACTIVITY_SCALE_SIZE) {
+            filled = ACTIVITY_SCALE_SIZE;
+        }
+
+        mc.getTextureManager().bindTexture(texture);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        drawActivityQuad(x, y, 0, 0, ACTIVITY_SCALE_SIZE);
+        if (filled > 0) {
+            drawActivityQuad(x, y + ACTIVITY_SCALE_SIZE - filled, ACTIVITY_SCALE_SIZE,
+                    ACTIVITY_SCALE_SIZE - filled, filled);
+        }
+        GL11.glDisable(GL11.GL_BLEND);
+    }
+
+    private void drawActivityQuad(int x, int y, int u, int v, int height) {
+        float u1 = u / (float) ACTIVITY_SCALE_TEX_W;
+        float u2 = (u + ACTIVITY_SCALE_SIZE) / (float) ACTIVITY_SCALE_TEX_W;
+        float v1 = v / (float) ACTIVITY_SCALE_TEX_H;
+        float v2 = (v + height) / (float) ACTIVITY_SCALE_TEX_H;
+        Tessellator t = Tessellator.instance;
+        t.startDrawingQuads();
+        t.addVertexWithUV(x, y + height, zLevel, u1, v2);
+        t.addVertexWithUV(x + ACTIVITY_SCALE_SIZE, y + height, zLevel, u2, v2);
+        t.addVertexWithUV(x + ACTIVITY_SCALE_SIZE, y, zLevel, u2, v1);
         t.addVertexWithUV(x, y, zLevel, u1, v1);
         t.draw();
     }

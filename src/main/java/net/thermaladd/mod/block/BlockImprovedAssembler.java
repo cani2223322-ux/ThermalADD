@@ -142,6 +142,9 @@ public class BlockImprovedAssembler extends BlockContainer implements IDismantle
             if (te instanceof TileImprovedAssembler) {
                 TileImprovedAssembler tile = (TileImprovedAssembler) te;
                 tile.setDefaultSides();
+                if (stack.hasDisplayName()) {
+                    tile.setCustomName(stack.getDisplayName());
+                }
                 if (stack.hasTagCompound() && stack.getTagCompound().hasKey("Augments")) {
                     tile.readAugmentsFromNBT(stack.getTagCompound());
                 } else {

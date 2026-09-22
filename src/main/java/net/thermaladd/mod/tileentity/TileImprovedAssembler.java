@@ -150,6 +150,8 @@ public class TileImprovedAssembler extends TileEntity
     private boolean rsPowered = false;
 
     private byte[] sideCache = new byte[6];
+    /** Player-given name from an anvil, or null - see getInventoryName(). */
+    private String customName;
     private int autoIOTimer = 0;
 
     private static final Container DUMMY_CONTAINER = new Container() {
@@ -1287,14 +1289,19 @@ public class TileImprovedAssembler extends TileEntity
         return slot >= AUGMENT_START && slot < AUGMENT_START + AUGMENT_SLOTS;
     }
 
+    /** Lang key when unnamed, the player's anvil name once renamed - see TileAdvancedPulverizer. */
     @Override
     public String getInventoryName() {
-        return "container.improvedAssembler";
+        return hasCustomInventoryName() ? customName : "tile.improvedAssembler.name";
     }
 
     @Override
     public boolean hasCustomInventoryName() {
-        return false;
+        return customName != null && customName.length() > 0;
+    }
+
+    public void setCustomName(String name) {
+        customName = name;
     }
 
     @Override
@@ -1389,6 +1396,9 @@ public class TileImprovedAssembler extends TileEntity
         tag.setInteger("Energy", energyStored);
         tag.setByteArray("Sides", sideCache);
         tag.setByte("RSControl", (byte) rsMode.ordinal());
+        if (hasCustomInventoryName()) {
+            tag.setString("CustomName", customName);
+        }
         NBTTagCompound tankTag = new NBTTagCompound();
         tank.writeToNBT(tankTag);
         tag.setTag("Tank", tankTag);
@@ -1409,6 +1419,9 @@ public class TileImprovedAssembler extends TileEntity
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
         energyStored = tag.getInteger("Energy");
+        if (tag.hasKey("CustomName")) {
+            customName = tag.getString("CustomName");
+        }
         if (tag.hasKey("RSControl")) {
             // Range-checked exactly like the Sides array below: a corrupt or hand-edited tag with
             // an out-of-range ordinal threw straight out of readFromNBT, which kills the chunk

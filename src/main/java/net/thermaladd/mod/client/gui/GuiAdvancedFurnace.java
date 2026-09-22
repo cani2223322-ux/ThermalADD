@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 import net.thermaladd.mod.inventory.ContainerAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
@@ -25,9 +26,12 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
     private static final int CHARGE_SLOT_X = ENERGY_X;
     private static final int CHARGE_SLOT_Y = ENERGY_Y + 45;
 
-    private static final int PROGRESS_X = 66;
-    /** Width of the gap between the input and output columns; the arrow is centred inside it. */
-    private static final int PROGRESS_SPAN = 46;
+    /** Activity glyph (16px) then progress arrow (24px), in the gap between the slot columns. */
+    private static final int SCALE_X = 67;
+    private static final int ARROW_X = 85;
+    /** Real TE's own Furnace glyph. */
+    private static final ResourceLocation SCALE_TEXTURE =
+            new ResourceLocation("cofh", "textures/gui/elements/Scale_Flame.png");
 
     private static final int TAB_STACK_X = BASE_WIDTH;
     private static final int TAB_STACK_Y = 4;
@@ -55,6 +59,10 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
         redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
         energyTab.setStackPosition(LEFT_TAB_X, LEFT_TAB_Y);
+        TabTracker.restore(augmentsTab);
+        TabTracker.restore(configTab);
+        TabTracker.restore(redstoneTab);
+        TabTracker.restore(energyTab);
     }
 
     @Override
@@ -126,19 +134,28 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         drawEnergyStored(left + ENERGY_X, top + ENERGY_Y, tile.getEnergy(), tile.getMaxEnergy());
     }
 
-    /** One real Thermal Expansion progress arrow per line - see TabbedMachineGui#drawProgressArrow. */
+    /** Real TE's own activity glyph plus progress arrow, per line - see TabbedMachineGui. */
     private void drawProgressBar(int left, int top, int line) {
-        int x = left + PROGRESS_X + (PROGRESS_SPAN - PROGRESS_ARROW_WIDTH) / 2;
+        int progress = tile.getProgress(line);
+        int max = tile.getProgressMax(line);
         int y = top + ContainerAdvancedFurnace.INPUT_Y + line * ContainerAdvancedFurnace.SLOT_SIZE
                 + (ContainerAdvancedFurnace.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
-        drawProgressArrow(x, y, tile.getProgress(line), tile.getProgressMax(line));
+        drawActivityScale(SCALE_TEXTURE, left + SCALE_X, y, progress, max);
+        drawProgressArrow(left + ARROW_X, y, progress, max);
     }
 
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-        fontRendererObj.drawString(StatCollector.translateToLocal("tile.advancedFurnace.name"), 8, 6, 0x404040);
+        drawMachineTitle(tile, BASE_WIDTH);
         fontRendererObj.drawString(StatCollector.translateToLocal("container.inventory"),
                 8, ContainerAdvancedFurnace.PLAYER_INV_Y - 10, 0x404040);
+
+        int relMouseX = mouseX - guiLeft;
+        int relMouseY = mouseY - guiTop;
+        augmentsTab.setMousePosition(relMouseX, relMouseY);
+        configTab.setMousePosition(relMouseX, relMouseY);
+        redstoneTab.setMousePosition(relMouseX, relMouseY);
+        energyTab.setMousePosition(relMouseX, relMouseY);
 
         augmentsTab.drawForeground(0, 0);
         if (tile.augmentReconfigSides) {
@@ -180,6 +197,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
             redstoneTab.setOpen(false);
             energyTab.setOpen(false);
             tab.setOpen(!wasOpen);
+            TabTracker.setOpen(tab, !wasOpen);
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {
@@ -196,6 +214,9 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         super.drawScreen(mouseX, mouseY, partialTicks);
+        if (isHoldingItem()) {
+            return;
+        }
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
 

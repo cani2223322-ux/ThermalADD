@@ -140,6 +140,9 @@ public class TabConfigCharger extends GuiSideTab {
         for (int i = 0; i < 6; i++) {
             int mode = tile.getSideMode(btnSide[i]);
             drawIcon16(iconForButton(i, mode), x + BTN_X[i], y + BTN_Y[i]);
+            if (isContentHovered(BTN_X[i], BTN_Y[i], 16, 16)) {
+                drawHoverFrame(x + BTN_X[i], y + BTN_Y[i]);
+            }
         }
     }
 
@@ -155,11 +158,16 @@ public class TabConfigCharger extends GuiSideTab {
             }
             int action;
             int side = btnSide[i];
+            // Pitches match real Thermal Expansion's own TabConfiguration exactly.
+            float pitch;
             if (shift) {
                 action = i == FRONT_INDEX ? MessageCycleSide.ACTION_RESET_ALL : MessageCycleSide.ACTION_RESET_ONE;
+                pitch = i == FRONT_INDEX ? TabbedMachineGui.PITCH_RESET_ALL : TabbedMachineGui.PITCH_SET_DISABLED;
             } else {
                 action = mouseButton == 1 ? MessageCycleSide.ACTION_BACKWARD : MessageCycleSide.ACTION_FORWARD;
+                pitch = mouseButton == 1 ? TabbedMachineGui.PITCH_CYCLE_BACKWARD : TabbedMachineGui.PITCH_CYCLE_FORWARD;
             }
+            playClick(pitch);
             PacketHandler.INSTANCE.sendToServer(new MessageCycleSide(tile.xCoord, tile.yCoord, tile.zCoord, side, action));
             return true;
         }

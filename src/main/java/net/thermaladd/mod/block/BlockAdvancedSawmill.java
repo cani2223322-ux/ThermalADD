@@ -136,6 +136,9 @@ public class BlockAdvancedSawmill extends BlockContainer implements IDismantleab
             TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
             tile.setFacing(meta);
             tile.setDefaultSides();
+            if (stack.hasDisplayName()) {
+                tile.setCustomName(stack.getDisplayName());
+            }
             if (!world.isRemote) {
                 if (stack.hasTagCompound() && stack.getTagCompound().hasKey("Augments")) {
                     tile.readAugmentsFromNBT(stack.getTagCompound());

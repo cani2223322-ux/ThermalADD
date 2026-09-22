@@ -56,6 +56,10 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
         redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
         energyTab.setStackPosition(LEFT_TAB_X, LEFT_TAB_Y);
+        TabTracker.restore(augmentsTab);
+        TabTracker.restore(configTab);
+        TabTracker.restore(redstoneTab);
+        TabTracker.restore(energyTab);
     }
 
     @Override
@@ -125,9 +129,16 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
 
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-        fontRendererObj.drawString(StatCollector.translateToLocal("tile.advancedCharger.name"), 8, 6, 0x404040);
+        drawMachineTitle(tile, BASE_WIDTH);
         fontRendererObj.drawString(StatCollector.translateToLocal("container.inventory"),
                 8, ContainerAdvancedCharger.PLAYER_INV_Y - 10, 0x404040);
+
+        int relMouseX = mouseX - guiLeft;
+        int relMouseY = mouseY - guiTop;
+        augmentsTab.setMousePosition(relMouseX, relMouseY);
+        configTab.setMousePosition(relMouseX, relMouseY);
+        redstoneTab.setMousePosition(relMouseX, relMouseY);
+        energyTab.setMousePosition(relMouseX, relMouseY);
 
         augmentsTab.drawForeground(0, 0);
         if (tile.augmentReconfigSides) {
@@ -169,6 +180,7 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
             redstoneTab.setOpen(false);
             energyTab.setOpen(false);
             tab.setOpen(!wasOpen);
+            TabTracker.setOpen(tab, !wasOpen);
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {
@@ -185,6 +197,9 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         super.drawScreen(mouseX, mouseY, partialTicks);
+        if (isHoldingItem()) {
+            return;
+        }
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
 

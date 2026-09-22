@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import net.minecraft.block.Block;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -69,6 +70,14 @@ public final class MachineDismantle {
 
         if (!tag.hasNoTags()) {
             drop.setTagCompound(tag);
+        }
+        // A machine renamed in an anvil keeps that name through being picked up and placed again.
+        // Every implementor is also an IInventory; the interface itself stays name-agnostic.
+        if (state instanceof IInventory) {
+            IInventory inventory = (IInventory) state;
+            if (inventory.hasCustomInventoryName()) {
+                drop.setStackDisplayName(inventory.getInventoryName());
+            }
         }
         return drop;
     }

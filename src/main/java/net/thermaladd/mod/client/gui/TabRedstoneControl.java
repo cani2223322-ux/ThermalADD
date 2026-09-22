@@ -108,6 +108,11 @@ public class TabRedstoneControl extends GuiSideTab {
         drawButtonIcon(btn0Icon, x + BTN_X[0], y + BTN_Y, pressed0);
         drawButtonIcon(TEX_TORCH_OFF, x + BTN_X[1], y + BTN_Y, pressed1);
         drawButtonIcon(TEX_TORCH_ON, x + BTN_X[2], y + BTN_Y, pressed2);
+        for (int i = 0; i < BTN_X.length; i++) {
+            if (isContentHovered(BTN_X[i], BTN_Y, 16, 16)) {
+                drawHoverFrame(x + BTN_X[i], y + BTN_Y);
+            }
+        }
 
         gui.getTabFontRenderer().drawString(StatCollector.translateToLocal("info.cofh.controlStatus") + ":",
                 x + 6, y + 42, SUBHEADER);
@@ -133,6 +138,9 @@ public class TabRedstoneControl extends GuiSideTab {
                     : i == 1 ? IRedstoneControl.ControlMode.LOW : IRedstoneControl.ControlMode.HIGH;
             if (tile.getControl() != target) {
                 PacketHandler.INSTANCE.sendToServer(new MessageSetRedstoneControl(x, y, z, target.ordinal()));
+                // Only when something actually changes, and with the same per-button pitches real
+                // Thermal Expansion's own TabRedstone uses (0.4 Disabled / 0.6 Low / 0.8 High).
+                playClick(i == 0 ? 0.4F : i == 1 ? 0.6F : 0.8F);
             }
             return true;
         }

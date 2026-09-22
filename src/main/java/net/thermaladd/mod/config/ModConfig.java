@@ -38,6 +38,7 @@ public final class ModConfig {
     private static final String CAT_ASSEMBLER = "machines.assembler";
     private static final String CAT_CELL = "machines.cell";
     private static final String CAT_RECIPES = "recipes";
+    private static final String CAT_GUI = "gui";
 
     /**
      * Energy buffer ceiling. The buffer itself is no longer the constraint - stored and maximum RF
@@ -68,6 +69,9 @@ public final class ModConfig {
     private static final long MIN_CELL_CAPACITY = 1000000L;
     private static final long MAX_CELL_CAPACITY = 1000000000000000L;
 
+    /** Read by TabbedMachineGui when it loads - see loadGui(). */
+    public static boolean colorBlindPalette = false;
+
     public static boolean recipeAdvancedPulverizer = true;
     public static boolean recipeAdvancedFurnace = true;
     public static boolean recipeAdvancedSawmill = true;
@@ -85,6 +89,7 @@ public final class ModConfig {
             cfg.load();
             loadMachines(cfg);
             loadRecipes(cfg);
+            loadGui(cfg);
         } catch (Throwable t) {
             // A broken config must never stop the mod from loading - every field keeps whatever
             // default it was initialized with, which is exactly the shipped balance.
@@ -186,6 +191,22 @@ public final class ModConfig {
             return clamped;
         }
         return value;
+    }
+
+    /**
+     * The machine GUIs mark each slot's role with a coloured ring, which is no help at all to a
+     * player who cannot tell those colours apart. Real Thermal Expansion answers the same problem
+     * by swapping its Slots.png for a SlotsCB.png; this mod draws its rings in code, so what
+     * changes here is the palette itself - to the Okabe-Ito set, chosen specifically so the
+     * colours stay distinguishable under the common forms of colour blindness.
+     */
+    private static void loadGui(Configuration cfg) {
+        // Only the flag is read here. ModConfig runs in preInit on the dedicated server too, so it
+        // must never touch TabbedMachineGui - that class extends GuiContainer and does not exist
+        // server-side. The GUI reads this flag itself when it first loads, which is client-only.
+        colorBlindPalette = cfg.get(CAT_GUI, "colorBlindPalette", false,
+                "Draw the slot role rings in a colour-blind-safe palette (Okabe-Ito) instead of"
+                        + " the Thermal Expansion colours.").getBoolean(false);
     }
 
     private static void loadRecipes(Configuration cfg) {

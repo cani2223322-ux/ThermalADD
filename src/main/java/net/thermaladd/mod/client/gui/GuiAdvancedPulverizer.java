@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 import net.thermaladd.mod.inventory.ContainerAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
@@ -33,9 +34,15 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
     private static final int CHARGE_SLOT_X = ENERGY_X;
     private static final int CHARGE_SLOT_Y = ENERGY_Y + 45;
 
-    private static final int PROGRESS_X = 66;
-    /** Width of the gap between the input and output columns; the arrow is centred inside it. */
-    private static final int PROGRESS_SPAN = 46;
+    /**
+     * The 46px gap between the input and output columns holds real TE's own pair of indicators:
+     * the machine's activity glyph (16px) then the progress arrow (24px).
+     */
+    private static final int SCALE_X = 67;
+    private static final int ARROW_X = 85;
+    /** Real TE's own Pulverizer glyph - the Furnace uses Scale_Flame, the Sawmill Scale_Saw. */
+    private static final ResourceLocation SCALE_TEXTURE =
+            new ResourceLocation("cofh", "textures/gui/elements/Scale_Crush.png");
 
     private static final int TAB_STACK_X = BASE_WIDTH;
     private static final int TAB_STACK_Y = 4;
@@ -73,6 +80,12 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
         redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
         energyTab.setStackPosition(LEFT_TAB_X, LEFT_TAB_Y);
+        // Re-open whichever tab the player last had open, per side - updateScreen() closes the
+        // Configuration/Redstone ones again if this machine lacks their augment.
+        TabTracker.restore(augmentsTab);
+        TabTracker.restore(configTab);
+        TabTracker.restore(redstoneTab);
+        TabTracker.restore(energyTab);
     }
 
     @Override
@@ -163,17 +176,30 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
      * line's own 18px row.
      */
     private void drawProgressBar(int left, int top, int line) {
-        int x = left + PROGRESS_X + (PROGRESS_SPAN - PROGRESS_ARROW_WIDTH) / 2;
+        int progress = tile.getProgress(line);
+        int max = tile.getProgressMax(line);
         int y = top + ContainerAdvancedPulverizer.INPUT_Y + line * ContainerAdvancedPulverizer.SLOT_SIZE
                 + (ContainerAdvancedPulverizer.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
-        drawProgressArrow(x, y, tile.getProgress(line), tile.getProgressMax(line));
+        // Machine-specific activity glyph first, then the arrow - the same pairing real TE shows,
+        // just repeated per processing line instead of once for a single-slot machine.
+        drawActivityScale(SCALE_TEXTURE, left + SCALE_X, y, progress, max);
+        drawProgressArrow(left + ARROW_X, y, progress, max);
     }
 
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-        fontRendererObj.drawString(StatCollector.translateToLocal("tile.advancedPulverizer.name"), 8, 6, 0x404040);
+        drawMachineTitle(tile, BASE_WIDTH);
         fontRendererObj.drawString(StatCollector.translateToLocal("container.inventory"),
                 8, ContainerAdvancedPulverizer.PLAYER_INV_Y - 10, 0x404040);
+
+        // Tab content highlights whatever button is under the cursor, and drawContentForeground
+        // has no mouse arguments of its own - hand the panel-relative position over first.
+        int relMouseX = mouseX - guiLeft;
+        int relMouseY = mouseY - guiTop;
+        augmentsTab.setMousePosition(relMouseX, relMouseY);
+        configTab.setMousePosition(relMouseX, relMouseY);
+        redstoneTab.setMousePosition(relMouseX, relMouseY);
+        energyTab.setMousePosition(relMouseX, relMouseY);
 
         augmentsTab.drawForeground(0, 0);
         if (tile.augmentReconfigSides) {
@@ -222,6 +248,8 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
             redstoneTab.setOpen(false);
             energyTab.setOpen(false);
             tab.setOpen(!wasOpen);
+            // Remember the choice so the next machine opens with the same tab already out.
+            TabTracker.setOpen(tab, !wasOpen);
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {
@@ -242,6 +270,11 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         super.drawScreen(mouseX, mouseY, partialTicks);
+        // Real TE suppresses every tooltip while a stack is on the cursor - otherwise the tooltip
+        // box covers the very slot the player is trying to drop it into.
+        if (isHoldingItem()) {
+            return;
+        }
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
 

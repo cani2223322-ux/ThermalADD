@@ -57,6 +57,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
         ySize = BASE_HEIGHT;
         this.configTab = new TabConfigCell(this, tile);
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y);
+        TabTracker.restore(configTab);
     }
 
     @Override
@@ -106,7 +107,11 @@ public class GuiSingularityCell extends TabbedMachineGui {
 
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-        fontRendererObj.drawString(StatCollector.translateToLocal("tile.singularityCell.name"), 8, 6, 0x404040);
+        // Centred like real TE's own GUIs. The Cell has no inventory to carry a custom name, so
+        // unlike the machines this one stays on its plain block name.
+        String title = StatCollector.translateToLocal("tile.singularityCell.name");
+        fontRendererObj.drawString(title, (BASE_WIDTH - fontRendererObj.getStringWidth(title)) / 2, 6, 0x404040);
+        configTab.setMousePosition(mouseX - guiLeft, mouseY - guiTop);
 
         long capacity = tile.getCapacityLong();
         String fillLine = formatRF(tile.getEnergyStoredLong()) + " / " + formatRF(capacity) + " RF";
@@ -130,6 +135,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
 
         if (mouseButton == 0 && configTab.isMouseOverIcon(mouseX, mouseY, left, top)) {
             configTab.setOpen(!configTab.open);
+            TabTracker.setOpen(configTab, configTab.open);
             return;
         }
         if (configTab.isFullyOpen() && configTab.isMouseOverFlap(mouseX, mouseY, left, top)) {
@@ -146,6 +152,9 @@ public class GuiSingularityCell extends TabbedMachineGui {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         super.drawScreen(mouseX, mouseY, partialTicks);
+        if (isHoldingItem()) {
+            return;
+        }
         int left = (width - xSize) / 2;
         int top = (height - ySize) / 2;
 

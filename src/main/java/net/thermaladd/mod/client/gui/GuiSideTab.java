@@ -100,6 +100,63 @@ public abstract class GuiSideTab {
         return open && currentWidth >= MAX_WIDTH && currentHeight >= MAX_HEIGHT;
     }
 
+    public boolean isLeftSide() {
+        return leftSide;
+    }
+
+    /**
+     * Opens the tab with no animation - used when {@link TabTracker} restores whichever tab the
+     * player had open in the previous machine, which should already be open the moment the GUI
+     * appears rather than visibly sliding out.
+     */
+    public void setFullyOpenImmediately() {
+        open = true;
+        currentWidth = MAX_WIDTH;
+        currentHeight = MAX_HEIGHT;
+    }
+
+    /**
+     * Where the mouse is, relative to the GUI panel's own origin. Set once per frame by the GUI
+     * before it draws the tabs, so tab content can highlight whichever button is under the
+     * cursor - drawContentForeground has no mouse arguments of its own.
+     */
+    private int mousePanelX = Integer.MIN_VALUE;
+    private int mousePanelY = Integer.MIN_VALUE;
+
+    public void setMousePosition(int panelRelX, int panelRelY) {
+        mousePanelX = panelRelX;
+        mousePanelY = panelRelY;
+    }
+
+    /** Real TE's own click feedback - see TabbedMachineGui#playClick for the pitch convention. */
+    protected void playClick(float pitch) {
+        gui.playClick(pitch);
+    }
+
+    /** {@code relX}/{@code relY} are in the same tab-relative space the BTN_X/BTN_Y tables use. */
+    protected boolean isContentHovered(int relX, int relY, int width, int height) {
+        if (!isFullyOpen() || mousePanelX == Integer.MIN_VALUE) {
+            return false;
+        }
+        int tx = mousePanelX - boxX();
+        int ty = mousePanelY - tabY;
+        return tx >= relX && tx < relX + width && ty >= relY && ty < relY + height;
+    }
+
+    /**
+     * A 1px white frame just outside a 16x16 button, drawn while the cursor is over it. Real
+     * Thermal Expansion's own buttons only distinguish idle/active/disabled and never react to
+     * hover at all - this is one place it is worth going past TE, since without it there is
+     * nothing telling the player these glyphs are clickable.
+     */
+    protected void drawHoverFrame(int x, int y) {
+        final int color = 0x80FFFFFF;
+        net.minecraft.client.gui.Gui.drawRect(x - 1, y - 1, x + 17, y, color);
+        net.minecraft.client.gui.Gui.drawRect(x - 1, y + 16, x + 17, y + 17, color);
+        net.minecraft.client.gui.Gui.drawRect(x - 1, y, x, y + 16, color);
+        net.minecraft.client.gui.Gui.drawRect(x + 16, y, x + 17, y + 16, color);
+    }
+
     public void update() {
         if (open && currentWidth < MAX_WIDTH) {
             currentWidth = Math.min(MAX_WIDTH, currentWidth + EXPAND_SPEED);

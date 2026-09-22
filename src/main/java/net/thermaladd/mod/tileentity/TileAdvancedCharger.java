@@ -166,6 +166,9 @@ public class TileAdvancedCharger extends TileEntity
     private int energyPerTick = 0;
     private int maxEnergyPerTick = LINE_SLOTS * BASE_ENERGY_PER_TICK;
 
+    /** Player-given name from an anvil, or null - see getInventoryName(). */
+    private String customName;
+
     private byte facing = 3;
     private byte[] sideCache = new byte[6];
     private boolean isActive = false;
@@ -1090,14 +1093,19 @@ public class TileAdvancedCharger extends TileEntity
         return slot >= AUGMENT_START && slot < AUGMENT_START + AUGMENT_SLOTS;
     }
 
+    /** Lang key when unnamed, the player's anvil name once renamed - see TileAdvancedPulverizer. */
     @Override
     public String getInventoryName() {
-        return "container.advancedCharger";
+        return hasCustomInventoryName() ? customName : "tile.advancedCharger.name";
     }
 
     @Override
     public boolean hasCustomInventoryName() {
-        return false;
+        return customName != null && customName.length() > 0;
+    }
+
+    public void setCustomName(String name) {
+        customName = name;
     }
 
     @Override
@@ -1184,6 +1192,9 @@ public class TileAdvancedCharger extends TileEntity
         tag.setIntArray("Progress", progress);
         tag.setIntArray("ProgressMax", progressMax);
         tag.setByte("RSControl", (byte) rsMode.ordinal());
+        if (hasCustomInventoryName()) {
+            tag.setString("CustomName", customName);
+        }
 
         NBTTagList items = new NBTTagList();
         for (int i = 0; i < inventory.length; i++) {
@@ -1202,6 +1213,9 @@ public class TileAdvancedCharger extends TileEntity
         super.readFromNBT(tag);
         energyStorage.readFromNBT(tag);
         facing = tag.getByte("Facing");
+        if (tag.hasKey("CustomName")) {
+            customName = tag.getString("CustomName");
+        }
         if (tag.hasKey("RSControl")) {
             // Range-checked exactly like the Sides array below - an out-of-range ordinal from a
             // corrupt or hand-edited tag threw straight out of readFromNBT, killing the chunk load.
