@@ -133,9 +133,11 @@ public class GuiSingularityCell extends TabbedMachineGui {
             return;
         }
         if (configTab.isFullyOpen() && configTab.isMouseOverFlap(mouseX, mouseY, left, top)) {
-            if (configTab.onContentClick(mouseX - left - configTab.getTabX(), mouseY - top - configTab.getTabY(), mouseButton, shift)) {
-                return;
-            }
+            // Swallowed whether or not the content claimed it: this flap holds no vanilla Slots,
+            // and letting the click through to GuiContainer#mouseClicked risks it being read as
+            // "clicked outside the window", which drops the stack on the cursor.
+            configTab.onContentClick(mouseX - left - configTab.getTabX(), mouseY - top - configTab.getTabY(), mouseButton, shift);
+            return;
         }
 
         super.mouseClicked(mouseX, mouseY, mouseButton);

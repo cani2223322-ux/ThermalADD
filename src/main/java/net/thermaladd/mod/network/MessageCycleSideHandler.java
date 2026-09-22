@@ -24,10 +24,15 @@ public class MessageCycleSideHandler implements IMessageHandler<MessageCycleSide
     @Override
     public IMessage onMessage(MessageCycleSide message, MessageContext ctx) {
         EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-        TileEntity te = player.worldObj.getTileEntity(message.getX(), message.getY(), message.getZ());
+        // Range check FIRST: World#getTileEntity goes through getChunkFromChunkCoords, which
+        // loads (and if necessary generates) the chunk. Doing the lookup before the check let a
+        // modified client force arbitrary chunks to load anywhere in the world just by spamming
+        // this packet with random coordinates. MessageSetRedstoneControlHandler already had the
+        // order right; this one did not.
         if (player.getDistanceSq(message.getX() + 0.5, message.getY() + 0.5, message.getZ() + 0.5) > 64.0) {
             return null;
         }
+        TileEntity te = player.worldObj.getTileEntity(message.getX(), message.getY(), message.getZ());
 
         if (te instanceof TileAdvancedPulverizer) {
             TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;

@@ -150,8 +150,11 @@ public class ContainerAdvancedCharger extends Container {
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
         List<ICrafting> list = (List<ICrafting>) crafters;
-        int energyScaled = tile.getEnergy() / TileAdvancedCharger.ENERGY_SYNC_SCALE;
-        int maxEnergyScaled = tile.getMaxEnergy() / TileAdvancedCharger.ENERGY_SYNC_SCALE;
+        // Sent as exact low/high 16-bit halves - see TileAdvancedPulverizer#applyClientEnergy.
+        // (progress/progressMax below still use ENERGY_SYNC_SCALE: those drive a bar rather than a
+        // printed number, and a capacitor's RF charge would need 18 extra properties to split.)
+        int energy = tile.getEnergy();
+        int maxEnergy = tile.getMaxEnergy();
         int reconfigSides = tile.augmentReconfigSides ? 1 : 0;
         int autoInput = tile.augmentAutoInput ? 1 : 0;
         int autoOutput = tile.augmentAutoOutput ? 1 : 0;
@@ -159,11 +162,13 @@ public class ContainerAdvancedCharger extends Container {
 
         for (int i = 0; i < list.size(); i++) {
             ICrafting crafter = list.get(i);
-            if (lastEnergy != energyScaled) {
-                crafter.sendProgressBarUpdate(this, 0, energyScaled);
+            if (lastEnergy != energy) {
+                crafter.sendProgressBarUpdate(this, 0, energy & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 33, energy >>> 16);
             }
-            if (lastMaxEnergy != maxEnergyScaled) {
-                crafter.sendProgressBarUpdate(this, 1, maxEnergyScaled);
+            if (lastMaxEnergy != maxEnergy) {
+                crafter.sendProgressBarUpdate(this, 1, maxEnergy & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 34, maxEnergy >>> 16);
             }
             for (int line = 0; line < TileAdvancedCharger.LINE_SLOTS; line++) {
                 // See TileAdvancedCharger#setProgressClient's own doc for why this needs the
@@ -203,13 +208,15 @@ public class ContainerAdvancedCharger extends Container {
             // own 9 parallel lines at up to BASE_ENERGY_PER_TICK=16,000 RF/t each already exceed
             // 32,767 with ZERO augments installed (9 * 16,000 = 144,000) - needs the same
             // ENERGY_SYNC_SCALE division ids 0/1 already use.
-            int energyPerTick = tile.getEnergyPerTick() / TileAdvancedCharger.ENERGY_SYNC_SCALE;
+            int energyPerTick = tile.getEnergyPerTick();
             if (lastEnergyPerTick != energyPerTick) {
-                crafter.sendProgressBarUpdate(this, 30, energyPerTick);
+                crafter.sendProgressBarUpdate(this, 30, energyPerTick & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 35, energyPerTick >>> 16);
             }
-            int maxEnergyPerTick = tile.getMaxEnergyPerTick() / TileAdvancedCharger.ENERGY_SYNC_SCALE;
+            int maxEnergyPerTick = tile.getMaxEnergyPerTick();
             if (lastMaxEnergyPerTick != maxEnergyPerTick) {
-                crafter.sendProgressBarUpdate(this, 31, maxEnergyPerTick);
+                crafter.sendProgressBarUpdate(this, 31, maxEnergyPerTick & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 36, maxEnergyPerTick >>> 16);
             }
             int controlMode = tile.getControl().ordinal();
             if (lastControlMode != controlMode) {
@@ -217,8 +224,8 @@ public class ContainerAdvancedCharger extends Container {
             }
         }
 
-        lastEnergy = energyScaled;
-        lastMaxEnergy = maxEnergyScaled;
+        lastEnergy = energy;
+        lastMaxEnergy = maxEnergy;
         for (int line = 0; line < TileAdvancedCharger.LINE_SLOTS; line++) {
             // Must store the same SCALED value the comparison above uses (see the /
             // ENERGY_SYNC_SCALE division a few lines up) - storing the raw unscaled value here
@@ -234,17 +241,25 @@ public class ContainerAdvancedCharger extends Container {
         lastAutoInput = autoInput;
         lastAutoOutput = autoOutput;
         lastRedstoneControl = redstoneControl;
-        lastEnergyPerTick = tile.getEnergyPerTick() / TileAdvancedCharger.ENERGY_SYNC_SCALE;
-        lastMaxEnergyPerTick = tile.getMaxEnergyPerTick() / TileAdvancedCharger.ENERGY_SYNC_SCALE;
+        lastEnergyPerTick = tile.getEnergyPerTick();
+        lastMaxEnergyPerTick = tile.getMaxEnergyPerTick();
         lastControlMode = tile.getControl().ordinal();
     }
 
     @Override
     public void updateProgressBar(int id, int value) {
         if (id == 0) {
-            tile.setEnergyStoredClient(value);
+            tile.setEnergyLowClient(value);
         } else if (id == 1) {
-            tile.setMaxEnergyClient(value * TileAdvancedCharger.ENERGY_SYNC_SCALE);
+            tile.setMaxEnergyLowClient(value);
+        } else if (id == 33) {
+            tile.setEnergyHighClient(value);
+        } else if (id == 34) {
+            tile.setMaxEnergyHighClient(value);
+        } else if (id == 35) {
+            tile.setEnergyPerTickHighClient(value);
+        } else if (id == 36) {
+            tile.setMaxEnergyPerTickHighClient(value);
         } else if (id >= 2 && id <= 10) {
             tile.setProgressClient(id - 2, value);
         } else if (id >= 11 && id <= 19) {
@@ -260,9 +275,9 @@ public class ContainerAdvancedCharger extends Container {
         } else if (id == 29) {
             tile.augmentRedstoneControl = value != 0;
         } else if (id == 30) {
-            tile.setEnergyPerTickClient(value);
+            tile.setEnergyPerTickLowClient(value);
         } else if (id == 31) {
-            tile.setMaxEnergyPerTickClient(value);
+            tile.setMaxEnergyPerTickLowClient(value);
         } else if (id == 32) {
             tile.setControlClient(value);
         }

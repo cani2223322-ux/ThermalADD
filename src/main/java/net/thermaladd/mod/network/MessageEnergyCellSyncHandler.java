@@ -8,19 +8,28 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
-/** Same plain-field-write pattern as MessageTileRenderSyncHandler - see that class for why no main-thread scheduling is needed here. */
+/** Handed to the client thread for the same reason as MessageTileRenderSyncHandler - see that class. */
 public class MessageEnergyCellSyncHandler implements IMessageHandler<MessageEnergyCellSync, IMessage> {
 
     @Override
-    public IMessage onMessage(MessageEnergyCellSync message, MessageContext ctx) {
+    public IMessage onMessage(final MessageEnergyCellSync message, MessageContext ctx) {
+        Minecraft.getMinecraft().func_152344_a(new Runnable() {
+            @Override
+            public void run() {
+                apply(message);
+            }
+        });
+        return null;
+    }
+
+    private static void apply(MessageEnergyCellSync message) {
         World world = Minecraft.getMinecraft().theWorld;
         if (world == null) {
-            return null;
+            return;
         }
         TileEntity te = world.getTileEntity(message.getX(), message.getY(), message.getZ());
         if (te instanceof TileSingularityCell) {
             ((TileSingularityCell) te).setEnergyStoredClient(message.getEnergy(), message.getEnergyIn(), message.getEnergyOut());
         }
-        return null;
     }
 }

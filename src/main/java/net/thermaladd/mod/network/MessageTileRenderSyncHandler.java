@@ -37,11 +37,30 @@ import cofh.lib.audio.SoundTile;
  */
 public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTileRenderSync, IMessage> {
 
+    /**
+     * FML runs onMessage on the NETWORK IO thread, not the client thread. Everything below touches
+     * client-thread-owned state: World#getTileEntity and #markBlockForUpdate, and - worse -
+     * SoundHandler#playSound, which mutates the same playingSounds/tickableSounds maps
+     * SoundManager#updateAllSounds iterates every client tick. Starting a machine while other
+     * sounds were playing could therefore throw a ConcurrentModificationException out of the
+     * client's own sound tick. Minecraft#func_152344_a hands the work to the client thread, which
+     * runs it at the start of its next tick.
+     */
     @Override
-    public IMessage onMessage(MessageTileRenderSync message, MessageContext ctx) {
+    public IMessage onMessage(final MessageTileRenderSync message, MessageContext ctx) {
+        Minecraft.getMinecraft().func_152344_a(new Runnable() {
+            @Override
+            public void run() {
+                apply(message);
+            }
+        });
+        return null;
+    }
+
+    private static void apply(MessageTileRenderSync message) {
         World world = Minecraft.getMinecraft().theWorld;
         if (world == null) {
-            return null;
+            return;
         }
         TileEntity te = world.getTileEntity(message.getX(), message.getY(), message.getZ());
         byte[] sides = message.getSideCache();
@@ -91,11 +110,10 @@ public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTile
             // field comment - just keep its idle/active face icon in sync.
             tile.setActiveClient(active);
         } else {
-            return null;
+            return;
         }
 
         world.markBlockForUpdate(message.getX(), message.getY(), message.getZ());
-        return null;
     }
 
     /**
@@ -107,7 +125,7 @@ public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTile
      * must be read from the tile BEFORE this sync's new value is applied to it - see the call
      * sites above.
      */
-    private void playMachineSoundOnStart(boolean wasActive, boolean nowActive, final int x, final int y, final int z, final String soundName) {
+    private static void playMachineSoundOnStart(boolean wasActive, boolean nowActive, final int x, final int y, final int z, final String soundName) {
         if (!nowActive || wasActive) {
             return;
         }

@@ -172,7 +172,12 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {
-            return tab.onContentClick(mouseX - left - tab.getContentX(), mouseY - top - tab.getTabY(), mouseButton, shift);
+            if (tab.onContentClick(mouseX - left - tab.getContentX(), mouseY - top - tab.getTabY(), mouseButton, shift)) {
+                return true;
+            }
+            // See GuiAdvancedPulverizer#handleTabClick - an unclaimed click inside an open flap
+            // used to reach vanilla as "clicked outside the window" and drop the held stack.
+            return tab != augmentsTab;
         }
         return false;
     }

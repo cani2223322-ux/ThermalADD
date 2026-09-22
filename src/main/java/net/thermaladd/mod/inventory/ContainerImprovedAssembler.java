@@ -156,7 +156,8 @@ public class ContainerImprovedAssembler extends Container {
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
         List<ICrafting> list = (List<ICrafting>) crafters;
-        int energyScaled = tile.getEnergy() / TileImprovedAssembler.ENERGY_SYNC_SCALE;
+        // Sent as exact low/high 16-bit halves - see TileAdvancedPulverizer#applyClientEnergy.
+        int energy = tile.getEnergy();
         int reconfigSides = tile.augmentReconfigSides ? 1 : 0;
         int autoInput = tile.augmentAutoInput ? 1 : 0;
         int autoOutput = tile.augmentAutoOutput ? 1 : 0;
@@ -170,8 +171,9 @@ public class ContainerImprovedAssembler extends Container {
 
         for (int i = 0; i < list.size(); i++) {
             ICrafting crafter = list.get(i);
-            if (lastEnergy != energyScaled) {
-                crafter.sendProgressBarUpdate(this, 0, energyScaled);
+            if (lastEnergy != energy) {
+                crafter.sendProgressBarUpdate(this, 0, energy & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 15, energy >>> 16);
             }
             for (int side = 0; side < 6; side++) {
                 int mode = tile.getSideMode(side);
@@ -207,7 +209,7 @@ public class ContainerImprovedAssembler extends Container {
             }
         }
 
-        lastEnergy = energyScaled;
+        lastEnergy = energy;
         for (int side = 0; side < 6; side++) {
             lastSideModes[side] = tile.getSideMode(side);
         }
@@ -224,7 +226,9 @@ public class ContainerImprovedAssembler extends Container {
     @Override
     public void updateProgressBar(int id, int value) {
         if (id == 0) {
-            tile.setEnergyStoredClient(value);
+            tile.setEnergyLowClient(value);
+        } else if (id == 15) {
+            tile.setEnergyHighClient(value);
         } else if (id >= 1 && id <= 6) {
             tile.setSideModeClient(id - 1, value);
         } else if (id == 7) {

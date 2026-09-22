@@ -145,10 +145,11 @@ public class ContainerAdvancedSawmill extends Container {
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
         List<ICrafting> list = (List<ICrafting>) crafters;
-        int energyScaled = tile.getEnergy() / TileAdvancedSawmill.ENERGY_SYNC_SCALE;
-        int maxEnergyScaled = tile.getMaxEnergy() / TileAdvancedSawmill.ENERGY_SYNC_SCALE;
-        int energyPerTickScaled = tile.getEnergyPerTick() / TileAdvancedSawmill.RATE_SYNC_SCALE;
-        int maxEnergyPerTickScaled = tile.getMaxEnergyPerTick() / TileAdvancedSawmill.RATE_SYNC_SCALE;
+        // Sent as exact low/high 16-bit halves - see TileAdvancedPulverizer#applyClientEnergy.
+        int energy = tile.getEnergy();
+        int maxEnergy = tile.getMaxEnergy();
+        int energyPerTick = tile.getEnergyPerTick();
+        int maxEnergyPerTick = tile.getMaxEnergyPerTick();
         int reconfigSides = tile.augmentReconfigSides ? 1 : 0;
         int autoInput = tile.augmentAutoInput ? 1 : 0;
         int autoOutput = tile.augmentAutoOutput ? 1 : 0;
@@ -156,11 +157,13 @@ public class ContainerAdvancedSawmill extends Container {
 
         for (int i = 0; i < list.size(); i++) {
             ICrafting crafter = list.get(i);
-            if (lastEnergy != energyScaled) {
-                crafter.sendProgressBarUpdate(this, 0, energyScaled);
+            if (lastEnergy != energy) {
+                crafter.sendProgressBarUpdate(this, 0, energy & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 21, energy >>> 16);
             }
-            if (lastMaxEnergy != maxEnergyScaled) {
-                crafter.sendProgressBarUpdate(this, 1, maxEnergyScaled);
+            if (lastMaxEnergy != maxEnergy) {
+                crafter.sendProgressBarUpdate(this, 1, maxEnergy & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 22, maxEnergy >>> 16);
             }
             for (int line = 0; line < TileAdvancedSawmill.INPUT_SLOTS; line++) {
                 int p = tile.getProgress(line);
@@ -190,11 +193,13 @@ public class ContainerAdvancedSawmill extends Container {
             if (lastRedstoneControl != redstoneControl) {
                 crafter.sendProgressBarUpdate(this, 17, redstoneControl);
             }
-            if (lastEnergyPerTick != energyPerTickScaled) {
-                crafter.sendProgressBarUpdate(this, 18, energyPerTickScaled);
+            if (lastEnergyPerTick != energyPerTick) {
+                crafter.sendProgressBarUpdate(this, 18, energyPerTick & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 23, energyPerTick >>> 16);
             }
-            if (lastMaxEnergyPerTick != maxEnergyPerTickScaled) {
-                crafter.sendProgressBarUpdate(this, 19, maxEnergyPerTickScaled);
+            if (lastMaxEnergyPerTick != maxEnergyPerTick) {
+                crafter.sendProgressBarUpdate(this, 19, maxEnergyPerTick & 0xFFFF);
+                crafter.sendProgressBarUpdate(this, 24, maxEnergyPerTick >>> 16);
             }
             int controlMode = tile.getControl().ordinal();
             if (lastControlMode != controlMode) {
@@ -202,8 +207,8 @@ public class ContainerAdvancedSawmill extends Container {
             }
         }
 
-        lastEnergy = energyScaled;
-        lastMaxEnergy = maxEnergyScaled;
+        lastEnergy = energy;
+        lastMaxEnergy = maxEnergy;
         for (int line = 0; line < TileAdvancedSawmill.INPUT_SLOTS; line++) {
             lastProgress[line] = tile.getProgress(line);
             lastProgressMax[line] = tile.getProgressMax(line);
@@ -215,17 +220,25 @@ public class ContainerAdvancedSawmill extends Container {
         lastAutoInput = autoInput;
         lastAutoOutput = autoOutput;
         lastRedstoneControl = redstoneControl;
-        lastEnergyPerTick = energyPerTickScaled;
-        lastMaxEnergyPerTick = maxEnergyPerTickScaled;
+        lastEnergyPerTick = energyPerTick;
+        lastMaxEnergyPerTick = maxEnergyPerTick;
         lastControlMode = tile.getControl().ordinal();
     }
 
     @Override
     public void updateProgressBar(int id, int value) {
         if (id == 0) {
-            tile.setEnergyStoredClient(value);
+            tile.setEnergyLowClient(value);
         } else if (id == 1) {
-            tile.setMaxEnergyClient(value * TileAdvancedSawmill.ENERGY_SYNC_SCALE);
+            tile.setMaxEnergyLowClient(value);
+        } else if (id == 21) {
+            tile.setEnergyHighClient(value);
+        } else if (id == 22) {
+            tile.setMaxEnergyHighClient(value);
+        } else if (id == 23) {
+            tile.setEnergyPerTickHighClient(value);
+        } else if (id == 24) {
+            tile.setMaxEnergyPerTickHighClient(value);
         } else if (id >= 2 && id <= 4) {
             tile.setProgressClient(id - 2, value);
         } else if (id >= 5 && id <= 7) {
@@ -241,9 +254,9 @@ public class ContainerAdvancedSawmill extends Container {
         } else if (id == 17) {
             tile.augmentRedstoneControl = value != 0;
         } else if (id == 18) {
-            tile.setEnergyPerTickClient(value);
+            tile.setEnergyPerTickLowClient(value);
         } else if (id == 19) {
-            tile.setMaxEnergyPerTickClient(value);
+            tile.setMaxEnergyPerTickLowClient(value);
         } else if (id == 20) {
             tile.setControlClient(value);
         }

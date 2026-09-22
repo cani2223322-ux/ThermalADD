@@ -19,14 +19,12 @@ import net.thermaladd.mod.tileentity.TileSingularityCell;
  * Must run in preInit, strictly before any tile is constructed - the tiles read these fields
  * in their field initializers ({@code new EnergyStorage(BASE_ENERGY_CAPACITY, ...)}).
  *
- * WHY EVERY VALUE IS CLAMPED: the machine GUIs sync their energy/progress/RF-per-tick readouts
- * through vanilla's Container#sendProgressBarUpdate, which serializes as a SIGNED 16-BIT SHORT
- * (max 32767). Each machine divides its large values by its own ENERGY_SYNC_SCALE/RATE_SYNC_SCALE
- * before sending and multiplies back on receive, so the real ceiling for a given value is
- * {@code 32767 * thatScale}, divided by whatever the augments can multiply it by. A config value
- * past that point would silently wrap and show garbage (or negative) numbers in the GUI, so the
- * maxima below are derived from those limits rather than picked for flavor. Each one is noted
- * with the arithmetic that produced it.
+ * WHY EVERY VALUE IS CLAMPED: the machine GUIs sync their readouts through vanilla's
+ * Container#sendProgressBarUpdate, which serializes as a SIGNED 16-BIT SHORT (max 32767). Energy
+ * and RF/t are sent as exact low/high halves and so are effectively unbounded, but the per-line
+ * progress values are still sent whole, and a config value past what those can carry would
+ * silently wrap and show garbage (or negative) numbers. The maxima below are derived from those
+ * limits rather than picked for flavor, and each is noted with the reasoning behind it.
  */
 public final class ModConfig {
 
@@ -42,31 +40,24 @@ public final class ModConfig {
     private static final String CAT_RECIPES = "recipes";
 
     /**
-     * Energy buffer ceiling for the four machines that have an Energy Storage augment.
-     * That augment multiplies the buffer by up to 8, and the result is sent as
-     * {@code capacity * 8 / ENERGY_SYNC_SCALE}, which must stay under 32767:
-     * Pulverizer/Furnace/Sawmill use scale 256 -> 32767 * 256 / 8 = 1,048,544, rounded down.
+     * Energy buffer ceiling. The buffer itself is no longer the constraint - stored and maximum RF
+     * are sent to the GUI as exact low/high 16-bit halves (see
+     * TileAdvancedPulverizer#applyClientEnergy) rather than divided by a scale - so this only has
+     * to leave room for the Energy Storage augment's x8 multiplier inside a 32-bit int.
      */
-    private static final int MAX_CAPACITY_SCALE_256 = 1048000;
-    /** Same arithmetic for the Charger, which uses ENERGY_SYNC_SCALE 1024: 32767 * 1024 / 8 = 4,194,176. */
-    private static final int MAX_CAPACITY_CHARGER = 4194000;
-    /** The Assembler has no Energy Storage augment, so its buffer is sent unmultiplied: 32767 * 256 = 8,388,352. */
-    private static final int MAX_CAPACITY_ASSEMBLER = 8388000;
+    private static final int MAX_CAPACITY = 100000000;
 
     /**
-     * RF/t ceiling for the three "3 parallel lines" machines. Worst case sent to the GUI is
-     * {@code 3 lines * cost * 60 (max Machine Speed energy multiplier) * 1.25 (level-4 Secondary
-     * Sieve surcharge) / RATE_SYNC_SCALE}; with RATE_SYNC_SCALE 8 that is
-     * {@code 3 * 1000 * 75 / 8 = 28,125}, safely under 32767. The same limit also keeps a single
-     * progress step ({@code cost * 10}) from overflowing the raw progress sync.
+     * RF/t ceiling for the three "3 parallel lines" machines. The RF/t readouts are exact halves
+     * too now, so what actually bounds this is the per-line PROGRESS sync, which is still a raw
+     * short: one tick adds {@code cost * 10} (the maximum Machine Speed process multiplier) on top
+     * of a recipe's own RF cost, and 1000 * 10 = 10,000 leaves plenty of room under 32767 for even
+     * an unusually expensive third-party recipe.
      */
     private static final int MAX_PROCESS_ENERGY_3LINE = 1000;
-    /**
-     * Charger worst case is {@code 9 lines * cost * 60 / ENERGY_SYNC_SCALE (1024)}; at 40,000 that
-     * is {@code 9 * 40000 * 60 / 1024 = 21,093}, under 32767.
-     */
+    /** The Charger's progress is scaled by its own ENERGY_SYNC_SCALE of 1024, so it has far more headroom. */
     private static final int MAX_PROCESS_ENERGY_CHARGER = 40000;
-    /** Assembler worst case is {@code 6 lines * cost} sent raw: 6 * 1000 = 6,000, well under 32767. */
+    /** The Assembler has no accumulating progress at all - a craft completes within one tick. */
     private static final int MAX_PROCESS_ENERGY_ASSEMBLER = 1000;
 
     private static final int MIN_CAPACITY = 10000;
@@ -107,35 +98,35 @@ public final class ModConfig {
 
     private static void loadMachines(Configuration cfg) {
         TileAdvancedPulverizer.BASE_ENERGY_CAPACITY = capacity(cfg, CAT_PULVERIZER,
-                TileAdvancedPulverizer.BASE_ENERGY_CAPACITY, MAX_CAPACITY_SCALE_256);
+                TileAdvancedPulverizer.BASE_ENERGY_CAPACITY, MAX_CAPACITY);
         TileAdvancedPulverizer.ENERGY_RECEIVE_PER_TICK = transfer(cfg, CAT_PULVERIZER,
                 TileAdvancedPulverizer.ENERGY_RECEIVE_PER_TICK);
         TileAdvancedPulverizer.BASE_ENERGY_PER_TICK = process(cfg, CAT_PULVERIZER,
                 TileAdvancedPulverizer.BASE_ENERGY_PER_TICK, MAX_PROCESS_ENERGY_3LINE);
 
         TileAdvancedFurnace.BASE_ENERGY_CAPACITY = capacity(cfg, CAT_FURNACE,
-                TileAdvancedFurnace.BASE_ENERGY_CAPACITY, MAX_CAPACITY_SCALE_256);
+                TileAdvancedFurnace.BASE_ENERGY_CAPACITY, MAX_CAPACITY);
         TileAdvancedFurnace.ENERGY_RECEIVE_PER_TICK = transfer(cfg, CAT_FURNACE,
                 TileAdvancedFurnace.ENERGY_RECEIVE_PER_TICK);
         TileAdvancedFurnace.BASE_ENERGY_PER_TICK = process(cfg, CAT_FURNACE,
                 TileAdvancedFurnace.BASE_ENERGY_PER_TICK, MAX_PROCESS_ENERGY_3LINE);
 
         TileAdvancedSawmill.BASE_ENERGY_CAPACITY = capacity(cfg, CAT_SAWMILL,
-                TileAdvancedSawmill.BASE_ENERGY_CAPACITY, MAX_CAPACITY_SCALE_256);
+                TileAdvancedSawmill.BASE_ENERGY_CAPACITY, MAX_CAPACITY);
         TileAdvancedSawmill.ENERGY_RECEIVE_PER_TICK = transfer(cfg, CAT_SAWMILL,
                 TileAdvancedSawmill.ENERGY_RECEIVE_PER_TICK);
         TileAdvancedSawmill.BASE_ENERGY_PER_TICK = process(cfg, CAT_SAWMILL,
                 TileAdvancedSawmill.BASE_ENERGY_PER_TICK, MAX_PROCESS_ENERGY_3LINE);
 
         TileAdvancedCharger.BASE_ENERGY_CAPACITY = capacity(cfg, CAT_CHARGER,
-                TileAdvancedCharger.BASE_ENERGY_CAPACITY, MAX_CAPACITY_CHARGER);
+                TileAdvancedCharger.BASE_ENERGY_CAPACITY, MAX_CAPACITY);
         TileAdvancedCharger.ENERGY_RECEIVE_PER_TICK = transfer(cfg, CAT_CHARGER,
                 TileAdvancedCharger.ENERGY_RECEIVE_PER_TICK);
         TileAdvancedCharger.BASE_ENERGY_PER_TICK = process(cfg, CAT_CHARGER,
                 TileAdvancedCharger.BASE_ENERGY_PER_TICK, MAX_PROCESS_ENERGY_CHARGER);
 
         TileImprovedAssembler.ENERGY_CAPACITY = capacity(cfg, CAT_ASSEMBLER,
-                TileImprovedAssembler.ENERGY_CAPACITY, MAX_CAPACITY_ASSEMBLER);
+                TileImprovedAssembler.ENERGY_CAPACITY, MAX_CAPACITY);
         TileImprovedAssembler.ENERGY_RECEIVE_PER_TICK = transfer(cfg, CAT_ASSEMBLER,
                 TileImprovedAssembler.ENERGY_RECEIVE_PER_TICK);
         TileImprovedAssembler.PROCESS_ENERGY = process(cfg, CAT_ASSEMBLER,
@@ -146,8 +137,7 @@ public final class ModConfig {
 
     private static int capacity(Configuration cfg, String category, int def, int max) {
         return clampedInt(cfg, category, "energyCapacity", def, MIN_CAPACITY, max,
-                "Internal RF buffer of the machine. Range " + MIN_CAPACITY + "-" + max
-                        + "; the upper bound is what the vanilla GUI sync can carry, not a balance choice.");
+                "Internal RF buffer of the machine. Range " + MIN_CAPACITY + "-" + max + ".");
     }
 
     private static int transfer(Configuration cfg, String category, int def) {

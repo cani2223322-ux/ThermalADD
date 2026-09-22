@@ -532,12 +532,42 @@ public class TileAdvancedCharger extends TileEntity
         return energyStorage.getMaxEnergyStored();
     }
 
-    public void setEnergyStoredClient(int scaled) {
-        energyStorage.setEnergyStored(scaled * ENERGY_SYNC_SCALE);
+    /**
+     * Exact low/high 16-bit halves of the two RF numbers the GUI prints - see
+     * TileAdvancedPulverizer#applyClientEnergy for why the old divide-by-a-scale approach was
+     * replaced (it rounded the displayed buffer down by up to one whole scale step).
+     */
+    private int clientEnergyLow;
+    private int clientEnergyHigh;
+    private int clientMaxEnergyLow;
+    private int clientMaxEnergyHigh;
+
+    public void setEnergyLowClient(int value) {
+        clientEnergyLow = value & 0xFFFF;
+        applyClientEnergy();
     }
 
-    public void setMaxEnergyClient(int value) {
-        energyStorage.setCapacity(value);
+    public void setEnergyHighClient(int value) {
+        clientEnergyHigh = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    public void setMaxEnergyLowClient(int value) {
+        clientMaxEnergyLow = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    public void setMaxEnergyHighClient(int value) {
+        clientMaxEnergyHigh = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    private void applyClientEnergy() {
+        int capacity = clientMaxEnergyHigh << 16 | clientMaxEnergyLow;
+        if (capacity > 0) {
+            energyStorage.setCapacity(capacity);
+        }
+        energyStorage.setEnergyStored(clientEnergyHigh << 16 | clientEnergyLow);
     }
 
     public int getProgress(int line) {
@@ -573,13 +603,21 @@ public class TileAdvancedCharger extends TileEntity
         return maxEnergyPerTick;
     }
 
-    /** See ContainerAdvancedCharger's own doc comment on why ids 30/31 need ENERGY_SYNC_SCALE too, unlike the other 3 machines' own unscaled equivalents. */
-    public void setEnergyPerTickClient(int scaled) {
-        energyPerTick = scaled * ENERGY_SYNC_SCALE;
+    /** Exact low/high 16-bit halves - see TileAdvancedPulverizer#applyClientEnergy. */
+    public void setEnergyPerTickLowClient(int value) {
+        energyPerTick = (energyPerTick & 0xFFFF0000) | (value & 0xFFFF);
     }
 
-    public void setMaxEnergyPerTickClient(int scaled) {
-        maxEnergyPerTick = scaled * ENERGY_SYNC_SCALE;
+    public void setEnergyPerTickHighClient(int value) {
+        energyPerTick = ((value & 0xFFFF) << 16) | (energyPerTick & 0xFFFF);
+    }
+
+    public void setMaxEnergyPerTickLowClient(int value) {
+        maxEnergyPerTick = (maxEnergyPerTick & 0xFFFF0000) | (value & 0xFFFF);
+    }
+
+    public void setMaxEnergyPerTickHighClient(int value) {
+        maxEnergyPerTick = ((value & 0xFFFF) << 16) | (maxEnergyPerTick & 0xFFFF);
     }
 
     // ---------------------------------------------------------------- IEnergyInfo (real TE's own Energy tab)
@@ -1165,7 +1203,12 @@ public class TileAdvancedCharger extends TileEntity
         energyStorage.readFromNBT(tag);
         facing = tag.getByte("Facing");
         if (tag.hasKey("RSControl")) {
-            rsMode = ControlMode.values()[tag.getByte("RSControl") & 0xFF];
+            // Range-checked exactly like the Sides array below - an out-of-range ordinal from a
+            // corrupt or hand-edited tag threw straight out of readFromNBT, killing the chunk load.
+            int ordinal = tag.getByte("RSControl") & 0xFF;
+            if (ordinal < ControlMode.values().length) {
+                rsMode = ControlMode.values()[ordinal];
+            }
         }
 
         if (tag.hasKey("Sides")) {

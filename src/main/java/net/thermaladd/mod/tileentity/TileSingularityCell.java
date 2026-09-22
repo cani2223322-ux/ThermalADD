@@ -95,6 +95,8 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
     }
 
     private long energyStored = 0L;
+    /** Last light level pushed to the lighting engine - see relightIfNeeded(). */
+    private int lastLightValue = -1;
     private byte[] sideCache = DEFAULT_SIDES.clone();
 
     /** RF actually moved in/out on the tick just finished - "Вход"/"Выход" in the GUI. */
@@ -252,9 +254,15 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
         return true;
     }
 
-    /** Client-side only: applies a side mode received via MessageTileRenderSync. */
+    /**
+     * Client-side only: applies a side mode received via MessageTileRenderSync. Both arguments are
+     * range-checked because they come straight off the wire - an out-of-range mode would later
+     * index BlockSingularityCell's per-mode icon array out of bounds and crash the renderer.
+     */
     public void setSideModeClient(int side, int mode) {
-        sideCache[side] = (byte) mode;
+        if (isValidSide(side) && mode >= 0 && mode < MODE_COUNT) {
+            sideCache[side] = (byte) mode;
+        }
     }
 
     /**
@@ -332,6 +340,24 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
         energyOutLastTick = energyOutThisTick;
         energyInThisTick = 0L;
         energyOutThisTick = 0L;
+
+        relightIfNeeded();
+    }
+
+    /**
+     * getLightValue() brightens as the cell fills, but nothing ever told the lighting engine that,
+     * so a cell placed empty in a dark room stayed pitch black however full it got, until some
+     * unrelated neighbouring block update happened to force a relight. Checked once per tick
+     * rather than on every energy change - receiveEnergy/extractEnergy and the push loop above all
+     * write energyStored directly - and only acts when the 0-15 level actually moved, so a cell
+     * sitting at a steady charge costs nothing.
+     */
+    private void relightIfNeeded() {
+        int light = getLightValue();
+        if (light != lastLightValue) {
+            lastLightValue = light;
+            worldObj.func_147451_t(xCoord, yCoord, zCoord);
+        }
     }
 
     @Override

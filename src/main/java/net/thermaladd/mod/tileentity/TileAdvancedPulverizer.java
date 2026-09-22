@@ -95,27 +95,6 @@ public class TileAdvancedPulverizer extends TileEntity
     public static int ENERGY_RECEIVE_PER_TICK = 10000;
 
     /**
-     * windowProperty values are transmitted as a signed 16-bit short (max 32767, see
-     * S31PacketWindowProperty) - dividing by only 4 (as this mod used to) still overflows it the
-     * moment stored/max energy passes ~131,068 RF, which happens within the first second of
-     * charging at this tier's capacities (up to {@code BASE_ENERGY_CAPACITY * 8} = 8,000,000 RF
-     * with a maxed Energy Storage augment). 256 keeps the scaled value under 32767 even at that
-     * ceiling (8,000,000 / 256 = 31,250) with margin to spare; the GUI's energy bar is only 42px
-     * tall regardless; so this loses no perceptible precision.
-     */
-    public static final int ENERGY_SYNC_SCALE = 256;
-    /**
-     * Same trick as ENERGY_SYNC_SCALE, but for the two RF/t readouts (current consumption and the
-     * machine's maximum draw). Those used to be sent raw, which was safe only while
-     * BASE_ENERGY_PER_TICK was a hardcoded 80: the worst case is
-     * {@code INPUT_SLOTS * BASE_ENERGY_PER_TICK * 60 (max speed multiplier) * 1.25 (level-4 sieve
-     * surcharge)}, so a config-raised cost would have overflowed the signed-short window property
-     * almost immediately. Dividing by 8 keeps the displayed number within 8 RF/t of the real one
-     * while lifting the ceiling to 32767 * 8 = 262,136 RF/t.
-     */
-    public static final int RATE_SYNC_SCALE = 8;
-
-    /**
      * Real Thermal Expansion's own ambient "machine working" sound event (verified against the
      * vendored jar's own {@code assets/thermalexpansion/sounds.json}: {@code blockMachinePulverizer}
      * maps to {@code blocks/machine/pulverizer.ogg}) - reused directly rather than shipping a
@@ -716,13 +695,51 @@ public class TileAdvancedPulverizer extends TileEntity
         return energyStorage.getMaxEnergyStored();
     }
 
-    /** Client-side only: applies a value received (already divided by ENERGY_SYNC_SCALE for the packet) via the container. */
-    public void setEnergyStoredClient(int scaled) {
-        energyStorage.setEnergyStored(scaled * ENERGY_SYNC_SCALE);
+    /**
+     * Client-side halves of the four RF numbers the GUI prints.
+     *
+     * Container#sendProgressBarUpdate serializes as a SIGNED 16-BIT SHORT, so anything past 32767
+     * cannot go over in one piece. This used to be handled by dividing by ENERGY_SYNC_SCALE and
+     * multiplying back, which silently rounded every number the GUI showed: a 1,000,000 RF buffer
+     * came out as 999,936, because 1,000,000/256 is 3906.25 and the .25 was discarded. Waila reads
+     * the real server-side value, so the two disagreed on screen.
+     *
+     * Sending the low and high 16 bits as two separate properties and reassembling them here is
+     * exact for the whole int range instead. The incoming halves are masked with 0xFFFF because
+     * the packet is read back as a SIGNED short - a low half of 0xFFFF arrives as -1.
+     */
+    private int clientEnergyLow;
+    private int clientEnergyHigh;
+    private int clientMaxEnergyLow;
+    private int clientMaxEnergyHigh;
+
+    public void setEnergyLowClient(int value) {
+        clientEnergyLow = value & 0xFFFF;
+        applyClientEnergy();
     }
 
-    public void setMaxEnergyClient(int value) {
-        energyStorage.setCapacity(value);
+    public void setEnergyHighClient(int value) {
+        clientEnergyHigh = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    public void setMaxEnergyLowClient(int value) {
+        clientMaxEnergyLow = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    public void setMaxEnergyHighClient(int value) {
+        clientMaxEnergyHigh = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    /** Capacity is applied first: EnergyStorage clamps the stored value to it. */
+    private void applyClientEnergy() {
+        int capacity = clientMaxEnergyHigh << 16 | clientMaxEnergyLow;
+        if (capacity > 0) {
+            energyStorage.setCapacity(capacity);
+        }
+        energyStorage.setEnergyStored(clientEnergyHigh << 16 | clientEnergyLow);
     }
 
     public int getProgress(int line) {
@@ -751,13 +768,21 @@ public class TileAdvancedPulverizer extends TileEntity
         return maxEnergyPerTick;
     }
 
-    /** Takes the RATE_SYNC_SCALE-divided value the container sent and restores the real RF/t. */
-    public void setEnergyPerTickClient(int scaled) {
-        energyPerTick = scaled * RATE_SYNC_SCALE;
+    /** Same exact-halves scheme as the energy buffer above - see applyClientEnergy's comment. */
+    public void setEnergyPerTickLowClient(int value) {
+        energyPerTick = (energyPerTick & 0xFFFF0000) | (value & 0xFFFF);
     }
 
-    public void setMaxEnergyPerTickClient(int scaled) {
-        maxEnergyPerTick = scaled * RATE_SYNC_SCALE;
+    public void setEnergyPerTickHighClient(int value) {
+        energyPerTick = ((value & 0xFFFF) << 16) | (energyPerTick & 0xFFFF);
+    }
+
+    public void setMaxEnergyPerTickLowClient(int value) {
+        maxEnergyPerTick = (maxEnergyPerTick & 0xFFFF0000) | (value & 0xFFFF);
+    }
+
+    public void setMaxEnergyPerTickHighClient(int value) {
+        maxEnergyPerTick = ((value & 0xFFFF) << 16) | (maxEnergyPerTick & 0xFFFF);
     }
 
     // ---------------------------------------------------------------- IEnergyInfo (real TE's own Energy tab)
@@ -1391,7 +1416,12 @@ public class TileAdvancedPulverizer extends TileEntity
         energyStorage.readFromNBT(tag);
         facing = tag.getByte("Facing");
         if (tag.hasKey("RSControl")) {
-            rsMode = ControlMode.values()[tag.getByte("RSControl") & 0xFF];
+            // Range-checked exactly like the Sides array below - an out-of-range ordinal from a
+            // corrupt or hand-edited tag threw straight out of readFromNBT, killing the chunk load.
+            int ordinal = tag.getByte("RSControl") & 0xFF;
+            if (ordinal < ControlMode.values().length) {
+                rsMode = ControlMode.values()[ordinal];
+            }
         }
 
         if (tag.hasKey("Sides")) {

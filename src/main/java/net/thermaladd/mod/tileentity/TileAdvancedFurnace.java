@@ -64,15 +64,6 @@ public class TileAdvancedFurnace extends TileEntity
     public static int BASE_ENERGY_CAPACITY = 1000000;
     public static int ENERGY_RECEIVE_PER_TICK = 10000;
 
-    /** See TileAdvancedPulverizer#ENERGY_SYNC_SCALE - same overflow fix, same capacity ceiling (BASE_ENERGY_CAPACITY * 8 with a maxed Energy Storage augment). */
-    public static final int ENERGY_SYNC_SCALE = 256;
-    /**
-     * Same trick as ENERGY_SYNC_SCALE, but for the two RF/t readouts. Sending those raw was only
-     * safe while BASE_ENERGY_PER_TICK was hardcoded; now that config can raise it, the worst case
-     * ({@code INPUT_SLOTS * BASE_ENERGY_PER_TICK * 60}) needs the same headroom the energy buffer
-     * already had. See TileAdvancedPulverizer.RATE_SYNC_SCALE for the full reasoning.
-     */
-    public static final int RATE_SYNC_SCALE = 8;
 
     /** See TileAdvancedPulverizer#SOUND_NAME - same real Thermal Expansion ambient sound reuse, verified against the vendored jar's own sounds.json (blockMachineFurnace -> blocks/machine/furnace.ogg). */
     public static final String SOUND_NAME = "thermalexpansion:blockMachineFurnace";
@@ -539,13 +530,42 @@ public class TileAdvancedFurnace extends TileEntity
         return energyStorage.getMaxEnergyStored();
     }
 
-    /** Client-side only: applies a value received (already divided by ENERGY_SYNC_SCALE for the packet) via the container. */
-    public void setEnergyStoredClient(int scaled) {
-        energyStorage.setEnergyStored(scaled * ENERGY_SYNC_SCALE);
+    /**
+     * Exact low/high 16-bit halves of the RF numbers the GUI prints - see
+     * TileAdvancedPulverizer#applyClientEnergy for why the old divide-by-a-scale approach was
+     * replaced (it rounded a 1,000,000 RF buffer down to 999,936 on screen).
+     */
+    private int clientEnergyLow;
+    private int clientEnergyHigh;
+    private int clientMaxEnergyLow;
+    private int clientMaxEnergyHigh;
+
+    public void setEnergyLowClient(int value) {
+        clientEnergyLow = value & 0xFFFF;
+        applyClientEnergy();
     }
 
-    public void setMaxEnergyClient(int value) {
-        energyStorage.setCapacity(value);
+    public void setEnergyHighClient(int value) {
+        clientEnergyHigh = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    public void setMaxEnergyLowClient(int value) {
+        clientMaxEnergyLow = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    public void setMaxEnergyHighClient(int value) {
+        clientMaxEnergyHigh = value & 0xFFFF;
+        applyClientEnergy();
+    }
+
+    private void applyClientEnergy() {
+        int capacity = clientMaxEnergyHigh << 16 | clientMaxEnergyLow;
+        if (capacity > 0) {
+            energyStorage.setCapacity(capacity);
+        }
+        energyStorage.setEnergyStored(clientEnergyHigh << 16 | clientEnergyLow);
     }
 
     public int getProgress(int line) {
@@ -574,13 +594,20 @@ public class TileAdvancedFurnace extends TileEntity
         return maxEnergyPerTick;
     }
 
-    /** Takes the RATE_SYNC_SCALE-divided value the container sent and restores the real RF/t. */
-    public void setEnergyPerTickClient(int scaled) {
-        energyPerTick = scaled * RATE_SYNC_SCALE;
+    public void setEnergyPerTickLowClient(int value) {
+        energyPerTick = (energyPerTick & 0xFFFF0000) | (value & 0xFFFF);
     }
 
-    public void setMaxEnergyPerTickClient(int scaled) {
-        maxEnergyPerTick = scaled * RATE_SYNC_SCALE;
+    public void setEnergyPerTickHighClient(int value) {
+        energyPerTick = ((value & 0xFFFF) << 16) | (energyPerTick & 0xFFFF);
+    }
+
+    public void setMaxEnergyPerTickLowClient(int value) {
+        maxEnergyPerTick = (maxEnergyPerTick & 0xFFFF0000) | (value & 0xFFFF);
+    }
+
+    public void setMaxEnergyPerTickHighClient(int value) {
+        maxEnergyPerTick = ((value & 0xFFFF) << 16) | (maxEnergyPerTick & 0xFFFF);
     }
 
     // ---------------------------------------------------------------- IEnergyInfo (real TE's own Energy tab)
@@ -1109,7 +1136,12 @@ public class TileAdvancedFurnace extends TileEntity
         energyStorage.readFromNBT(tag);
         facing = tag.getByte("Facing");
         if (tag.hasKey("RSControl")) {
-            rsMode = ControlMode.values()[tag.getByte("RSControl") & 0xFF];
+            // Range-checked exactly like the Sides array below - an out-of-range ordinal from a
+            // corrupt or hand-edited tag threw straight out of readFromNBT, killing the chunk load.
+            int ordinal = tag.getByte("RSControl") & 0xFF;
+            if (ordinal < ControlMode.values().length) {
+                rsMode = ControlMode.values()[ordinal];
+            }
         }
 
         if (tag.hasKey("Sides")) {

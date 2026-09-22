@@ -231,7 +231,16 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {
-            return tab.onContentClick(mouseX - left - tab.getContentX(), mouseY - top - tab.getTabY(), mouseButton, shift);
+            if (tab.onContentClick(mouseX - left - tab.getContentX(), mouseY - top - tab.getTabY(), mouseButton, shift)) {
+                return true;
+            }
+            // Swallow the click anyway unless this flap holds real vanilla Slots - only the
+            // Augments tab does. Letting an unclaimed click fall through to
+            // GuiContainer#mouseClicked was actively harmful: the Energy tab opens to the LEFT of
+            // guiLeft, so vanilla's own "is this inside the window?" test failed and it treated
+            // the click as slot -999, i.e. "clicked outside" - throwing whatever the player was
+            // carrying on the cursor onto the ground.
+            return tab != augmentsTab;
         }
         return false;
     }

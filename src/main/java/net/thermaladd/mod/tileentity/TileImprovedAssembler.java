@@ -31,6 +31,8 @@ import cofh.api.energy.IEnergyContainerItem;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
 import cofh.api.tileentity.IEnergyInfo;
+import net.minecraft.entity.item.EntityItem;
+
 import cofh.api.tileentity.IPortableData;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
@@ -87,8 +89,6 @@ public class TileImprovedAssembler extends TileEntity
     /** Was 800 RF/t - bumped to match the mod's UltimateResonant tier (6 slots at 20 RF/craft each need only 120 RF/t at most, so this is pure headroom, not a starvation fix like the Pulverizer's). */
     public static int ENERGY_RECEIVE_PER_TICK = 5000;
 
-    /** See TileAdvancedPulverizer#ENERGY_SYNC_SCALE - same windowProperty short-overflow fix; ENERGY_CAPACITY here is fixed, but /4 (500,000 / 4 = 125,000) was already well past the 32767 short limit on its own. */
-    public static final int ENERGY_SYNC_SCALE = 256;
 
     /**
      * Same fluid tank real Thermal Expansion's own Assembler has (decompiled
@@ -277,9 +277,13 @@ public class TileImprovedAssembler extends TileEntity
         return worldObj != null ? worldObj.getBlockMetadata(xCoord, yCoord, zCoord) : 3;
     }
 
-    /** Client-side only: applies a value received (already divided by ENERGY_SYNC_SCALE for the packet) via the container. */
-    public void setEnergyStoredClient(int scaled) {
-        this.energyStored = scaled * ENERGY_SYNC_SCALE;
+    /** Exact low/high 16-bit halves - see TileAdvancedPulverizer#applyClientEnergy. */
+    public void setEnergyLowClient(int value) {
+        energyStored = (energyStored & 0xFFFF0000) | (value & 0xFFFF);
+    }
+
+    public void setEnergyHighClient(int value) {
+        energyStored = ((value & 0xFFFF) << 16) | (energyStored & 0xFFFF);
     }
 
     /** RF actually drawn on the last tick that ran server-side - what real TE's own "Energy Consumption" line shows. */
@@ -993,9 +997,16 @@ public class TileImprovedAssembler extends TileEntity
                 continue;
             }
             ItemStack buf = inventory[INPUT_START + bufferIndex];
+            // Recipes with a container ingredient (a milk bucket in a cake, a bowl in a stew) hand
+            // the empty vessel back in every other crafting context; this used to just delete it,
+            // so automating cake silently destroyed 3 buckets per craft.
+            ItemStack container = buf.getItem().hasContainerItem(buf) ? buf.getItem().getContainerItem(buf) : null;
             buf.stackSize--;
             if (buf.stackSize <= 0) {
                 inventory[INPUT_START + bufferIndex] = null;
+            }
+            if (container != null) {
+                returnContainerItem(container);
             }
         }
 
@@ -1008,6 +1019,35 @@ public class TileImprovedAssembler extends TileEntity
         energyStored -= PROCESS_ENERGY;
         energyPerTick += PROCESS_ENERGY;
         return true;
+    }
+
+    /**
+     * Puts a crafting container item (the empty bucket a milk bucket leaves behind, and so on)
+     * back into the ingredient buffer, merging into an existing stack where it can. If the buffer
+     * has no room it is dropped next to the machine rather than destroyed - the alternative,
+     * refusing the craft until space appears, would deadlock a buffer that the returned item
+     * itself is what fills.
+     */
+    private void returnContainerItem(ItemStack container) {
+        for (int i = 0; i < INPUT_SLOTS; i++) {
+            ItemStack buf = inventory[INPUT_START + i];
+            if (buf == null) {
+                inventory[INPUT_START + i] = container;
+                return;
+            }
+            if (buf.getItem() == container.getItem()
+                    && buf.getItemDamage() == container.getItemDamage()
+                    && ItemStack.areItemStackTagsEqual(buf, container)
+                    && buf.stackSize + container.stackSize <= buf.getMaxStackSize()) {
+                buf.stackSize += container.stackSize;
+                return;
+            }
+        }
+        if (worldObj != null && !worldObj.isRemote) {
+            EntityItem drop = new EntityItem(worldObj, xCoord + 0.5D, yCoord + 1.0D, zCoord + 0.5D, container);
+            drop.delayBeforeCanPickup = 10;
+            worldObj.spawnEntityInWorld(drop);
+        }
     }
 
     /**
@@ -1106,7 +1146,23 @@ public class TileImprovedAssembler extends TileEntity
      */
     private IRecipe resolveRecipe(int schematicSlot, ItemStack schematic, InventoryCrafting grid) {
         if (cachedSchematicRef[schematicSlot] == schematic) {
-            return cachedRecipe[schematicSlot];
+            IRecipe cached = cachedRecipe[schematicSlot];
+            // The cache is keyed on the schematic, but the recipe is decided by what is actually
+            // IN the grid, and those are not the same thing: matchesRequirement accepts any item
+            // carrying the schematic's OreDictionary name, so one schematic can legitimately
+            // resolve to different recipes on different ticks. Without this re-check, an oak-log
+            // schematic that had cached vanilla's oak-plank recipe kept returning it after the
+            // buffer was switched to spruce logs - getCraftingResult then handed back OAK planks
+            // while a spruce log was consumed, turning any unevenly-valued ore tag into a
+            // transmutation exploit. Re-matching one known recipe is cheap next to the full
+            // recipe-list scan this cache exists to avoid.
+            //
+            // Re-scanning when the cached entry is null matters too: a null used to be cached
+            // permanently, so a slot that failed to match once never crafted again until the
+            // player physically pulled the schematic out and put it back.
+            if (cached != null && cached.matches(grid, worldObj)) {
+                return cached;
+            }
         }
         IRecipe recipe = findMatchingRecipe(grid);
         cachedSchematicRef[schematicSlot] = schematic;
@@ -1133,8 +1189,12 @@ public class TileImprovedAssembler extends TileEntity
         if (existing == null) {
             return true;
         }
+        // The NBT comparison is not optional: the output slot is merged into by raw stackSize
+        // addition, so without it a firework whose NBT records a BLUE star merged straight into a
+        // stack of red ones - the player got an extra red rocket and the blue star was eaten.
         return existing.getItem() == result.getItem()
                 && existing.getItemDamage() == result.getItemDamage()
+                && ItemStack.areItemStackTagsEqual(existing, result)
                 && existing.stackSize + result.stackSize <= existing.getMaxStackSize();
     }
 
@@ -1350,7 +1410,13 @@ public class TileImprovedAssembler extends TileEntity
         super.readFromNBT(tag);
         energyStored = tag.getInteger("Energy");
         if (tag.hasKey("RSControl")) {
-            rsMode = ControlMode.values()[tag.getByte("RSControl") & 0xFF];
+            // Range-checked exactly like the Sides array below: a corrupt or hand-edited tag with
+            // an out-of-range ordinal threw straight out of readFromNBT, which kills the chunk
+            // load server-side and crashes any client receiving the description packet.
+            int ordinal = tag.getByte("RSControl") & 0xFF;
+            if (ordinal < ControlMode.values().length) {
+                rsMode = ControlMode.values()[ordinal];
+            }
         }
 
         if (tag.hasKey("Sides")) {
