@@ -178,6 +178,59 @@ public abstract class TabbedMachineGui extends GuiContainer {
         }
     }
 
+    /**
+     * Real Thermal Expansion's own processing-progress arrow, verified against the decompiled
+     * {@code cofh.lib.gui.element.ElementDualScaled} (as used by {@code GuiPulverizer} at 24x16
+     * with {@code setMode(1)}, i.e. filling left to right): {@code cofh:textures/gui/elements/
+     * Progress_Arrow_Right.png} is a 64x16 sheet holding two 24x16 frames side by side - the
+     * empty arrow at u=0, which is always drawn, and the filled arrow at u=24, of which only the
+     * leftmost {@code filled} pixels are revealed.
+     *
+     * This replaces the flat colored rectangle this mod drew before. {@code drawTexturedModalRect}
+     * hardcodes a 256x256 sheet, so - exactly like {@link #drawEnergyStoredFilled} and
+     * {@link GuiSideTab#drawIcon16} - both frames are blitted by hand with explicit UV fractions.
+     * The empty frame already includes its own recessed casing, so callers must NOT draw a
+     * {@link #drawTESocket} behind it the way the old rectangle needed.
+     */
+    protected static final ResourceLocation PROGRESS_ARROW_TEXTURE =
+            new ResourceLocation("cofh", "textures/gui/elements/Progress_Arrow_Right.png");
+    protected static final int PROGRESS_ARROW_WIDTH = 24;
+    protected static final int PROGRESS_ARROW_HEIGHT = 16;
+    private static final int PROGRESS_ARROW_TEX_W = 64;
+    private static final int PROGRESS_ARROW_TEX_H = 16;
+
+    protected void drawProgressArrow(int x, int y, int progress, int maxProgress) {
+        int filled = maxProgress <= 0 ? 0 : (int) ((long) progress * PROGRESS_ARROW_WIDTH / maxProgress);
+        if (filled > PROGRESS_ARROW_WIDTH) {
+            filled = PROGRESS_ARROW_WIDTH;
+        }
+
+        mc.getTextureManager().bindTexture(PROGRESS_ARROW_TEXTURE);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        // The arrow art is not a solid rectangle - the pixels around it are transparent, so the
+        // panel behind has to show through.
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        drawProgressQuad(x, y, 0, PROGRESS_ARROW_WIDTH);
+        if (filled > 0) {
+            drawProgressQuad(x, y, PROGRESS_ARROW_WIDTH, filled);
+        }
+        GL11.glDisable(GL11.GL_BLEND);
+    }
+
+    private void drawProgressQuad(int x, int y, int u, int width) {
+        float u1 = u / (float) PROGRESS_ARROW_TEX_W;
+        float u2 = (u + width) / (float) PROGRESS_ARROW_TEX_W;
+        float v2 = PROGRESS_ARROW_HEIGHT / (float) PROGRESS_ARROW_TEX_H;
+        Tessellator t = Tessellator.instance;
+        t.startDrawingQuads();
+        t.addVertexWithUV(x, y + PROGRESS_ARROW_HEIGHT, zLevel, u1, v2);
+        t.addVertexWithUV(x + width, y + PROGRESS_ARROW_HEIGHT, zLevel, u2, v2);
+        t.addVertexWithUV(x + width, y, zLevel, u2, 0);
+        t.addVertexWithUV(x, y, zLevel, u1, 0);
+        t.draw();
+    }
+
     private void drawEnergyQuad(int x, int y, int u, int v, int uvW, int uvH, int screenW, int screenH) {
         float u1 = u / (float) ENERGY_TEX_W;
         float u2 = (u + uvW) / (float) ENERGY_TEX_W;

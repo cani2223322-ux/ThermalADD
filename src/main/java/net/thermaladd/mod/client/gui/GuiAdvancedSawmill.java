@@ -16,8 +16,6 @@ import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
  */
 public class GuiAdvancedSawmill extends TabbedMachineGui {
 
-    private static final int PROGRESS_FILL = 0xFF3CA0DC;
-    private static final int PROGRESS_DONE = 0xFF3CDC6E;
 
     private static final int BASE_WIDTH = 176;
     private static final int BASE_HEIGHT = 178;
@@ -30,8 +28,8 @@ public class GuiAdvancedSawmill extends TabbedMachineGui {
     private static final int CHARGE_SLOT_Y = ENERGY_Y + 45;
 
     private static final int PROGRESS_X = 66;
-    private static final int PROGRESS_WIDTH = 46;
-    private static final int PROGRESS_HEIGHT = 10;
+    /** Width of the gap between the input and output columns; the arrow is centred inside it. */
+    private static final int PROGRESS_SPAN = 46;
 
     private static final int TAB_STACK_X = BASE_WIDTH;
     private static final int TAB_STACK_Y = 4;
@@ -132,21 +130,12 @@ public class GuiAdvancedSawmill extends TabbedMachineGui {
         drawEnergyStored(left + ENERGY_X, top + ENERGY_Y, tile.getEnergy(), tile.getMaxEnergy());
     }
 
+    /** One real Thermal Expansion progress arrow per line - see TabbedMachineGui#drawProgressArrow. */
     private void drawProgressBar(int left, int top, int line) {
-        int x = left + PROGRESS_X;
-        int y = top + ContainerAdvancedSawmill.INPUT_Y + line * ContainerAdvancedSawmill.SLOT_SIZE + 4;
-
-        drawTESocket(x, y, PROGRESS_WIDTH, PROGRESS_HEIGHT);
-
-        int max = tile.getProgressMax(line);
-        if (max <= 0) {
-            return;
-        }
-        int p = tile.getProgress(line);
-        int filled = Math.min(PROGRESS_WIDTH, PROGRESS_WIDTH * p / max);
-        if (filled > 0) {
-            drawRect(x, y, x + filled, y + PROGRESS_HEIGHT, p >= max ? PROGRESS_DONE : PROGRESS_FILL);
-        }
+        int x = left + PROGRESS_X + (PROGRESS_SPAN - PROGRESS_ARROW_WIDTH) / 2;
+        int y = top + ContainerAdvancedSawmill.INPUT_Y + line * ContainerAdvancedSawmill.SLOT_SIZE
+                + (ContainerAdvancedSawmill.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
+        drawProgressArrow(x, y, tile.getProgress(line), tile.getProgressMax(line));
     }
 
     @Override
