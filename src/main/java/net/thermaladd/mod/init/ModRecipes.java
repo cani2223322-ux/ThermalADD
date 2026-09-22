@@ -10,6 +10,7 @@ import cofh.thermalexpansion.block.simple.BlockFrame;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.item.TEItems;
 import cofh.thermalfoundation.item.TFItems;
+import cpw.mods.fml.common.FMLLog;
 import cpw.mods.fml.common.registry.GameRegistry;
 
 /**
@@ -29,16 +30,77 @@ public class ModRecipes {
     private ModRecipes() {
     }
 
+    /**
+     * ThermalADD#postInit already wraps this whole call in one outer try/catch, but that alone
+     * means a single bad ingredient reference (an augment array index that turns out to never
+     * actually get populated, say) throws out of whichever registerXRecipe() hit it and silently
+     * takes every recipe registered AFTER it down too - discovered the hard way while adding the
+     * Charger's own recipe. Each recipe now gets its own try/catch instead, so one broken recipe
+     * only ever costs itself.
+     */
     public static void register() {
-        registerAdvancedPulverizerRecipe();
-        registerImprovedAssemblerRecipe();
-        registerAdvancedFurnaceRecipe();
-        registerAdvancedSawmillRecipe();
-        registerSpeedLevel4AugmentRecipe();
-        registerSecondarySieve4AugmentRecipe();
-        registerSingularityCellRecipe();
-        registerSingularityGearRecipe();
-        registerSingularityFrameRecipe();
+        registerSafely("Advanced Pulverizer", new RecipeRegistration() {
+            public void register() {
+                registerAdvancedPulverizerRecipe();
+            }
+        });
+        registerSafely("Improved Assembler", new RecipeRegistration() {
+            public void register() {
+                registerImprovedAssemblerRecipe();
+            }
+        });
+        registerSafely("Advanced Furnace", new RecipeRegistration() {
+            public void register() {
+                registerAdvancedFurnaceRecipe();
+            }
+        });
+        registerSafely("Advanced Sawmill", new RecipeRegistration() {
+            public void register() {
+                registerAdvancedSawmillRecipe();
+            }
+        });
+        registerSafely("Advanced Charger", new RecipeRegistration() {
+            public void register() {
+                registerAdvancedChargerRecipe();
+            }
+        });
+        registerSafely("Speed Level 4 augment", new RecipeRegistration() {
+            public void register() {
+                registerSpeedLevel4AugmentRecipe();
+            }
+        });
+        registerSafely("Secondary Sieve 4 augment", new RecipeRegistration() {
+            public void register() {
+                registerSecondarySieve4AugmentRecipe();
+            }
+        });
+        registerSafely("Singularity Cell", new RecipeRegistration() {
+            public void register() {
+                registerSingularityCellRecipe();
+            }
+        });
+        registerSafely("Singularity Gear", new RecipeRegistration() {
+            public void register() {
+                registerSingularityGearRecipe();
+            }
+        });
+        registerSafely("Singularity Frame", new RecipeRegistration() {
+            public void register() {
+                registerSingularityFrameRecipe();
+            }
+        });
+    }
+
+    private interface RecipeRegistration {
+        void register();
+    }
+
+    private static void registerSafely(String name, RecipeRegistration registration) {
+        try {
+            registration.register();
+        } catch (Throwable t) {
+            FMLLog.severe("[ThermalADD] Failed to register the %s recipe: %s", name, t);
+        }
     }
 
     /**
@@ -142,6 +204,43 @@ public class ModRecipes {
                 'R', TEAugments.generalReconfigSides,
                 'G', ModItems.singularityGear,
                 'S', sawmill,
+                'F', ModBlocks.singularityFrame));
+    }
+
+    /**
+     * Fifth variant of the same Singularity Frame + Singularity Gear base: Electrum ingots (a
+     * base-tier crafted TE alloy, never used by the other 4 recipes) and a real Machine Speed I
+     * augment (crafted, consumed/upgraded like every other augment ingredient in this class) -
+     * {@code TEAugments.machineChargerBoost} would have been the perfectly on-theme choice here
+     * (real TE's own Charger-specific augment type), but it turns out to be declared and
+     * allocated in the decompiled {@code TEAugments} without ever actually being populated by a
+     * level loop the way {@code machineSpeed}/{@code machineSecondary} are - every index is
+     * {@code null} at runtime, which would have made {@code ShapedOreRecipe}'s constructor throw
+     * immediately and (since {@code ModRecipes#register()} has no per-recipe try/catch) take
+     * every recipe registered after this one down with it. {@code machineSpeed[0]} is a
+     * confirmed-populated, already-proven-safe substitute (levels 1/2 are already this mod's own
+     * Pulverizer/Speed-Level-4 recipe ingredients respectively - level 0 was still unused). A
+     * Reinforced Capacitor (crafted, one tier below the Resonant Capacitor the Singularity
+     * Cell/Secondary Sieve 4 recipes already use) rounds out the energy theme. Every ingredient
+     * is a crafted item - Electrum is TE's own multi-step alloy, the Capacitor and augment are
+     * themselves upgrade-crafted from lower tiers - nothing raw.
+     */
+    private static void registerAdvancedChargerRecipe() {
+        ItemStack charger = new ItemStack(TEBlocks.blockMachine, 1, BlockMachine.Types.CHARGER.ordinal());
+
+        // E B E      E = Electrum ingot, B = Machine Speed I augment (real TE, crafted)
+        // G C G      G = Singularity Gear, C = real Charger
+        // K F K      K = Reinforced Capacitor (crafted), F = Singularity Frame
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModBlocks.advancedCharger),
+                "EBE",
+                "GCG",
+                "KFK",
+                'E', "ingotElectrum",
+                'B', TEAugments.machineSpeed[0],
+                'G', ModItems.singularityGear,
+                'C', charger,
+                'K', TEItems.capacitorReinforced,
                 'F', ModBlocks.singularityFrame));
     }
 

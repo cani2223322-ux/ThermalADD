@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.ISound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
+import net.thermaladd.mod.tileentity.TileAdvancedCharger;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
@@ -79,6 +80,15 @@ public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTile
                 tile.setSideModeClient(i, sides[i]);
             }
             playMachineSoundOnStart(tile.isActive(), active, message.getX(), message.getY(), message.getZ(), TileAdvancedSawmill.SOUND_NAME);
+            tile.setActiveClient(active);
+        } else if (te instanceof TileAdvancedCharger) {
+            TileAdvancedCharger tile = (TileAdvancedCharger) te;
+            tile.setFacingClient(message.getFacing());
+            for (int i = 0; i < sides.length; i++) {
+                tile.setSideModeClient(i, sides[i]);
+            }
+            // No sound for the Charger - real TE has none either, see TileAdvancedCharger's own
+            // field comment - just keep its idle/active face icon in sync.
             tile.setActiveClient(active);
         } else {
             return null;

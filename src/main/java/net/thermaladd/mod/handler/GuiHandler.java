@@ -5,16 +5,19 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.thermaladd.mod.ThermalADD;
+import net.thermaladd.mod.client.gui.GuiAdvancedCharger;
 import net.thermaladd.mod.client.gui.GuiAdvancedFurnace;
 import net.thermaladd.mod.client.gui.GuiAdvancedPulverizer;
 import net.thermaladd.mod.client.gui.GuiAdvancedSawmill;
 import net.thermaladd.mod.client.gui.GuiImprovedAssembler;
 import net.thermaladd.mod.client.gui.GuiSingularityCell;
+import net.thermaladd.mod.inventory.ContainerAdvancedCharger;
 import net.thermaladd.mod.inventory.ContainerAdvancedFurnace;
 import net.thermaladd.mod.inventory.ContainerAdvancedPulverizer;
 import net.thermaladd.mod.inventory.ContainerAdvancedSawmill;
 import net.thermaladd.mod.inventory.ContainerImprovedAssembler;
 import net.thermaladd.mod.inventory.ContainerSingularityCell;
+import net.thermaladd.mod.tileentity.TileAdvancedCharger;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
@@ -41,6 +44,9 @@ public class GuiHandler implements IGuiHandler {
         if (id == ThermalADD.GUI_ID_ADVANCED_SAWMILL && te instanceof TileAdvancedSawmill) {
             return new ContainerAdvancedSawmill(player.inventory, (TileAdvancedSawmill) te);
         }
+        if (id == ThermalADD.GUI_ID_ADVANCED_CHARGER && te instanceof TileAdvancedCharger) {
+            return new ContainerAdvancedCharger(player.inventory, (TileAdvancedCharger) te);
+        }
         return null;
     }
 
@@ -61,6 +67,9 @@ public class GuiHandler implements IGuiHandler {
         }
         if (id == ThermalADD.GUI_ID_ADVANCED_SAWMILL && te instanceof TileAdvancedSawmill) {
             return new GuiAdvancedSawmill(player.inventory, (TileAdvancedSawmill) te);
+        }
+        if (id == ThermalADD.GUI_ID_ADVANCED_CHARGER && te instanceof TileAdvancedCharger) {
+            return new GuiAdvancedCharger(player.inventory, (TileAdvancedCharger) te);
         }
         return null;
     }

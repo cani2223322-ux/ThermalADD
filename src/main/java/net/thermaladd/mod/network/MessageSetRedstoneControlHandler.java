@@ -6,6 +6,7 @@ import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.tileentity.TileEntity;
+import net.thermaladd.mod.tileentity.TileAdvancedCharger;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
@@ -25,7 +26,8 @@ public class MessageSetRedstoneControlHandler implements IMessageHandler<Message
         boolean augmentInstalled = (te instanceof TileAdvancedPulverizer && ((TileAdvancedPulverizer) te).augmentRedstoneControl)
                 || (te instanceof TileAdvancedFurnace && ((TileAdvancedFurnace) te).augmentRedstoneControl)
                 || (te instanceof TileImprovedAssembler && ((TileImprovedAssembler) te).augmentRedstoneControl)
-                || (te instanceof TileAdvancedSawmill && ((TileAdvancedSawmill) te).augmentRedstoneControl);
+                || (te instanceof TileAdvancedSawmill && ((TileAdvancedSawmill) te).augmentRedstoneControl)
+                || (te instanceof TileAdvancedCharger && ((TileAdvancedCharger) te).augmentRedstoneControl);
         if (!augmentInstalled || !(te instanceof IRedstoneControl)) {
             return null;
         }
