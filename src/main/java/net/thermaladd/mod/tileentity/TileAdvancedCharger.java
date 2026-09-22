@@ -19,6 +19,7 @@ import cofh.api.energy.IEnergyContainerItem;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
 import cofh.api.tileentity.IEnergyInfo;
+import cofh.api.tileentity.IPortableData;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.util.crafting.ChargerManager;
@@ -26,6 +27,7 @@ import cofh.thermalexpansion.util.crafting.ChargerManager.RecipeCharger;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
+import net.thermaladd.mod.util.IPortableMachineState;
 
 /**
  * Advanced Charger tile entity - the fifth "improved TE machine" in this mod, and a genuinely
@@ -49,7 +51,8 @@ import net.thermaladd.mod.network.PacketHandler;
  * exact same simple 4-mode side config the Furnace does, so this tile (and its GUI's badge
  * textures) reuses that vocabulary directly instead of inventing a new one.
  */
-public class TileAdvancedCharger extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo {
+public class TileAdvancedCharger extends TileEntity
+        implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo, IPortableData, IPortableMachineState {
 
     public static final int LINE_SLOTS = 9;
     /** One output slot per line, matching TileAdvancedFurnace's own one-output-per-line shape. */
@@ -74,14 +77,15 @@ public class TileAdvancedCharger extends TileEntity implements ISidedInventory, 
      * conversion recipe - real TE's own Charger uses this exact same rate for both purposes too
      * (its {@code calcEnergy()} drives both).
      */
-    public static final int BASE_ENERGY_PER_TICK = 16000;
+    /** Overridable from config/ThermalADD.cfg - see {@link net.thermaladd.mod.config.ModConfig}. */
+    public static int BASE_ENERGY_PER_TICK = 16000;
 
     /** Same "UltimateResonant" power tier identity as the other 4 machines - see {@link TileAdvancedPulverizer#TIER_NAME}. */
     public static final String TIER_NAME = "UltimateResonant";
     /** Larger than the other machines' own 1,000,000 - 9 lines charging at once can draw up to 9x BASE_ENERGY_PER_TICK, so the buffer needs real headroom to absorb bursts. */
-    public static final int BASE_ENERGY_CAPACITY = 2000000;
+    public static int BASE_ENERGY_CAPACITY = 2000000;
     /** Larger than the other machines' own 10,000 for the same reason - sized to sustain all 9 lines charging flat-out at once (9 * 16,000 = 144,000 RF/t) with margin. */
-    public static final int ENERGY_RECEIVE_PER_TICK = 200000;
+    public static int ENERGY_RECEIVE_PER_TICK = 200000;
 
     /**
      * See TileAdvancedPulverizer#ENERGY_SYNC_SCALE for the base windowProperty short-overflow
@@ -171,6 +175,72 @@ public class TileAdvancedCharger extends TileEntity implements ISidedInventory, 
     }
 
     // ---------------------------------------------------------------- facing / sides
+
+    /**
+     * Comparator signal: how many of the 9 charging lines currently hold an item, scaled to 1-15,
+     * with 0 meaning every line is empty. See TileAdvancedPulverizer#getComparatorSignal for why
+     * this counts lines instead of stack sizes.
+     */
+    public int getComparatorSignal() {
+        int occupied = 0;
+        for (int i = 0; i < LINE_SLOTS; i++) {
+            if (inventory[LINE_START + i] != null) {
+                occupied++;
+            }
+        }
+        return occupied == 0 ? 0 : 1 + (occupied * 14) / LINE_SLOTS;
+    }
+
+    // ---------------------------------------------------------------- IPortableData (TE Redprint)
+
+    /** See TileAdvancedPulverizer's own IPortableData block for the reasoning behind all of this. */
+    @Override
+    public String getDataType() {
+        return "tile.thermaladd.advancedCharger";
+    }
+
+    @Override
+    public void writePortableData(EntityPlayer player, NBTTagCompound tag) {
+        tag.setByteArray("SideCache", sideCache.clone());
+        tag.setByte("RSControl", (byte) rsMode.ordinal());
+    }
+
+    @Override
+    public void readPortableData(EntityPlayer player, NBTTagCompound tag) {
+        if (augmentReconfigSides && tag.hasKey("SideCache")) {
+            applySideModes(tag.getByteArray("SideCache"));
+        }
+        if (augmentRedstoneControl && tag.hasKey("RSControl")) {
+            int ordinal = tag.getByte("RSControl") & 0xFF;
+            if (ordinal < ControlMode.values().length) {
+                rsMode = ControlMode.values()[ordinal];
+                markDirty();
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- IPortableMachineState
+
+    @Override
+    public byte[] getSideModesCopy() {
+        return sideCache.clone();
+    }
+
+    @Override
+    public void applySideModes(byte[] modes) {
+        if (modes != null && modes.length == sideCache.length && isValidSideArray(modes)) {
+            sideCache = modes.clone();
+            markDirty();
+            syncRenderState();
+        }
+    }
+
+    @Override
+    public void setStoredEnergy(int energy) {
+        int capped = Math.max(0, Math.min(energy, energyStorage.getMaxEnergyStored()));
+        energyStorage.setEnergyStored(capped);
+        markDirty();
+    }
 
     public int getFacing() {
         return facing;

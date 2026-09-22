@@ -11,6 +11,7 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
+import net.thermaladd.mod.config.ModConfig;
 import net.thermaladd.mod.handler.GuiHandler;
 import net.thermaladd.mod.init.ModAugments;
 import net.thermaladd.mod.init.ModBlocks;
@@ -65,6 +66,9 @@ public class ThermalADD {
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
+        // First of all: the tiles read their energy constants in their own field initializers,
+        // so the config has to have overwritten those statics before any tile is constructed.
+        ModConfig.load(event.getSuggestedConfigurationFile());
         ModBlocks.init();
         ModBlocks.register();
         ModItems.init();

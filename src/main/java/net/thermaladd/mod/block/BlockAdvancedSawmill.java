@@ -18,11 +18,12 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
+import cofh.api.block.IDismantleable;
 import cofh.api.item.IToolHammer;
 import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.init.ModCreativeTab;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
-import net.thermaladd.mod.util.PendingAugmentDrops;
+import net.thermaladd.mod.util.MachineDismantle;
 
 /**
  * Reuses Thermal Expansion's own real machine-casing and Sawmill textures directly from its
@@ -37,7 +38,7 @@ import net.thermaladd.mod.util.PendingAugmentDrops;
  * {@link TileAdvancedSawmill}'s own javadoc for why the Sawmill's side-mode set is numerically
  * and color-wise identical to the Pulverizer's, so no new badge art was needed.
  */
-public class BlockAdvancedSawmill extends BlockContainer {
+public class BlockAdvancedSawmill extends BlockContainer implements IDismantleable {
 
     private IIcon iconFaceIdle;
     private IIcon iconFaceActive;
@@ -141,6 +142,7 @@ public class BlockAdvancedSawmill extends BlockContainer {
                 } else {
                     tile.installDefaultAugments();
                 }
+                MachineDismantle.restoreSidesAndEnergy(stack, tile);
             }
         }
     }
@@ -153,6 +155,18 @@ public class BlockAdvancedSawmill extends BlockContainer {
     @Override
     public boolean renderAsNormalBlock() {
         return true;
+    }
+
+    /** Comparator support - see BlockAdvancedPulverizer for why no explicit notification is needed. */
+    @Override
+    public boolean hasComparatorInputOverride() {
+        return true;
+    }
+
+    @Override
+    public int getComparatorInputOverride(World world, int x, int y, int z, int side) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        return te instanceof TileAdvancedSawmill ? ((TileAdvancedSawmill) te).getComparatorSignal() : 0;
     }
 
     @Override
@@ -169,12 +183,17 @@ public class BlockAdvancedSawmill extends BlockContainer {
             IToolHammer hammer = (IToolHammer) held.getItem();
             if (hammer.isUsable(held, player, x, y, z)) {
                 if (!world.isRemote) {
-                    TileEntity te = world.getTileEntity(x, y, z);
-                    if (te instanceof TileAdvancedSawmill) {
-                        TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
-                        int next = nextFacing(tile.getFacing());
-                        world.setBlockMetadataWithNotify(x, y, z, next, 3);
-                        tile.setFacing(next);
+                    // Sneak+wrench dismantles (real TE's own gesture); a plain click rotates.
+                    if (player.isSneaking()) {
+                        dismantleBlock(player, world, x, y, z, false);
+                    } else {
+                        TileEntity te = world.getTileEntity(x, y, z);
+                        if (te instanceof TileAdvancedSawmill) {
+                            TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
+                            int next = nextFacing(tile.getFacing());
+                            world.setBlockMetadataWithNotify(x, y, z, next, 3);
+                            tile.setFacing(next);
+                        }
                     }
                     hammer.toolUsed(held, player, x, y, z);
                 }
@@ -204,9 +223,8 @@ public class BlockAdvancedSawmill extends BlockContainer {
         if (te instanceof TileAdvancedSawmill) {
             TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
 
-            NBTTagCompound augNbt = tile.writeAugmentsToNBT(new NBTTagCompound());
-            PendingAugmentDrops.put(x, y, z, augNbt);
-
+            // Augments are NOT spilled here - they travel inside the dropped block item's own NBT
+            // instead (see getDrops), together with the side configuration and the energy buffer.
             for (int i = 0; i < tile.getSizeInventory(); i++) {
                 if (i >= TileAdvancedSawmill.AUGMENT_START
                         && i < TileAdvancedSawmill.AUGMENT_START + TileAdvancedSawmill.AUGMENT_SLOTS) {
@@ -227,15 +245,35 @@ public class BlockAdvancedSawmill extends BlockContainer {
 
     @Override
     public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
-        ItemStack drop = new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata));
-        NBTTagCompound augNbt = PendingAugmentDrops.take(x, y, z);
-        if (augNbt != null && augNbt.hasKey("Augments")) {
-            NBTTagCompound tag = new NBTTagCompound();
-            tag.setTag("Augments", augNbt.getTag("Augments"));
-            drop.setTagCompound(tag);
-        }
         ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
-        drops.add(drop);
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileAdvancedSawmill) {
+            drops.add(MachineDismantle.createDrop(this, damageDropped(metadata), (TileAdvancedSawmill) te));
+        } else {
+            drops.add(new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata)));
+        }
         return drops;
+    }
+
+    /** See BlockAdvancedPulverizer#removedByPlayer - keeps the tile alive until getDrops has read it. */
+    @Override
+    public boolean removedByPlayer(World world, EntityPlayer player, int x, int y, int z, boolean willHarvest) {
+        return willHarvest || super.removedByPlayer(world, player, x, y, z, willHarvest);
+    }
+
+    @Override
+    public void harvestBlock(World world, EntityPlayer player, int x, int y, int z, int meta) {
+        super.harvestBlock(world, player, x, y, z, meta);
+        world.setBlockToAir(x, y, z);
+    }
+
+    @Override
+    public ArrayList<ItemStack> dismantleBlock(EntityPlayer player, World world, int x, int y, int z, boolean returnDrops) {
+        return MachineDismantle.dismantle(this, player, world, x, y, z, returnDrops);
+    }
+
+    @Override
+    public boolean canDismantle(EntityPlayer player, World world, int x, int y, int z) {
+        return true;
     }
 }

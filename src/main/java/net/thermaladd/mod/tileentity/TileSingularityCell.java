@@ -10,6 +10,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import cofh.api.energy.IEnergyHandler;
 import cofh.api.energy.IEnergyReceiver;
+import cofh.api.tileentity.IPortableData;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
@@ -40,9 +41,10 @@ import net.thermaladd.mod.network.PacketHandler;
  * on the same face (unlike this mod's other machines, which also have an Auto mode) - same
  * DEFAULT_SIDES as real TE: bottom defaults to Output, the other 5 faces default to Input.
  */
-public class TileSingularityCell extends TileEntity implements IEnergyHandler {
+public class TileSingularityCell extends TileEntity implements IEnergyHandler, IPortableData {
 
-    public static final long CAPACITY = 1000000000000L;
+    /** Overridable from config/ThermalADD.cfg - see {@link net.thermaladd.mod.config.ModConfig}. */
+    public static long CAPACITY = 1000000000000L;
 
     public static final int MODE_DISABLED = 0;
     public static final int MODE_OUTPUT = 1;
@@ -51,6 +53,46 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler {
 
     /** Same order/values as real TE's TileCell.DEFAULT_SIDES: {Down, Up, North, South, West, East}. */
     private static final byte[] DEFAULT_SIDES = {MODE_OUTPUT, MODE_INPUT, MODE_INPUT, MODE_INPUT, MODE_INPUT, MODE_INPUT};
+
+    /**
+     * Lets real Thermal Expansion's own Redprint copy this cell's per-side Input/Output/Disabled
+     * layout onto another one, exactly as it does for TE's own Energy Cells. The data type is this
+     * mod's own string rather than TE's "tile.thermalexpansion.cell", so a Redprint filled from a
+     * real TE cell can't be pasted here and vice versa - the mode numbering happens to line up
+     * today, but nothing guarantees it stays that way. Charge is never copied, only configuration.
+     */
+    @Override
+    public String getDataType() {
+        return "tile.thermaladd.singularityCell";
+    }
+
+    @Override
+    public void writePortableData(EntityPlayer player, NBTTagCompound tag) {
+        tag.setByteArray("SideCache", sideCache.clone());
+    }
+
+    @Override
+    public void readPortableData(EntityPlayer player, NBTTagCompound tag) {
+        if (tag.hasKey("SideCache")) {
+            setSideModes(tag.getByteArray("SideCache"));
+        }
+    }
+
+    /**
+     * True while every face is still on its real-TE default. Lets the block skip writing a "Sides"
+     * tag onto an untouched dropped cell, so it still stacks with a freshly crafted one.
+     */
+    public static boolean isDefaultSideConfig(byte[] sides) {
+        if (sides == null || sides.length != DEFAULT_SIDES.length) {
+            return false;
+        }
+        for (int i = 0; i < sides.length; i++) {
+            if (sides[i] != DEFAULT_SIDES[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     private long energyStored = 0L;
     private byte[] sideCache = DEFAULT_SIDES.clone();
@@ -115,6 +157,22 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler {
     /** The TRUE stored value, for this mod's own GUI (and NBT round-trip) - not int-capped. */
     public long getEnergyStoredLong() {
         return energyStored;
+    }
+
+    /**
+     * Comparator signal: how full the cell is, scaled to 1-15, with 0 only for a completely empty
+     * cell. Unlike the machines (which report line occupancy) an energy buffer has a natural
+     * continuous fill level, so this is the usual proportional reading - the arithmetic is done in
+     * long math because the capacity is a trillion RF by default and would overflow an int.
+     */
+    public int getComparatorSignal() {
+        long stored = getEnergyStoredLong();
+        long capacity = getCapacityLong();
+        if (stored <= 0L || capacity <= 0L) {
+            return 0;
+        }
+        long scaled = stored * 15L / capacity;
+        return scaled < 1L ? 1 : (int) Math.min(15L, scaled);
     }
 
     public long getCapacityLong() {

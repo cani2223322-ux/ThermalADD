@@ -16,10 +16,12 @@ import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
+import cofh.api.block.IDismantleable;
+import cofh.api.item.IToolHammer;
 import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.init.ModCreativeTab;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
-import net.thermaladd.mod.util.PendingAugmentDrops;
+import net.thermaladd.mod.util.MachineDismantle;
 
 /**
  * A single-tier "beyond spec" Energy Cell, modeled on real Thermal Expansion's own Resonant
@@ -28,7 +30,7 @@ import net.thermaladd.mod.util.PendingAugmentDrops;
  * one static gradient texture rather than real TE's dynamic charge-meter TESR, with the same 3
  * connection-badge overlay (Disabled/Output/Input) real TE's own Cell shows per face.
  */
-public class BlockSingularityCell extends BlockContainer {
+public class BlockSingularityCell extends BlockContainer implements IDismantleable {
 
     /** Indexed by TileSingularityCell.MODE_* - all 6 faces use the same texture family (unlike a machine, this block has no Top/Bottom/Side distinction). */
     private final IIcon[] icons = new IIcon[TileSingularityCell.MODE_COUNT];
@@ -80,14 +82,47 @@ public class BlockSingularityCell extends BlockContainer {
         return te instanceof TileSingularityCell ? ((TileSingularityCell) te).getLightValue() : 0;
     }
 
+    /**
+     * Comparator support: proportional to how full the cell is. The tile calls markDirty() on
+     * every energy change, which vanilla routes into the comparator update path for free.
+     */
+    @Override
+    public boolean hasComparatorInputOverride() {
+        return true;
+    }
+
+    @Override
+    public int getComparatorInputOverride(World world, int x, int y, int z, int side) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        return te instanceof TileSingularityCell ? ((TileSingularityCell) te).getComparatorSignal() : 0;
+    }
+
     @Override
     public TileEntity createNewTileEntity(World world, int meta) {
         return new TileSingularityCell();
     }
 
+    /**
+     * Crescent Hammer support: a sneaking click dismantles the cell into an item that keeps its
+     * charge and side configuration, matching real Thermal Expansion's own Energy Cells. There is
+     * nothing to rotate here (the cell has no facing), so a plain wrench click just opens the GUI
+     * like any other click.
+     */
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side,
             float hitX, float hitY, float hitZ) {
+        ItemStack held = player.getHeldItem();
+        if (held != null && held.getItem() instanceof IToolHammer && player.isSneaking()) {
+            IToolHammer hammer = (IToolHammer) held.getItem();
+            if (hammer.isUsable(held, player, x, y, z)) {
+                if (!world.isRemote) {
+                    dismantleBlock(player, world, x, y, z, false);
+                    hammer.toolUsed(held, player, x, y, z);
+                }
+                return true;
+            }
+        }
+
         if (!world.isRemote) {
             player.openGui(ThermalADD.instance, ThermalADD.GUI_ID_SINGULARITY_CELL, world, x, y, z);
         }
@@ -95,49 +130,62 @@ public class BlockSingularityCell extends BlockContainer {
     }
 
     /**
-     * Same "the charge (and now side config) survive being picked back up" behavior real TE's
-     * own Energy Cells have (they double as portable battery packs, not just fixed storage) -
-     * captures the tile's true long-valued charge and its per-side modes into
-     * PendingAugmentDrops (see BlockAdvancedPulverizer's own use of it for augments) just
-     * before the tile is destroyed, for getDrops() to pick up. Deliberately only copies these
-     * two specific tags rather than reusing writeToNBT() wholesale - that also serializes the
-     * tile's own x/y/z, which would be stale/wrong once the item is carried somewhere else and
-     * placed again.
+     * Same "the charge and side config survive being picked back up" behavior real TE's own Energy
+     * Cells have (they double as portable battery packs, not just fixed storage). Read straight off
+     * the live tile - see MachineDismantle's class javadoc for why the old capture-in-breakBlock
+     * handoff was wrong. Deliberately writes only these two tags rather than reusing writeToNBT()
+     * wholesale: that also serializes the tile's own x/y/z, which would be stale once the item is
+     * carried somewhere else and placed again.
      */
     @Override
-    public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
+    public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
+        ItemStack drop = new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata));
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileSingularityCell) {
             TileSingularityCell tile = (TileSingularityCell) te;
-            NBTTagCompound tag = new NBTTagCompound();
-            tag.setLong("Energy", tile.getEnergyStoredLong());
+            NBTTagCompound itemTag = new NBTTagCompound();
+            long energy = tile.getEnergyStoredLong();
+            if (energy > 0L) {
+                itemTag.setLong("Energy", energy);
+            }
             byte[] sides = new byte[6];
             for (int i = 0; i < 6; i++) {
                 sides[i] = (byte) tile.getSideMode(i);
             }
-            tag.setByteArray("Sides", sides);
-            PendingAugmentDrops.put(x, y, z, tag);
-        }
-        super.breakBlock(world, x, y, z, block, meta);
-    }
-
-    @Override
-    public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
-        ItemStack drop = new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata));
-        NBTTagCompound tag = PendingAugmentDrops.take(x, y, z);
-        if (tag != null) {
-            NBTTagCompound itemTag = new NBTTagCompound();
-            if (tag.hasKey("Energy")) {
-                itemTag.setLong("Energy", tag.getLong("Energy"));
+            if (!TileSingularityCell.isDefaultSideConfig(sides)) {
+                itemTag.setByteArray("Sides", sides);
             }
-            if (tag.hasKey("Sides")) {
-                itemTag.setByteArray("Sides", tag.getByteArray("Sides"));
+            // An empty, never-configured cell drops with no NBT at all, so it still stacks with a
+            // freshly crafted one instead of sitting alone in its own single-item stack.
+            if (!itemTag.hasNoTags()) {
+                drop.setTagCompound(itemTag);
             }
-            drop.setTagCompound(itemTag);
         }
         ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
         drops.add(drop);
         return drops;
+    }
+
+    /** See BlockAdvancedPulverizer#removedByPlayer - keeps the tile alive until getDrops has read it. */
+    @Override
+    public boolean removedByPlayer(World world, EntityPlayer player, int x, int y, int z, boolean willHarvest) {
+        return willHarvest || super.removedByPlayer(world, player, x, y, z, willHarvest);
+    }
+
+    @Override
+    public void harvestBlock(World world, EntityPlayer player, int x, int y, int z, int meta) {
+        super.harvestBlock(world, player, x, y, z, meta);
+        world.setBlockToAir(x, y, z);
+    }
+
+    @Override
+    public ArrayList<ItemStack> dismantleBlock(EntityPlayer player, World world, int x, int y, int z, boolean returnDrops) {
+        return MachineDismantle.dismantle(this, player, world, x, y, z, returnDrops);
+    }
+
+    @Override
+    public boolean canDismantle(EntityPlayer player, World world, int x, int y, int z) {
+        return true;
     }
 
     @Override

@@ -18,11 +18,12 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
+import cofh.api.block.IDismantleable;
 import cofh.api.item.IToolHammer;
 import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.init.ModCreativeTab;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
-import net.thermaladd.mod.util.PendingAugmentDrops;
+import net.thermaladd.mod.util.MachineDismantle;
 
 /**
  * Reuses Thermal Expansion's own real machine-casing and Pulverizer textures directly from
@@ -31,7 +32,7 @@ import net.thermaladd.mod.util.PendingAugmentDrops;
  * {@code required-after} declaration), those textures are guaranteed to be present, and this
  * gives the block a pixel-identical Thermal Expansion look for free.
  */
-public class BlockAdvancedPulverizer extends BlockContainer {
+public class BlockAdvancedPulverizer extends BlockContainer implements IDismantleable {
 
     private IIcon iconFaceIdle;
     private IIcon iconFaceActive;
@@ -162,6 +163,9 @@ public class BlockAdvancedPulverizer extends BlockContainer {
                 } else {
                     tile.installDefaultAugments();
                 }
+                // After setDefaultSides()/installAugments() above, so a machine that was picked up
+                // already configured comes back exactly as it was rather than reset to defaults.
+                MachineDismantle.restoreSidesAndEnergy(stack, tile);
             }
         }
     }
@@ -176,17 +180,34 @@ public class BlockAdvancedPulverizer extends BlockContainer {
         return true;
     }
 
+    /**
+     * Comparator support. The signal itself is defined by the tile (occupied processing lines,
+     * scaled 1-15); no explicit comparator notification is needed anywhere, because every
+     * inventory mutation already goes through TileEntity#markDirty, which vanilla routes into
+     * World#markTileEntityChunkModified and from there into the comparator update path.
+     */
+    @Override
+    public boolean hasComparatorInputOverride() {
+        return true;
+    }
+
+    @Override
+    public int getComparatorInputOverride(World world, int x, int y, int z, int side) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        return te instanceof TileAdvancedPulverizer ? ((TileAdvancedPulverizer) te).getComparatorSignal() : 0;
+    }
+
     @Override
     public TileEntity createNewTileEntity(World world, int meta) {
         return new TileAdvancedPulverizer();
     }
 
     /**
-     * Crescent Hammer support: a click with one held always rotates the machine's facing -
-     * matching real Thermal Expansion's own TileReconfigurable#onWrench, which unconditionally
-     * calls rotateBlock() regardless of sneaking. Side configuration (Disabled/Input/Output
-     * Primary/Secondary/Both/All) is a GUI Configuration-tab-only feature in real TE - there is no wrench
-     * gesture for it - so this doesn't branch on sneak state at all. Any other held item (or
+     * Crescent Hammer support, matching real Thermal Expansion's own gestures: a plain click
+     * rotates the machine's facing (TileReconfigurable#onWrench calls rotateBlock() regardless of
+     * sneaking), and a sneaking click dismantles it into an item that keeps its augments, side
+     * configuration and buffered RF. Side configuration itself stays a GUI Configuration-tab
+     * feature, exactly as in real TE - there is no wrench gesture for it. Any other held item (or
      * an empty hand) just opens the GUI, as usual.
      */
     @Override
@@ -197,12 +218,16 @@ public class BlockAdvancedPulverizer extends BlockContainer {
             IToolHammer hammer = (IToolHammer) held.getItem();
             if (hammer.isUsable(held, player, x, y, z)) {
                 if (!world.isRemote) {
-                    TileEntity te = world.getTileEntity(x, y, z);
-                    if (te instanceof TileAdvancedPulverizer) {
-                        TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;
-                        int next = nextFacing(tile.getFacing());
-                        world.setBlockMetadataWithNotify(x, y, z, next, 3);
-                        tile.setFacing(next);
+                    if (player.isSneaking()) {
+                        dismantleBlock(player, world, x, y, z, false);
+                    } else {
+                        TileEntity te = world.getTileEntity(x, y, z);
+                        if (te instanceof TileAdvancedPulverizer) {
+                            TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;
+                            int next = nextFacing(tile.getFacing());
+                            world.setBlockMetadataWithNotify(x, y, z, next, 3);
+                            tile.setFacing(next);
+                        }
                     }
                     hammer.toolUsed(held, player, x, y, z);
                 }
@@ -232,13 +257,8 @@ public class BlockAdvancedPulverizer extends BlockContainer {
         if (te instanceof TileAdvancedPulverizer) {
             TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;
 
-            // Augments travel with the dropped block item's own NBT instead of falling out as
-            // loose items - see getDrops(). The tile is gone by the time getDrops runs, so the
-            // NBT has to be captured here, while it's still alive, and handed off via
-            // PendingAugmentDrops.
-            NBTTagCompound augNbt = tile.writeAugmentsToNBT(new NBTTagCompound());
-            PendingAugmentDrops.put(x, y, z, augNbt);
-
+            // Augments are NOT spilled here - they travel inside the dropped block item's own NBT
+            // instead (see getDrops), together with the side configuration and the energy buffer.
             for (int i = 0; i < tile.getSizeInventory(); i++) {
                 if (i >= TileAdvancedPulverizer.AUGMENT_START
                         && i < TileAdvancedPulverizer.AUGMENT_START + TileAdvancedPulverizer.AUGMENT_SLOTS) {
@@ -258,22 +278,48 @@ public class BlockAdvancedPulverizer extends BlockContainer {
     }
 
     /**
-     * The single dropped block item carries whatever augments were installed, in its own NBT -
-     * see breakBlock() above, which captures them into PendingAugmentDrops just before the tile
-     * is destroyed. Not called at all for a creative-mode instant-break, which is exactly right:
-     * creative players shouldn't receive an item (with or without augments) either way.
+     * The single dropped block item carries the machine's augments, side configuration and stored
+     * RF, read straight off the live tile. Not called at all for a creative-mode instant-break,
+     * which is exactly right: creative players shouldn't receive an item either way.
      */
     @Override
     public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
-        ItemStack drop = new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata));
-        NBTTagCompound augNbt = PendingAugmentDrops.take(x, y, z);
-        if (augNbt != null && augNbt.hasKey("Augments")) {
-            NBTTagCompound tag = new NBTTagCompound();
-            tag.setTag("Augments", augNbt.getTag("Augments"));
-            drop.setTagCompound(tag);
-        }
         ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
-        drops.add(drop);
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileAdvancedPulverizer) {
+            drops.add(MachineDismantle.createDrop(this, damageDropped(metadata), (TileAdvancedPulverizer) te));
+        } else {
+            drops.add(new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata)));
+        }
         return drops;
+    }
+
+    /**
+     * On a player harvest vanilla calls removedByPlayer (which normally clears the block, taking
+     * the tile with it) BEFORE harvestBlock/getDrops, so getDrops would find no tile to read.
+     * Reporting the removal here without actually performing it, and doing the real clear after
+     * harvestBlock has run, is the standard Forge workaround. Every non-player destruction path
+     * (explosions, the Wither, mod block-breakers) already drops before clearing, so those read a
+     * live tile without any help.
+     */
+    @Override
+    public boolean removedByPlayer(World world, EntityPlayer player, int x, int y, int z, boolean willHarvest) {
+        return willHarvest || super.removedByPlayer(world, player, x, y, z, willHarvest);
+    }
+
+    @Override
+    public void harvestBlock(World world, EntityPlayer player, int x, int y, int z, int meta) {
+        super.harvestBlock(world, player, x, y, z, meta);
+        world.setBlockToAir(x, y, z);
+    }
+
+    @Override
+    public ArrayList<ItemStack> dismantleBlock(EntityPlayer player, World world, int x, int y, int z, boolean returnDrops) {
+        return MachineDismantle.dismantle(this, player, world, x, y, z, returnDrops);
+    }
+
+    @Override
+    public boolean canDismantle(EntityPlayer player, World world, int x, int y, int z) {
+        return true;
     }
 }

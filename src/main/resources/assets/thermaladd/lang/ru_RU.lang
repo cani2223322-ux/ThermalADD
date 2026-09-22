@@ -26,6 +26,10 @@ gui.thermaladd.energy.tab.consumption=Расход:
 gui.thermaladd.energy.tab.maxpower=Макс. энергия/т:
 gui.thermaladd.energy.tab.stored=Запас:
 
+waila.thermaladd.energy=§7Энергия: §e%s / %s RF
+waila.thermaladd.consumption=§7Расход: §e%s / %s RF/т
+waila.thermaladd.lines=§7Активных линий: §e%s / %s
+
 tooltip.thermaladd.tier=§7Тир: §b%s
 tooltip.thermaladd.capacity=§7Запас энергии: §e%s RF
 tooltip.thermaladd.input=§7Макс. приём: §e%s RF/т

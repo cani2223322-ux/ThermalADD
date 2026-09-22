@@ -141,6 +141,8 @@ public class ContainerAdvancedFurnace extends Container {
         List<ICrafting> list = (List<ICrafting>) crafters;
         int energyScaled = tile.getEnergy() / TileAdvancedFurnace.ENERGY_SYNC_SCALE;
         int maxEnergyScaled = tile.getMaxEnergy() / TileAdvancedFurnace.ENERGY_SYNC_SCALE;
+        int energyPerTickScaled = tile.getEnergyPerTick() / TileAdvancedFurnace.RATE_SYNC_SCALE;
+        int maxEnergyPerTickScaled = tile.getMaxEnergyPerTick() / TileAdvancedFurnace.RATE_SYNC_SCALE;
         int reconfigSides = tile.augmentReconfigSides ? 1 : 0;
         int autoInput = tile.augmentAutoInput ? 1 : 0;
         int autoOutput = tile.augmentAutoOutput ? 1 : 0;
@@ -182,13 +184,11 @@ public class ContainerAdvancedFurnace extends Container {
             if (lastRedstoneControl != redstoneControl) {
                 crafter.sendProgressBarUpdate(this, 17, redstoneControl);
             }
-            int energyPerTick = tile.getEnergyPerTick();
-            if (lastEnergyPerTick != energyPerTick) {
-                crafter.sendProgressBarUpdate(this, 18, energyPerTick);
+            if (lastEnergyPerTick != energyPerTickScaled) {
+                crafter.sendProgressBarUpdate(this, 18, energyPerTickScaled);
             }
-            int maxEnergyPerTick = tile.getMaxEnergyPerTick();
-            if (lastMaxEnergyPerTick != maxEnergyPerTick) {
-                crafter.sendProgressBarUpdate(this, 19, maxEnergyPerTick);
+            if (lastMaxEnergyPerTick != maxEnergyPerTickScaled) {
+                crafter.sendProgressBarUpdate(this, 19, maxEnergyPerTickScaled);
             }
             int controlMode = tile.getControl().ordinal();
             if (lastControlMode != controlMode) {
@@ -209,8 +209,8 @@ public class ContainerAdvancedFurnace extends Container {
         lastAutoInput = autoInput;
         lastAutoOutput = autoOutput;
         lastRedstoneControl = redstoneControl;
-        lastEnergyPerTick = tile.getEnergyPerTick();
-        lastMaxEnergyPerTick = tile.getMaxEnergyPerTick();
+        lastEnergyPerTick = energyPerTickScaled;
+        lastMaxEnergyPerTick = maxEnergyPerTickScaled;
         lastControlMode = tile.getControl().ordinal();
     }
 

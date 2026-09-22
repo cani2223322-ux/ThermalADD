@@ -31,11 +31,13 @@ import cofh.api.energy.IEnergyContainerItem;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
 import cofh.api.tileentity.IEnergyInfo;
+import cofh.api.tileentity.IPortableData;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
+import net.thermaladd.mod.util.IPortableMachineState;
 
 /**
  * Improved Cyclic Assembler.
@@ -52,7 +54,8 @@ import net.thermaladd.mod.network.PacketHandler;
  * one job at a time), has 6 schematic slots that are all evaluated - and can all
  * craft - every single tick, so several schematics run truly in parallel.
  */
-public class TileImprovedAssembler extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo, IFluidHandler {
+public class TileImprovedAssembler extends TileEntity
+        implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo, IFluidHandler, IPortableData, IPortableMachineState {
 
     public static final int SCHEMATIC_SLOTS = 6;
     public static final int INPUT_SLOTS = 18;
@@ -70,7 +73,8 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
     public static final int CHARGE_SLOT = AUGMENT_START + AUGMENT_SLOTS;
 
     /** Same flat per-craft cost as the real Thermal Expansion Assembler (TileAssembler.PROCESS_ENERGY). */
-    public static final int PROCESS_ENERGY = 20;
+    /** Overridable from config/ThermalADD.cfg - see {@link net.thermaladd.mod.config.ModConfig}. */
+    public static int PROCESS_ENERGY = 20;
 
     /**
      * Same "UltimateResonant" power tier as the Advanced Pulverizer (see
@@ -79,9 +83,9 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
      */
     public static final String TIER_NAME = "UltimateResonant";
     /** Was 64,000 RF - bumped to match the mod's UltimateResonant tier. */
-    public static final int ENERGY_CAPACITY = 500000;
+    public static int ENERGY_CAPACITY = 500000;
     /** Was 800 RF/t - bumped to match the mod's UltimateResonant tier (6 slots at 20 RF/craft each need only 120 RF/t at most, so this is pure headroom, not a starvation fix like the Pulverizer's). */
-    public static final int ENERGY_RECEIVE_PER_TICK = 5000;
+    public static int ENERGY_RECEIVE_PER_TICK = 5000;
 
     /** See TileAdvancedPulverizer#ENERGY_SYNC_SCALE - same windowProperty short-overflow fix; ENERGY_CAPACITY here is fixed, but /4 (500,000 / 4 = 125,000) was already well past the 32767 short limit on its own. */
     public static final int ENERGY_SYNC_SCALE = 256;
@@ -203,6 +207,72 @@ public class TileImprovedAssembler extends TileEntity implements ISidedInventory
      * sync via the normal block-update packet. Exposed here so TabConfigAssembler can compute
      * Left/Right/Back the same way the other two machines' tabs do.
      */
+    /**
+     * Comparator signal: how full the 18-slot ingredient buffer is, scaled to 1-15, with 0 meaning
+     * completely empty. Unlike the other machines this one measures the shared buffer rather than
+     * per-line occupancy, because the Assembler's 6 schematic slots are configuration, not
+     * throughput - what is worth automating on here is "the buffer still has room for ingredients".
+     */
+    public int getComparatorSignal() {
+        int occupied = 0;
+        for (int i = 0; i < INPUT_SLOTS; i++) {
+            if (inventory[INPUT_START + i] != null) {
+                occupied++;
+            }
+        }
+        return occupied == 0 ? 0 : 1 + (occupied * 14) / INPUT_SLOTS;
+    }
+
+    // ---------------------------------------------------------------- IPortableData (TE Redprint)
+
+    /** See TileAdvancedPulverizer's own IPortableData block for the reasoning behind all of this. */
+    @Override
+    public String getDataType() {
+        return "tile.thermaladd.improvedAssembler";
+    }
+
+    @Override
+    public void writePortableData(EntityPlayer player, NBTTagCompound tag) {
+        tag.setByteArray("SideCache", sideCache.clone());
+        tag.setByte("RSControl", (byte) rsMode.ordinal());
+    }
+
+    @Override
+    public void readPortableData(EntityPlayer player, NBTTagCompound tag) {
+        if (augmentReconfigSides && tag.hasKey("SideCache")) {
+            applySideModes(tag.getByteArray("SideCache"));
+        }
+        if (augmentRedstoneControl && tag.hasKey("RSControl")) {
+            int ordinal = tag.getByte("RSControl") & 0xFF;
+            if (ordinal < ControlMode.values().length) {
+                rsMode = ControlMode.values()[ordinal];
+                markDirty();
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- IPortableMachineState
+
+    @Override
+    public byte[] getSideModesCopy() {
+        return sideCache.clone();
+    }
+
+    @Override
+    public void applySideModes(byte[] modes) {
+        if (modes != null && modes.length == sideCache.length && isValidSideArray(modes)) {
+            sideCache = modes.clone();
+            markDirty();
+            syncRenderState();
+        }
+    }
+
+    @Override
+    public void setStoredEnergy(int energy) {
+        energyStored = Math.max(0, Math.min(energy, ENERGY_CAPACITY));
+        markDirty();
+    }
+
     public int getFacing() {
         return worldObj != null ? worldObj.getBlockMetadata(xCoord, yCoord, zCoord) : 3;
     }

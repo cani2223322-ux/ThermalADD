@@ -18,14 +18,15 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
+import cofh.api.block.IDismantleable;
 import cofh.api.item.IToolHammer;
 import net.thermaladd.mod.ThermalADD;
 import net.thermaladd.mod.init.ModCreativeTab;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
-import net.thermaladd.mod.util.PendingAugmentDrops;
+import net.thermaladd.mod.util.MachineDismantle;
 
 /** Same design as {@link BlockAdvancedPulverizer}: real Thermal Expansion casing/face textures, Crescent Hammer support, Active/Inactive face swap. */
-public class BlockAdvancedFurnace extends BlockContainer {
+public class BlockAdvancedFurnace extends BlockContainer implements IDismantleable {
 
     private IIcon iconFaceIdle;
     private IIcon iconFaceActive;
@@ -133,6 +134,7 @@ public class BlockAdvancedFurnace extends BlockContainer {
                 } else {
                     tile.installDefaultAugments();
                 }
+                MachineDismantle.restoreSidesAndEnergy(stack, tile);
             }
         }
     }
@@ -147,15 +149,28 @@ public class BlockAdvancedFurnace extends BlockContainer {
         return true;
     }
 
+    /** Comparator support - see BlockAdvancedPulverizer for why no explicit notification is needed. */
+    @Override
+    public boolean hasComparatorInputOverride() {
+        return true;
+    }
+
+    @Override
+    public int getComparatorInputOverride(World world, int x, int y, int z, int side) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        return te instanceof TileAdvancedFurnace ? ((TileAdvancedFurnace) te).getComparatorSignal() : 0;
+    }
+
     @Override
     public TileEntity createNewTileEntity(World world, int meta) {
         return new TileAdvancedFurnace();
     }
 
     /**
-     * Crescent Hammer support: a click with one held always rotates the machine's facing -
-     * matching real Thermal Expansion's own TileReconfigurable#onWrench (unconditional
-     * rotateBlock(), no sneak branching). Side configuration is GUI-only in real TE.
+     * Crescent Hammer support, matching real Thermal Expansion's own gestures: a plain click
+     * rotates the machine's facing, a sneaking click dismantles it into an item that keeps its
+     * augments, side configuration and buffered RF. Side configuration itself stays GUI-only,
+     * exactly as in real TE.
      */
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side,
@@ -165,12 +180,16 @@ public class BlockAdvancedFurnace extends BlockContainer {
             IToolHammer hammer = (IToolHammer) held.getItem();
             if (hammer.isUsable(held, player, x, y, z)) {
                 if (!world.isRemote) {
-                    TileEntity te = world.getTileEntity(x, y, z);
-                    if (te instanceof TileAdvancedFurnace) {
-                        TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
-                        int next = nextFacing(tile.getFacing());
-                        world.setBlockMetadataWithNotify(x, y, z, next, 3);
-                        tile.setFacing(next);
+                    if (player.isSneaking()) {
+                        dismantleBlock(player, world, x, y, z, false);
+                    } else {
+                        TileEntity te = world.getTileEntity(x, y, z);
+                        if (te instanceof TileAdvancedFurnace) {
+                            TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
+                            int next = nextFacing(tile.getFacing());
+                            world.setBlockMetadataWithNotify(x, y, z, next, 3);
+                            tile.setFacing(next);
+                        }
                     }
                     hammer.toolUsed(held, player, x, y, z);
                 }
@@ -200,9 +219,8 @@ public class BlockAdvancedFurnace extends BlockContainer {
         if (te instanceof TileAdvancedFurnace) {
             TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
 
-            NBTTagCompound augNbt = tile.writeAugmentsToNBT(new NBTTagCompound());
-            PendingAugmentDrops.put(x, y, z, augNbt);
-
+            // Augments are NOT spilled here - they travel inside the dropped block item's own NBT
+            // instead (see getDrops), together with the side configuration and the energy buffer.
             for (int i = 0; i < tile.getSizeInventory(); i++) {
                 if (i >= TileAdvancedFurnace.AUGMENT_START
                         && i < TileAdvancedFurnace.AUGMENT_START + TileAdvancedFurnace.AUGMENT_SLOTS) {
@@ -221,17 +239,42 @@ public class BlockAdvancedFurnace extends BlockContainer {
         super.breakBlock(world, x, y, z, block, meta);
     }
 
+    /**
+     * The single dropped block item carries the machine's augments, side configuration and stored
+     * RF, read straight off the live tile - see MachineDismantle for why it is read here rather
+     * than handed over from breakBlock.
+     */
     @Override
     public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
-        ItemStack drop = new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata));
-        NBTTagCompound augNbt = PendingAugmentDrops.take(x, y, z);
-        if (augNbt != null && augNbt.hasKey("Augments")) {
-            NBTTagCompound tag = new NBTTagCompound();
-            tag.setTag("Augments", augNbt.getTag("Augments"));
-            drop.setTagCompound(tag);
-        }
         ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
-        drops.add(drop);
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileAdvancedFurnace) {
+            drops.add(MachineDismantle.createDrop(this, damageDropped(metadata), (TileAdvancedFurnace) te));
+        } else {
+            drops.add(new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata)));
+        }
         return drops;
+    }
+
+    /** See BlockAdvancedPulverizer#removedByPlayer - keeps the tile alive until getDrops has read it. */
+    @Override
+    public boolean removedByPlayer(World world, EntityPlayer player, int x, int y, int z, boolean willHarvest) {
+        return willHarvest || super.removedByPlayer(world, player, x, y, z, willHarvest);
+    }
+
+    @Override
+    public void harvestBlock(World world, EntityPlayer player, int x, int y, int z, int meta) {
+        super.harvestBlock(world, player, x, y, z, meta);
+        world.setBlockToAir(x, y, z);
+    }
+
+    @Override
+    public ArrayList<ItemStack> dismantleBlock(EntityPlayer player, World world, int x, int y, int z, boolean returnDrops) {
+        return MachineDismantle.dismantle(this, player, world, x, y, z, returnDrops);
+    }
+
+    @Override
+    public boolean canDismantle(EntityPlayer player, World world, int x, int y, int z) {
+        return true;
     }
 }

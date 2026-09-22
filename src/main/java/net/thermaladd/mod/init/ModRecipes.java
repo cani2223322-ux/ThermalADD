@@ -12,6 +12,7 @@ import cofh.thermalexpansion.item.TEItems;
 import cofh.thermalfoundation.item.TFItems;
 import cpw.mods.fml.common.FMLLog;
 import cpw.mods.fml.common.registry.GameRegistry;
+import net.thermaladd.mod.config.ModConfig;
 
 /**
  * Recipe registration for both machines in this mod. Runs from {@code ThermalADD#postInit},
@@ -39,52 +40,52 @@ public class ModRecipes {
      * only ever costs itself.
      */
     public static void register() {
-        registerSafely("Advanced Pulverizer", new RecipeRegistration() {
+        registerSafely("Advanced Pulverizer", ModConfig.recipeAdvancedPulverizer, new RecipeRegistration() {
             public void register() {
                 registerAdvancedPulverizerRecipe();
             }
         });
-        registerSafely("Improved Assembler", new RecipeRegistration() {
+        registerSafely("Improved Assembler", ModConfig.recipeImprovedAssembler, new RecipeRegistration() {
             public void register() {
                 registerImprovedAssemblerRecipe();
             }
         });
-        registerSafely("Advanced Furnace", new RecipeRegistration() {
+        registerSafely("Advanced Furnace", ModConfig.recipeAdvancedFurnace, new RecipeRegistration() {
             public void register() {
                 registerAdvancedFurnaceRecipe();
             }
         });
-        registerSafely("Advanced Sawmill", new RecipeRegistration() {
+        registerSafely("Advanced Sawmill", ModConfig.recipeAdvancedSawmill, new RecipeRegistration() {
             public void register() {
                 registerAdvancedSawmillRecipe();
             }
         });
-        registerSafely("Advanced Charger", new RecipeRegistration() {
+        registerSafely("Advanced Charger", ModConfig.recipeAdvancedCharger, new RecipeRegistration() {
             public void register() {
                 registerAdvancedChargerRecipe();
             }
         });
-        registerSafely("Speed Level 4 augment", new RecipeRegistration() {
+        registerSafely("Speed Level 4 augment", ModConfig.recipeSpeedLevel4Augment, new RecipeRegistration() {
             public void register() {
                 registerSpeedLevel4AugmentRecipe();
             }
         });
-        registerSafely("Secondary Sieve 4 augment", new RecipeRegistration() {
+        registerSafely("Secondary Sieve 4 augment", ModConfig.recipeSecondarySieve4Augment, new RecipeRegistration() {
             public void register() {
                 registerSecondarySieve4AugmentRecipe();
             }
         });
-        registerSafely("Singularity Cell", new RecipeRegistration() {
+        registerSafely("Singularity Cell", ModConfig.recipeSingularityCell, new RecipeRegistration() {
             public void register() {
                 registerSingularityCellRecipe();
             }
         });
-        registerSafely("Singularity Gear", new RecipeRegistration() {
+        registerSafely("Singularity Gear", ModConfig.recipeSingularityGear, new RecipeRegistration() {
             public void register() {
                 registerSingularityGearRecipe();
             }
         });
-        registerSafely("Singularity Frame", new RecipeRegistration() {
+        registerSafely("Singularity Frame", ModConfig.recipeSingularityFrame, new RecipeRegistration() {
             public void register() {
                 registerSingularityFrameRecipe();
             }
@@ -95,7 +96,10 @@ public class ModRecipes {
         void register();
     }
 
-    private static void registerSafely(String name, RecipeRegistration registration) {
+    private static void registerSafely(String name, boolean enabled, RecipeRegistration registration) {
+        if (!enabled) {
+            return;
+        }
         try {
             registration.register();
         } catch (Throwable t) {

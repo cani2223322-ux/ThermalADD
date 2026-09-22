@@ -19,6 +19,7 @@ import cofh.api.energy.IEnergyContainerItem;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
 import cofh.api.tileentity.IEnergyInfo;
+import cofh.api.tileentity.IPortableData;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.util.crafting.PulverizerManager;
@@ -26,6 +27,7 @@ import cofh.thermalexpansion.util.crafting.PulverizerManager.RecipePulverizer;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
+import net.thermaladd.mod.util.IPortableMachineState;
 
 /**
  * Advanced Pulverizer tile entity.
@@ -47,7 +49,8 @@ import net.thermaladd.mod.network.PacketHandler;
  * machine gets, all always available at once since this block has no separate tier/upgrade
  * item of its own.
  */
-public class TileAdvancedPulverizer extends TileEntity implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo {
+public class TileAdvancedPulverizer extends TileEntity
+        implements ISidedInventory, IEnergyReceiver, IRedstoneControl, IEnergyInfo, IPortableData, IPortableMachineState {
 
     public static final int INPUT_SLOTS = 3;
     /** One primary-output slot per input line, as instructed - not a fixed 2 regardless of INPUT_SLOTS. */
@@ -70,7 +73,8 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
      * per the "faster than the base version" requirement. Three lines can run at once, so
      * peak draw is 3x this (before augments).
      */
-    public static final int BASE_ENERGY_PER_TICK = 80;
+    /** Overridable from config/ThermalADD.cfg - see {@link net.thermaladd.mod.config.ModConfig}. */
+    public static int BASE_ENERGY_PER_TICK = 80;
 
     /**
      * This block's own fixed power tier - "UltimateResonant": named for sitting beyond even
@@ -86,9 +90,9 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
      */
     public static final String TIER_NAME = "UltimateResonant";
     /** Base RF buffer - was 80,000, far too small once Machine Speed augments are involved. */
-    public static final int BASE_ENERGY_CAPACITY = 1000000;
+    public static int BASE_ENERGY_CAPACITY = 1000000;
     /** Base RF intake per tick - was 1,200, well below the ~4,800 RF/t a maxed-out speed setup can burn. */
-    public static final int ENERGY_RECEIVE_PER_TICK = 10000;
+    public static int ENERGY_RECEIVE_PER_TICK = 10000;
 
     /**
      * windowProperty values are transmitted as a signed 16-bit short (max 32767, see
@@ -100,6 +104,16 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
      * tall regardless; so this loses no perceptible precision.
      */
     public static final int ENERGY_SYNC_SCALE = 256;
+    /**
+     * Same trick as ENERGY_SYNC_SCALE, but for the two RF/t readouts (current consumption and the
+     * machine's maximum draw). Those used to be sent raw, which was safe only while
+     * BASE_ENERGY_PER_TICK was a hardcoded 80: the worst case is
+     * {@code INPUT_SLOTS * BASE_ENERGY_PER_TICK * 60 (max speed multiplier) * 1.25 (level-4 sieve
+     * surcharge)}, so a config-raised cost would have overflowed the signed-short window property
+     * almost immediately. Dividing by 8 keeps the displayed number within 8 RF/t of the real one
+     * while lifting the ceiling to 32767 * 8 = 262,136 RF/t.
+     */
+    public static final int RATE_SYNC_SCALE = 8;
 
     /**
      * Real Thermal Expansion's own ambient "machine working" sound event (verified against the
@@ -221,6 +235,91 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
     }
 
     // ---------------------------------------------------------------- facing / sides
+
+    /**
+     * Comparator signal: how many of the machine's processing lines currently hold an input item,
+     * scaled to 1-15, with 0 meaning every line is empty. Deliberately counts occupied lines
+     * rather than weighing stack sizes the way vanilla's own inventory comparator does - for a
+     * parallel machine the useful thing to automate on is "every line is busy, stop feeding me",
+     * and a line holding 1 item is exactly as busy as one holding 64.
+     */
+    public int getComparatorSignal() {
+        int occupied = 0;
+        for (int i = 0; i < INPUT_SLOTS; i++) {
+            if (inventory[INPUT_START + i] != null) {
+                occupied++;
+            }
+        }
+        return occupied == 0 ? 0 : 1 + (occupied * 14) / INPUT_SLOTS;
+    }
+
+    // ---------------------------------------------------------------- IPortableData (TE Redprint)
+
+    /**
+     * Lets real Thermal Expansion's own Redprint copy this machine's side configuration and
+     * redstone mode onto another one - no custom item or GUI button needed, the Redprint just
+     * works on anything implementing cofh.api.tileentity.IPortableData.
+     *
+     * The data type is this mod's own per-machine string, so a Redprint filled from a Pulverizer
+     * only pastes onto another Pulverizer: the side MODES are machine-specific (this one has 6,
+     * the Furnace has 4), and TE's own ItemDiagram refuses the paste outright when the types don't
+     * match rather than writing something meaningless.
+     *
+     * Faces are copied by their absolute world side, NOT relative to facing, and the facing itself
+     * is deliberately not copied - pasting a configuration should never silently spin a machine
+     * the player already placed.
+     */
+    @Override
+    public String getDataType() {
+        return "tile.thermaladd.advancedPulverizer";
+    }
+
+    @Override
+    public void writePortableData(EntityPlayer player, NBTTagCompound tag) {
+        tag.setByteArray("SideCache", sideCache.clone());
+        tag.setByte("RSControl", (byte) rsMode.ordinal());
+    }
+
+    @Override
+    public void readPortableData(EntityPlayer player, NBTTagCompound tag) {
+        // Same augment gates the GUI itself enforces - a Redprint must not be a way around a
+        // machine that has no Reconfigurable Sides / Redstone Control augment installed.
+        if (augmentReconfigSides && tag.hasKey("SideCache")) {
+            applySideModes(tag.getByteArray("SideCache"));
+        }
+        if (augmentRedstoneControl && tag.hasKey("RSControl")) {
+            int ordinal = tag.getByte("RSControl") & 0xFF;
+            if (ordinal < ControlMode.values().length) {
+                rsMode = ControlMode.values()[ordinal];
+                markDirty();
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- IPortableMachineState
+
+    @Override
+    public byte[] getSideModesCopy() {
+        return sideCache.clone();
+    }
+
+    @Override
+    public void applySideModes(byte[] modes) {
+        // Same validation the NBT load path uses - a wrong-length or out-of-range array would
+        // later index the block's per-mode icon arrays out of bounds while rendering.
+        if (modes != null && modes.length == sideCache.length && isValidSideArray(modes)) {
+            sideCache = modes.clone();
+            markDirty();
+            syncRenderState();
+        }
+    }
+
+    @Override
+    public void setStoredEnergy(int energy) {
+        int capped = Math.max(0, Math.min(energy, energyStorage.getMaxEnergyStored()));
+        energyStorage.setEnergyStored(capped);
+        markDirty();
+    }
 
     public int getFacing() {
         return facing;
@@ -652,12 +751,13 @@ public class TileAdvancedPulverizer extends TileEntity implements ISidedInventor
         return maxEnergyPerTick;
     }
 
-    public void setEnergyPerTickClient(int value) {
-        energyPerTick = value;
+    /** Takes the RATE_SYNC_SCALE-divided value the container sent and restores the real RF/t. */
+    public void setEnergyPerTickClient(int scaled) {
+        energyPerTick = scaled * RATE_SYNC_SCALE;
     }
 
-    public void setMaxEnergyPerTickClient(int value) {
-        maxEnergyPerTick = value;
+    public void setMaxEnergyPerTickClient(int scaled) {
+        maxEnergyPerTick = scaled * RATE_SYNC_SCALE;
     }
 
     // ---------------------------------------------------------------- IEnergyInfo (real TE's own Energy tab)
