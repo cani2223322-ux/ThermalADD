@@ -1,5 +1,8 @@
 package net.thermaladd.mod.client.gui;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.audio.PositionedSoundRecord;
@@ -8,6 +11,7 @@ import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.Slot;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 import net.thermaladd.mod.config.ModConfig;
@@ -286,6 +290,67 @@ public abstract class TabbedMachineGui extends GuiContainer {
     public void playClick(float pitch) {
         mc.getSoundHandler().playSound(
                 PositionedSoundRecord.func_147674_a(new ResourceLocation("random.click"), pitch));
+    }
+
+    // ------------------------------------------------ slot-role and progress tooltips
+
+    /**
+     * Lang key naming what a machine slot is FOR, or null for no tooltip. Overridden per machine.
+     * Real Thermal Expansion conveys slot roles by colour alone - its ElementSlotOverlay never
+     * answers a hover at all - so an empty slot here says in words what goes in it.
+     */
+    protected String slotRoleKey(int tileSlot) {
+        return null;
+    }
+
+    /** The slot under the cursor, or null. GuiContainer's own lookup is private. */
+    protected Slot slotUnderMouse(int mouseX, int mouseY) {
+        for (int i = 0; i < inventorySlots.inventorySlots.size(); i++) {
+            Slot slot = (Slot) inventorySlots.inventorySlots.get(i);
+            if (func_146978_c(slot.xDisplayPosition, slot.yDisplayPosition, 16, 16, mouseX, mouseY)) {
+                return slot;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Names the role of the EMPTY machine slot under the cursor. Only empty ones: an occupied slot
+     * already gets vanilla's item tooltip, and a second box on top of it would just cover it.
+     * Returns whether a tooltip was drawn.
+     */
+    protected boolean drawEmptySlotRoleTooltip(IInventory tile, int mouseX, int mouseY) {
+        Slot slot = slotUnderMouse(mouseX, mouseY);
+        if (slot == null || slot.inventory != tile || slot.getHasStack()) {
+            return false;
+        }
+        String key = slotRoleKey(slot.getSlotIndex());
+        if (key == null) {
+            return false;
+        }
+        List<String> lines = new ArrayList<String>();
+        lines.add(StatCollector.translateToLocal(key));
+        drawHoveringText(lines, mouseX, mouseY, fontRendererObj);
+        return true;
+    }
+
+    /**
+     * RF invested / RF required for one processing line, while the cursor is over that line's
+     * activity glyph or progress arrow (a panel-relative rectangle). Nothing while the line is
+     * idle. Returns whether a tooltip was drawn.
+     */
+    protected boolean drawProgressTooltip(int mouseX, int mouseY, int relX, int relY, int width, int height,
+            int progress, int maxProgress) {
+        int x = guiLeft + relX;
+        int y = guiTop + relY;
+        if (maxProgress <= 0 || mouseX < x || mouseX >= x + width || mouseY < y || mouseY >= y + height) {
+            return false;
+        }
+        List<String> lines = new ArrayList<String>();
+        lines.add(StatCollector.translateToLocalFormatted("gui.thermaladd.progress",
+                String.valueOf(Math.min(progress, maxProgress)), String.valueOf(maxProgress)));
+        drawHoveringText(lines, mouseX, mouseY, fontRendererObj);
+        return true;
     }
 
     /**

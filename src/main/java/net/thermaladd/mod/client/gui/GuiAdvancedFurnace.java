@@ -134,6 +134,17 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         drawEnergyStored(left + ENERGY_X, top + ENERGY_Y, tile.getEnergy(), tile.getMaxEnergy());
     }
 
+    @Override
+    protected String slotRoleKey(int slot) {
+        if (slot < TileAdvancedFurnace.OUTPUT_START) {
+            return "gui.thermaladd.mode.input";
+        }
+        if (slot < TileAdvancedFurnace.AUGMENT_START) {
+            return "gui.thermaladd.mode.output";
+        }
+        return slot < TileAdvancedFurnace.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
+    }
+
     /** Real TE's own activity glyph plus progress arrow, per line - see TabbedMachineGui. */
     private void drawProgressBar(int left, int top, int line) {
         int progress = tile.getProgress(line);
@@ -225,6 +236,18 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
             List<String> energyTooltip = new ArrayList<String>();
             energyTooltip.add(tile.getEnergy() + " / " + tile.getMaxEnergy() + " RF");
             drawHoveringText(energyTooltip, mouseX, mouseY, fontRendererObj);
+            return;
+        }
+
+        for (int line = 0; line < TileAdvancedFurnace.INPUT_SLOTS; line++) {
+            int rowY = ContainerAdvancedFurnace.INPUT_Y + line * ContainerAdvancedFurnace.SLOT_SIZE
+                    + (ContainerAdvancedFurnace.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
+            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ARROW_X + PROGRESS_ARROW_WIDTH - SCALE_X,
+                    PROGRESS_ARROW_HEIGHT, tile.getProgress(line), tile.getProgressMax(line))) {
+                return;
+            }
+        }
+        if (drawEmptySlotRoleTooltip(tile, mouseX, mouseY)) {
             return;
         }
 

@@ -21,6 +21,13 @@ gui.thermaladd.mode.outputBoth=Выход (оба)
 gui.thermaladd.mode.all=Все
 gui.thermaladd.mode.disabled=Отключено
 
+gui.thermaladd.slot.charge=Зарядка машины: конденсатор или другой предмет с RF
+gui.thermaladd.slot.augment=Слот расширения
+gui.thermaladd.slot.schematic=Схема
+gui.thermaladd.slot.buffer=Буфер ингредиентов
+gui.thermaladd.slot.chargerLine=Вход: предмет для зарядки или рецепт Зарядника
+gui.thermaladd.progress=Прогресс: %s / %s RF
+
 gui.thermaladd.energy.title=Энергия
 gui.thermaladd.energy.tab.consumption=Расход:
 gui.thermaladd.energy.tab.maxpower=Макс. энергия/т:

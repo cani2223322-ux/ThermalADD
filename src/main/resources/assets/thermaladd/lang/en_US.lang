@@ -21,6 +21,13 @@ gui.thermaladd.mode.outputBoth=Output (Both)
 gui.thermaladd.mode.all=All
 gui.thermaladd.mode.disabled=Disabled
 
+gui.thermaladd.slot.charge=Machine charging: a Capacitor or any other RF-holding item
+gui.thermaladd.slot.augment=Augment slot
+gui.thermaladd.slot.schematic=Schematic
+gui.thermaladd.slot.buffer=Ingredient buffer
+gui.thermaladd.slot.chargerLine=Input: an item to charge, or a Charger recipe
+gui.thermaladd.progress=Progress: %s / %s RF
+
 gui.thermaladd.energy.title=Energy
 gui.thermaladd.energy.tab.consumption=Consumption:
 gui.thermaladd.energy.tab.maxpower=Max Energy/t:

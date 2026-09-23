@@ -297,6 +297,20 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
      * tab, which has no custom content, only real vanilla Slots - the click falls through to
      * normal slot handling via super.mouseClicked().
      */
+    @Override
+    protected String slotRoleKey(int slot) {
+        if (slot < TileImprovedAssembler.INPUT_START) {
+            return "gui.thermaladd.slot.schematic";
+        }
+        if (slot < TileImprovedAssembler.OUTPUT_START) {
+            return "gui.thermaladd.slot.buffer";
+        }
+        if (slot < TileImprovedAssembler.AUGMENT_START) {
+            return "gui.thermaladd.mode.output";
+        }
+        return slot < TileImprovedAssembler.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
+    }
+
     private boolean handleTabClick(GuiSideTab tab, int mouseX, int mouseY, int left, int top, int mouseButton, boolean shift) {
         if (mouseButton == 0 && tab.isMouseOverIcon(mouseX, mouseY, left, top)) {
             boolean wasOpen = tab.open;
@@ -349,6 +363,9 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             }
             tankTooltip.add(amount + " / " + tile.getTankCapacity() + " mB");
             drawHoveringText(tankTooltip, mouseX, mouseY, fontRendererObj);
+            return;
+        }
+        if (drawEmptySlotRoleTooltip(tile, mouseX, mouseY)) {
             return;
         }
 

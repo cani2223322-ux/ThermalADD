@@ -138,6 +138,20 @@ public class GuiAdvancedSawmill extends TabbedMachineGui {
         drawEnergyStored(left + ENERGY_X, top + ENERGY_Y, tile.getEnergy(), tile.getMaxEnergy());
     }
 
+    @Override
+    protected String slotRoleKey(int slot) {
+        if (slot < TileAdvancedSawmill.OUTPUT_PRIMARY_START) {
+            return "gui.thermaladd.mode.input";
+        }
+        if (slot < TileAdvancedSawmill.OUTPUT_SECONDARY_START) {
+            return "gui.thermaladd.mode.outputPrimary";
+        }
+        if (slot < TileAdvancedSawmill.AUGMENT_START) {
+            return "gui.thermaladd.mode.outputSecondary";
+        }
+        return slot < TileAdvancedSawmill.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
+    }
+
     /** Real TE's own activity glyph plus progress arrow, per line - see TabbedMachineGui. */
     private void drawProgressBar(int left, int top, int line) {
         int progress = tile.getProgress(line);
@@ -229,6 +243,18 @@ public class GuiAdvancedSawmill extends TabbedMachineGui {
             List<String> energyTooltip = new ArrayList<String>();
             energyTooltip.add(tile.getEnergy() + " / " + tile.getMaxEnergy() + " RF");
             drawHoveringText(energyTooltip, mouseX, mouseY, fontRendererObj);
+            return;
+        }
+
+        for (int line = 0; line < TileAdvancedSawmill.INPUT_SLOTS; line++) {
+            int rowY = ContainerAdvancedSawmill.INPUT_Y + line * ContainerAdvancedSawmill.SLOT_SIZE
+                    + (ContainerAdvancedSawmill.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
+            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ARROW_X + PROGRESS_ARROW_WIDTH - SCALE_X,
+                    PROGRESS_ARROW_HEIGHT, tile.getProgress(line), tile.getProgressMax(line))) {
+                return;
+            }
+        }
+        if (drawEmptySlotRoleTooltip(tile, mouseX, mouseY)) {
             return;
         }
 

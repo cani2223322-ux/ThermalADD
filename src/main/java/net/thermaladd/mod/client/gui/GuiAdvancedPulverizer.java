@@ -175,6 +175,20 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
      * centred in the same gap between the input and output columns, and vertically centred in the
      * line's own 18px row.
      */
+    @Override
+    protected String slotRoleKey(int slot) {
+        if (slot < TileAdvancedPulverizer.OUTPUT_PRIMARY_START) {
+            return "gui.thermaladd.mode.input";
+        }
+        if (slot < TileAdvancedPulverizer.OUTPUT_SECONDARY_START) {
+            return "gui.thermaladd.mode.outputPrimary";
+        }
+        if (slot < TileAdvancedPulverizer.AUGMENT_START) {
+            return "gui.thermaladd.mode.outputSecondary";
+        }
+        return slot < TileAdvancedPulverizer.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
+    }
+
     private void drawProgressBar(int left, int top, int line) {
         int progress = tile.getProgress(line);
         int max = tile.getProgressMax(line);
@@ -284,6 +298,18 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
             List<String> energyTooltip = new ArrayList<String>();
             energyTooltip.add(tile.getEnergy() + " / " + tile.getMaxEnergy() + " RF");
             drawHoveringText(energyTooltip, mouseX, mouseY, fontRendererObj);
+            return;
+        }
+
+        for (int line = 0; line < TileAdvancedPulverizer.INPUT_SLOTS; line++) {
+            int rowY = ContainerAdvancedPulverizer.INPUT_Y + line * ContainerAdvancedPulverizer.SLOT_SIZE
+                    + (ContainerAdvancedPulverizer.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
+            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ARROW_X + PROGRESS_ARROW_WIDTH - SCALE_X,
+                    PROGRESS_ARROW_HEIGHT, tile.getProgress(line), tile.getProgressMax(line))) {
+                return;
+            }
+        }
+        if (drawEmptySlotRoleTooltip(tile, mouseX, mouseY)) {
             return;
         }
 

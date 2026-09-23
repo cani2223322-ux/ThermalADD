@@ -215,6 +215,9 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
         }
 
         // A line's progress is NOT drawn here any more - see renderToolTip below.
+        if (drawEmptySlotRoleTooltip(tile, mouseX, mouseY)) {
+            return;
+        }
 
         List<String> tooltip = new ArrayList<String>();
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);
@@ -252,6 +255,17 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
         lines.add(EnumChatFormatting.GRAY + String.valueOf(tile.getProgress(line)) + " / " + max + " RF");
         FontRenderer font = stack.getItem().getFontRenderer(stack);
         drawHoveringText(lines, x, y, font == null ? fontRendererObj : font);
+    }
+
+    @Override
+    protected String slotRoleKey(int slot) {
+        if (slot < TileAdvancedCharger.OUTPUT_START) {
+            return "gui.thermaladd.slot.chargerLine";
+        }
+        if (slot < TileAdvancedCharger.AUGMENT_START) {
+            return "gui.thermaladd.mode.output";
+        }
+        return slot < TileAdvancedCharger.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
     }
 
     /** Which charging line's input slot is under the given screen position, or -1. */
