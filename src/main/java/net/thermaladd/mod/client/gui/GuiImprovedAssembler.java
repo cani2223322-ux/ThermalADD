@@ -68,6 +68,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
     private final TabConfigAssembler configTab;
     private final TabRedstoneControl redstoneTab;
     private final TabEnergy energyTab;
+    private final TabInfo infoTab;
 
     public GuiImprovedAssembler(InventoryPlayer playerInv, TileImprovedAssembler tile) {
         super(new ContainerImprovedAssembler(playerInv, tile));
@@ -87,10 +88,14 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP);
         redstoneTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y + TAB_STACK_STEP * 2);
         energyTab.setStackPosition(LEFT_TAB_X, LEFT_TAB_Y);
+        this.infoTab = new TabInfo(this, "info.thermaladd.improvedAssembler", "info.thermaladd.tip.assemblerBuffer", "info.thermaladd.tip.wrench", "info.thermaladd.tip.redprint", "info.thermaladd.tip.comparatorBuffer");
+        infoTab.setStackPosition(LEFT_TAB_X, LEFT_TAB_Y + TAB_STACK_STEP);
+        setScrollableTab(infoTab);
         TabTracker.restore(augmentsTab);
         TabTracker.restore(configTab);
         TabTracker.restore(redstoneTab);
         TabTracker.restore(energyTab);
+        TabTracker.restore(infoTab);
     }
 
     @Override
@@ -115,6 +120,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         configTab.setMousePosition(relMouseX, relMouseY);
         redstoneTab.setMousePosition(relMouseX, relMouseY);
         energyTab.setMousePosition(relMouseX, relMouseY);
+        infoTab.setMousePosition(relMouseX, relMouseY);
 
         augmentsTab.drawForeground(0, 0);
         if (tile.augmentReconfigSides) {
@@ -124,6 +130,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             redstoneTab.drawForeground(0, 0);
         }
         energyTab.drawForeground(0, 0);
+        infoTab.drawForeground(0, 0);
     }
 
     @Override
@@ -137,6 +144,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         configTab.update();
         redstoneTab.update();
         energyTab.update();
+        infoTab.update();
 
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
 
@@ -194,6 +202,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             redstoneTab.drawBackground(left, top);
         }
         energyTab.drawBackground(left, top);
+        infoTab.drawBackground(left, top);
     }
 
     /** Small static right-pointing triangle (7x7) marking schematic -> output direction; the real Assembler crafts instantly, so there's no progress fraction to animate here. */
@@ -286,6 +295,9 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         if (handleTabClick(energyTab, mouseX, mouseY, left, top, mouseButton, shift)) {
             return;
         }
+        if (handleTabClick(infoTab, mouseX, mouseY, left, top, mouseButton, shift)) {
+            return;
+        }
 
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
@@ -318,8 +330,9 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             configTab.setOpen(false);
             redstoneTab.setOpen(false);
             energyTab.setOpen(false);
+            infoTab.setOpen(false);
             tab.setOpen(!wasOpen);
-            TabTracker.record(augmentsTab, configTab, redstoneTab, energyTab);
+            TabTracker.record(augmentsTab, configTab, redstoneTab, energyTab, infoTab);
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {
@@ -378,6 +391,7 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
             redstoneTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         }
         energyTab.addTooltip(mouseX, mouseY, left, top, tooltip);
+        infoTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         if (!tooltip.isEmpty()) {
             drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
         }

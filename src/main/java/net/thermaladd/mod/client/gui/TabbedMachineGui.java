@@ -3,6 +3,7 @@ package net.thermaladd.mod.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
@@ -294,6 +295,34 @@ public abstract class TabbedMachineGui extends GuiContainer {
     public void playClick(float pitch) {
         mc.getSoundHandler().playSound(
                 PositionedSoundRecord.func_147674_a(new ResourceLocation("random.click"), pitch));
+    }
+
+    // ------------------------------------------------ Information tab scrolling
+
+    private TabInfo scrollableTab;
+
+    /** Registers the tab that the mouse wheel scrolls while the cursor is over its open flap. */
+    protected void setScrollableTab(TabInfo tab) {
+        scrollableTab = tab;
+    }
+
+    /**
+     * GuiContainer does nothing with the wheel itself, so this is purely additive: while the
+     * Information tab is open and the cursor is over it, each wheel notch scrolls one line - the
+     * same routing real TE's GuiBase does into its TabScrolledText.
+     */
+    @Override
+    public void handleMouseInput() {
+        super.handleMouseInput();
+        int wheel = Mouse.getEventDWheel();
+        if (wheel == 0 || scrollableTab == null || !scrollableTab.isFullyOpen()) {
+            return;
+        }
+        int mouseX = Mouse.getEventX() * width / mc.displayWidth;
+        int mouseY = height - Mouse.getEventY() * height / mc.displayHeight - 1;
+        if (scrollableTab.isMouseOverFlap(mouseX, mouseY, guiLeft, guiTop)) {
+            scrollableTab.scroll(wheel > 0 ? -1 : 1);
+        }
     }
 
     // ------------------------------------------------ slot-role and progress tooltips

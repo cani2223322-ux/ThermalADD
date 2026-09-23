@@ -6,6 +6,22 @@ itemGroup.thermaladd=ThermalADD
 
 gui.thermaladd.tab.augments=Расширения
 gui.thermaladd.tab.configuration=Конфигурация
+gui.thermaladd.tab.info=Информация
+
+info.thermaladd.advancedPulverizer=Измельчает по рецептам Измельчителя TE сразу на трёх линиях. Шанс вторичного выхода растёт с расширением «Вторичное сито».
+info.thermaladd.advancedFurnace=Плавит по рецептам Печи TE сразу на трёх линиях.
+info.thermaladd.advancedSawmill=Распиливает по рецептам Лесопилки TE сразу на трёх линиях, с первичным и вторичным выходом.
+info.thermaladd.advancedCharger=Девять линий. Предмет с RF-буфером заряжается прямо в слоте, остальное идёт по рецептам Зарядника TE.
+info.thermaladd.improvedAssembler=Шесть схем крафтят параллельно из общего буфера на 18 слотов. Жидкость для рецептов берётся из бака.
+info.thermaladd.singularityCell=Хранит до триллиона RF. Каждую грань можно настроить на вход, выход или отключить.
+info.thermaladd.tip.lock=Shift+ПКМ по занятому слоту линии закрепляет её за этим предметом.
+info.thermaladd.tip.wrench=Ключ: клик поворачивает машину, Shift+ПКМ разбирает её с сохранением расширений, настроек и энергии.
+info.thermaladd.tip.wrenchCell=Ключ: Shift+ПКМ разбирает ячейку с сохранением заряда и настроек.
+info.thermaladd.tip.redprint=Redprint из TE копирует настройку сторон на другой такой же блок.
+info.thermaladd.tip.comparatorLines=Компаратор показывает, сколько линий занято.
+info.thermaladd.tip.comparatorBuffer=Компаратор показывает заполненность буфера.
+info.thermaladd.tip.comparatorCharge=Компаратор показывает уровень заряда.
+info.thermaladd.tip.assemblerBuffer=Пустые контейнеры (вёдра и т.п.) возвращаются в буфер. Забрать их трубой можно со стороны в режиме «Все».
 gui.thermaladd.side.top=Верх
 gui.thermaladd.side.bottom=Низ
 gui.thermaladd.side.front=Перед

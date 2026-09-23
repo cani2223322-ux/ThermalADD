@@ -48,6 +48,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
 
     private final TileSingularityCell tile;
     private final TabConfigCell configTab;
+    private final TabInfo infoTab;
 
     public GuiSingularityCell(InventoryPlayer playerInv, TileSingularityCell tile) {
         super(new ContainerSingularityCell(playerInv, tile));
@@ -57,7 +58,13 @@ public class GuiSingularityCell extends TabbedMachineGui {
         ySize = BASE_HEIGHT;
         this.configTab = new TabConfigCell(this, tile);
         configTab.setStackPosition(TAB_STACK_X, TAB_STACK_Y);
+        // The Cell has no Energy tab, so Information takes the top of the left side on its own.
+        this.infoTab = new TabInfo(this, "info.thermaladd.singularityCell", "info.thermaladd.tip.wrenchCell",
+                "info.thermaladd.tip.redprint", "info.thermaladd.tip.comparatorCharge");
+        infoTab.setStackPosition(0, TAB_STACK_Y);
+        setScrollableTab(infoTab);
         TabTracker.restore(configTab);
+        TabTracker.restore(infoTab);
     }
 
     @Override
@@ -70,6 +77,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
         // match real Thermal Expansion's own GuiBase#drawTabs - this is what makes the tab
         // animation look smooth and open at the expected speed regardless of framerate.
         configTab.update();
+        infoTab.update();
 
         drawTEPanel(left, top, BASE_WIDTH, BASE_HEIGHT);
         drawEnergyBar(left, top);
@@ -84,6 +92,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
         }
 
         configTab.drawBackground(left, top);
+        infoTab.drawBackground(left, top);
     }
 
     /** Same real-TE {@code Energy.png} art the 3 machine GUIs use (see TabbedMachineGui#drawEnergyStored) - real TE's own Energy Cell GUI draws its bar with the identical ElementEnergyStored widget, just at this panel's own size/position. */
@@ -112,6 +121,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
         String title = StatCollector.translateToLocal("tile.singularityCell.name");
         fontRendererObj.drawString(title, (BASE_WIDTH - fontRendererObj.getStringWidth(title)) / 2, 6, 0x404040);
         configTab.setMousePosition(mouseX - guiLeft, mouseY - guiTop);
+        infoTab.setMousePosition(mouseX - guiLeft, mouseY - guiTop);
 
         long capacity = tile.getCapacityLong();
         String fillLine = formatRF(tile.getEnergyStoredLong()) + " / " + formatRF(capacity) + " RF";
@@ -125,6 +135,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
         fontRendererObj.drawString(StatCollector.translateToLocal("container.inventory"), 8, PLAYER_INV_Y - 10, 0x404040);
 
         configTab.drawForeground(0, 0);
+        infoTab.drawForeground(0, 0);
     }
 
     @Override
@@ -133,9 +144,19 @@ public class GuiSingularityCell extends TabbedMachineGui {
         int top = (height - ySize) / 2;
         boolean shift = GuiScreen.isShiftKeyDown();
 
+        // One tab open at a time, the same as the machine GUIs.
         if (mouseButton == 0 && configTab.isMouseOverIcon(mouseX, mouseY, left, top)) {
-            configTab.setOpen(!configTab.open);
-            TabTracker.record(configTab);
+            boolean wasOpen = configTab.open;
+            infoTab.setOpen(false);
+            configTab.setOpen(!wasOpen);
+            TabTracker.record(configTab, infoTab);
+            return;
+        }
+        if (mouseButton == 0 && infoTab.isMouseOverIcon(mouseX, mouseY, left, top)) {
+            boolean wasOpen = infoTab.open;
+            configTab.setOpen(false);
+            infoTab.setOpen(!wasOpen);
+            TabTracker.record(configTab, infoTab);
             return;
         }
         if (configTab.isFullyOpen() && configTab.isMouseOverFlap(mouseX, mouseY, left, top)) {
@@ -143,6 +164,10 @@ public class GuiSingularityCell extends TabbedMachineGui {
             // and letting the click through to GuiContainer#mouseClicked risks it being read as
             // "clicked outside the window", which drops the stack on the cursor.
             configTab.onContentClick(mouseX - left - configTab.getTabX(), mouseY - top - configTab.getTabY(), mouseButton, shift);
+            return;
+        }
+        if (infoTab.isFullyOpen() && infoTab.isMouseOverFlap(mouseX, mouseY, left, top)) {
+            infoTab.onContentClick(mouseX - left - infoTab.getContentX(), mouseY - top - infoTab.getTabY(), mouseButton, shift);
             return;
         }
 
@@ -165,6 +190,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
             tooltip.add(String.format(Locale.ROOT, "%,d", tile.getCapacityLong()) + " RF " + StatCollector.translateToLocal("gui.thermaladd.cell.capacity"));
         } else {
             configTab.addTooltip(mouseX, mouseY, left, top, tooltip);
+            infoTab.addTooltip(mouseX, mouseY, left, top, tooltip);
         }
         if (!tooltip.isEmpty()) {
             drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);

@@ -6,6 +6,22 @@ itemGroup.thermaladd=ThermalADD
 
 gui.thermaladd.tab.augments=Augments
 gui.thermaladd.tab.configuration=Configuration
+gui.thermaladd.tab.info=Information
+
+info.thermaladd.advancedPulverizer=Grinds on the TE Pulverizer's recipes, three lines at once. The secondary output chance rises with the Secondary Sieve augment.
+info.thermaladd.advancedFurnace=Smelts on the TE Furnace's recipes, three lines at once.
+info.thermaladd.advancedSawmill=Saws on the TE Sawmill's recipes, three lines at once, with a primary and a secondary output.
+info.thermaladd.advancedCharger=Nine lines. An RF-holding item is charged in place; anything else runs the TE Charger's recipes.
+info.thermaladd.improvedAssembler=Six schematics craft in parallel from a shared 18-slot buffer. Recipe fluids come from the tank.
+info.thermaladd.singularityCell=Holds up to a trillion RF. Each face can be set to input, output or disabled.
+info.thermaladd.tip.lock=Shift + right-click a filled line slot to lock that line to its item.
+info.thermaladd.tip.wrench=Wrench: click to rotate, sneak + right-click to dismantle, keeping augments, settings and energy.
+info.thermaladd.tip.wrenchCell=Wrench: sneak + right-click to dismantle, keeping the charge and settings.
+info.thermaladd.tip.redprint=TE's Redprint copies the side setup onto another block of the same kind.
+info.thermaladd.tip.comparatorLines=A comparator reads how many lines are busy.
+info.thermaladd.tip.comparatorBuffer=A comparator reads how full the buffer is.
+info.thermaladd.tip.comparatorCharge=A comparator reads the charge level.
+info.thermaladd.tip.assemblerBuffer=Empty containers (buckets and the like) go back into the buffer. A pipe on a side set to "All" can take them out.
 gui.thermaladd.side.top=Top
 gui.thermaladd.side.bottom=Bottom
 gui.thermaladd.side.front=Front
