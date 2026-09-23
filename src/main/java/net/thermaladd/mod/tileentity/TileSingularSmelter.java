@@ -218,8 +218,13 @@ public class TileSingularSmelter extends TileSingularityMachine {
         }
 
         addToFirstFitting(OUTPUT_PRIMARY_START, OUTPUT_PRIMARY_SLOTS, primary);
-        if (secondary != null && rollChance(recipe.getSecondaryOutputChance())) {
+        int chance = recipe.getSecondaryOutputChance();
+        if (secondary != null && rollChance(chance)) {
             addToFirstFitting(OUTPUT_SECONDARY_START, OUTPUT_SECONDARY_SLOTS, secondary);
+            // TE's second copy. Only when it still fits - TE caps it at the stack limit too.
+            if (rollBonus(chance) && canFitAny(OUTPUT_SECONDARY_START, OUTPUT_SECONDARY_SLOTS, secondary)) {
+                addToFirstFitting(OUTPUT_SECONDARY_START, OUTPUT_SECONDARY_SLOTS, secondary);
+            }
         }
         consumeInput(slotA, needA);
         consumeInput(slotB, needB);

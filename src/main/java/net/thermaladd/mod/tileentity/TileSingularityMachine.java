@@ -969,6 +969,15 @@ public abstract class TileSingularityMachine extends TileEntity
         return chance >= 100 || worldObj.rand.nextInt(secondaryChanceDivisor) < chance;
     }
 
+    /**
+     * Real TE's extra secondary (TileSmelter#processFinish): once the Secondary Sieve has pushed
+     * the divisor below the recipe's chance, the part of the chance left over rolls for a second
+     * copy - which is what the Sieve does for 100% byproducts such as Rich Slag.
+     */
+    protected boolean rollBonus(int chance) {
+        return secondaryChanceDivisor < chance && worldObj.rand.nextInt(secondaryChanceDivisor) < chance - secondaryChanceDivisor;
+    }
+
     protected boolean canFitStack(int slot, ItemStack stack) {
         ItemStack existing = inventory[slot];
         if (existing == null) {

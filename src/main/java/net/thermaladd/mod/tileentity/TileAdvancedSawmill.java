@@ -22,6 +22,7 @@ import cofh.api.tileentity.IEnergyInfo;
 import cofh.api.tileentity.IPortableData;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
+import cofh.thermalexpansion.item.TEItems;
 import cofh.thermalexpansion.util.crafting.SawmillManager;
 import cofh.thermalexpansion.util.crafting.SawmillManager.RecipeSawmill;
 import cpw.mods.fml.common.network.NetworkRegistry;
@@ -900,7 +901,24 @@ public class TileAdvancedSawmill extends TileEntity
         int chance = recipe.getSecondaryOutputChance();
         if (chance >= 100 || worldObj.rand.nextInt(secondaryChanceDivisor) < chance) {
             addToFirstFitting(OUTPUT_SECONDARY_START, OUTPUT_SECONDARY_SLOTS, secondary);
+            // Real TE's TileSawmill gives Sawdust (and only Sawdust) a second roll once the
+            // Secondary Sieve has pushed the divisor below the recipe's chance.
+            if (TEItems.sawdust != null && secondary.isItemEqual(TEItems.sawdust)
+                    && secondaryChanceDivisor < chance
+                    && worldObj.rand.nextInt(secondaryChanceDivisor) < chance - secondaryChanceDivisor
+                    && canFitAnySecondary(secondary)) {
+                addToFirstFitting(OUTPUT_SECONDARY_START, OUTPUT_SECONDARY_SLOTS, secondary);
+            }
         }
+    }
+
+    private boolean canFitAnySecondary(ItemStack stack) {
+        for (int i = 0; i < OUTPUT_SECONDARY_SLOTS; i++) {
+            if (canFitStack(OUTPUT_SECONDARY_START + i, stack)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void addToFirstFitting(int firstSlot, int slotCount, ItemStack stack) {
