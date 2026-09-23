@@ -2,7 +2,7 @@
 {
     "modid": "thermaladd",
     "name": "ThermalADD",
-    "description": "A Thermal Expansion 4 addon adding upgraded, multi-slot, UltimateResonant-tier versions of TE4 machines: the Advanced Pulverizer, Improved Cyclic Assembler and Advanced Furnace, each with 3 (or 6) parallel processing slots and 9 augment slots, all running on Thermal Expansion's own real recipe lists.",
+    "description": "A Thermal Expansion 4 addon: multi-line, UltimateResonant-tier versions of TE4 machines (Pulverizer, Redstone Furnace, Sawmill, Induction Smelter, Magma Crucible, Fluid Transposer, Charger, Cyclic Assembler) on Thermal Expansion's own recipes, a trillion-RF Singularity Energy Cell, a 4,096,000 mB Singularity Tank, a 120-slot Singularity Strongbox and an Upgrade Kit that converts placed TE machines in place.",
     "version": "${version}",
     "mcversion": "${mcversion}",
     "url": "",

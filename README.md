@@ -3,103 +3,122 @@
 🇷🇺 **Русский** | 🇬🇧 [English](#english)
 
 Аддон для [Thermal Expansion 4](https://www.curseforge.com/minecraft/mc-mods/thermal-expansion)
-под Minecraft **1.7.10** (Forge). Добавляет улучшенные, многослотовые версии машин TE4 тира
-`UltimateResonant`, работающие на настоящих списках рецептов Thermal Expansion, плюс пару
-собственных «запредельных» расширений и энергоячейку сверхбольшой ёмкости.
+под Minecraft **1.7.10** (Forge). Добавляет улучшенные, многолинейные версии машин TE4 тира
+`UltimateResonant`, работающие на настоящих списках рецептов Thermal Expansion, хранилища
+сверхбольшой ёмкости, набор для улучшения уже стоящих машин TE и пару собственных
+«запредельных» расширений.
 
 ## Машины
 
-- **Сингулярный измельчитель** — 3 параллельные линии обработки вместо одной, 9 слотов
-  расширений, собственный энергетический тир.
-- **Сингулярная красная печь** — 3 параллельные линии вместо одной, 9 слотов расширений.
-- **Сингулярная лесопилка** — 3 параллельные линии, первичный и вторичный выход, 9 слотов
-  расширений.
-- **Сингулярный зарядник** — 9 линий одновременной зарядки вместо одного слота настоящего
-  Заряжателя. Каждая линия независимо поддерживает оба режима оригинала: либо заряжает
-  вставленный предмет с RF-буфером (конденсаторы, инструменты, брони), либо выполняет обычный
-  рецепт Заряжателя с фиксированной стоимостью.
-- **Сингулярный циклический сборщик** — 6 параллельных слотов схем вместо одного, принимает
-  настоящие схемы TE, 9 слотов расширений и собственный резервуар на **100 000 mB** (та же
-  механика подмены предмета-контейнера жидкостью из бака, что и у настоящего Циклического
-  сборщика).
-- **Сингулярная ячейка** — единый симметричный блок хранения энергии на основе настоящей
-  Resonant Energy Cell, доведённый до предела, который RF-API вообще способен выразить.
-  Истинная ёмкость — до **1 000 000 000 000 RF** (1 триллион); GUI показывает реальное число,
-  а не потолок ~2,15 млрд, который `int`-based RF-API может сообщить другим модам. Каждая
-  грань принимает или отдаёт столько RF, сколько позволяет один вызов передачи.
+Все машины обрабатывают по несколько линий параллельно из общего буфера RF, имеют 9 слотов
+расширений и собственный энергетический тир.
 
-Ещё в моде есть **Сингулярная шестерня** и **Рамка механизма (сингулярная)** — общая
-крафтовая база для всех машин.
+- **Сингулярный измельчитель** — 3 линии, первичный и вторичный выход.
+- **Сингулярная красная печь** — 3 линии.
+- **Сингулярная лесопилка** — 3 линии, первичный и вторичный выход.
+- **Сингулярная индукционная печь** — 3 линии по два входа, рецепты Индукционного
+  плавильщика TE. Второй вход линии принимает только то, что образует рецепт с первым, поэтому
+  трубы и автовход сами собирают правильные пары. Все 8 режимов сторон оригинала, включая
+  отдельные входы для первого и второго ингредиента.
+- **Сингулярный магматический тигель** — 3 линии, плавящие в общий бак на **100 000 mB**.
+  Прогресс показан «жидкой» стрелкой, как в TE.
+- **Сингулярный жидкостный транспозер** — 3 линии вокруг общего бака на **100 000 mB**;
+  кнопка переключает всю машину между наполнением и извлечением. Переносные баки и другие
+  жидкостные контейнеры наполняются и опустошаются постепенно, по одному на линию.
+- **Сингулярный зарядник** — 9 линий. Каждая либо заряжает вставленный предмет с RF-буфером,
+  либо выполняет рецепт Заряжателя.
+- **Сингулярный циклический сборщик** — 6 параллельных слотов схем, настоящие схемы TE, буфер
+  на 18 слотов и бак на **100 000 mB** (жидкость подменяет предмет-контейнер в рецепте, как у
+  настоящего Циклического сборщика).
+
+## Хранилища
+
+- **Сингулярная ячейка** — до **1 000 000 000 000 RF** (1 триллион). GUI и Waila показывают
+  настоящее число, а не потолок ~2,15 млрд, который может сообщить `int`-based RF-API.
+- **Сингулярный бак** — **4 096 000 mB**, в 8 раз больше резонансного бака TE. Жидкость видна
+  за стеклом; ключ включает слив вниз (оранжевая рамка), лишнее переливается в бак сверху,
+  вёдра работают правым кликом, компаратор показывает уровень.
+- **Сингулярный сейф** — **120 слотов** (у резонансного сейфа TE не больше 104). Модель сейфа
+  TE с открывающейся крышкой.
+
+Бак и сейф при любом разрушении сохраняют содержимое в выпавшем предмете. Машины с баком
+(тигель, транспозер) при разборке ключом тоже уносят жидкость с собой.
+
+## Набор улучшения
+
+ПКМ **Набором улучшения** по уже стоящей машине TE (Измельчитель, Печь, Лесопилка,
+Индукционный плавильщик, Магматический тигель, Жидкостный транспозер, Заряжатель, Циклический
+сборщик), по переносному баку или сейфу превращает её в сингулярную версию прямо на месте.
+Переносятся предметы, расширения, RF, жидкость, направление, настройка сторон и имя; то, чему
+не нашлось места, отдаётся игроку. Защищённый чужой блок улучшить нельзя.
+
+Также в моде есть **Сингулярная шестерня** и **Рамка механизма (сингулярная)** — общая
+крафтовая база для всех машин. Все рецепты собираются только из крафтовых материалов.
 
 ## Совместимость с Thermal Expansion
 
-Мод намеренно повторяет поведение оригинала, а не изобретает своё:
+Мод намеренно повторяет поведение оригинала:
 
 - **Настоящие расширения TE** — Автовход/выход, Реконфигурируемые стороны, Красный контроль,
-  Скорость механизма, Вторичный выход, Хранилище энергии. Одно и то же расширение нельзя
-  поставить в два слота: блок отказывает в дубликате, а не игнорирует его молча, как TE.
-- **Вкладка «Конфигурация»** в стиле CoFH с индикаторами подключения прямо на блоке
-  (синий/красный/жёлтый/оранжевый), показывающими режим каждой грани. Жесты те же:
-  ЛКМ — вперёд, ПКМ — назад, Shift — сброс.
+  Скорость механизма, Вторичный выход, Хранилище энергии. В слоте расширения лежит ровно один
+  предмет, и один тип нельзя поставить дважды.
+- **Вкладка «Конфигурация»** в стиле CoFH с индикаторами прямо на блоке. ЛКМ — вперёд, ПКМ —
+  назад, Shift — сброс. Автоматика, как и в TE, работает только через стороны «Вход» и
+  «Выход»; сторона «Все» — для труб.
 - **Вкладка «Красный контроль»** (Отключено / Низкий / Высокий сигнал).
-- **Серповидный гаечный ключ**: обычный клик поворачивает машину, **Shift+ПКМ разбирает** её в
-  предмет, который сохраняет расширения, конфигурацию сторон и накопленную энергию. Реализован
-  `IDismantleable`, поэтому подходят и инструменты других модов.
-- **Redprint из TE копирует настройки** между машинами — реализован `IPortableData`. Копируется
-  конфигурация сторон и режим красного камня, только между машинами одного типа.
-- **Выход на компаратор** у всех блоков: машины показывают, сколько линий занято, Сборщик —
-  заполненность буфера, Ячейка — заряд.
-- **Звук работы** у Измельчителя, Печи и Лесопилки — настоящие звуковые события Thermal
-  Expansion.
-- **Waila** (если установлена) показывает у каждой машины запас RF, текущий расход и число
-  активных линий, а у Ячейки — её настоящую ёмкость за пределами `int`.
+- **Гаечный ключ**: клик поворачивает машину вместе с настройкой сторон, **Shift+ПКМ
+  разбирает** её в предмет с расширениями, настройками и энергией. Реализован
+  `IDismantleable`, так что подходят и ключи других модов. Ломать можно любым инструментом —
+  содержимое не теряется.
+- **Redprint из TE** копирует настройку сторон и красного камня между машинами одного типа.
+- **Компаратор**: машины — число занятых линий, Сборщик — заполненность буфера, Ячейка —
+  заряд, Бак — уровень жидкости.
+- **Звуки работы** — настоящие звуковые события TE.
+- **Waila** (опционально) — запас RF, расход, активные линии и содержимое бака.
+- **NEI** (опционально) — клик по стрелке прогресса открывает рецепты этой машины.
 
-Свежепоставленный блок сразу несёт те же 3 стандартных расширения, что и настоящие машины TE
-(Автовыход, Красный контроль, Реконфигурируемые стороны). Машину можно переименовать в
-наковальне — имя сохраняется при установке и возвращается на выпавший предмет.
+Свежепоставленная машина несёт те же 3 стандартных расширения, что и машины TE. Машину можно
+переименовать в наковальне — имя сохраняется.
 
 ## Интерфейс
 
-Слоты подсвечиваются цветной рамкой по роли текущей конфигурации грани — рамка появляется
-только после того, как игрок сам настроил хотя бы одну грань (при установке все грани
-начинают как «Отключено»). Прогресс обработки показан настоящей заполняющейся стрелкой
-Thermal Expansion рядом с фирменным значком машины. Столбик RF отрисован настоящей текстурой
-шкалы TE, показывает точный запас при наведении и имеет отдельный слот под Конденсаторы —
-вставленный предмет разряжается прямо в буфер машины.
-
-Клики по кнопкам конфигурации и красного камня озвучены теми же тонами, что и в оригинале.
-Открытая вкладка запоминается и раскрывается сама в следующей машине. Подсказки прячутся,
-пока на курсоре предмет.
+- Прогресс — настоящая заполняющаяся стрелка TE и значок машины; подсказка показывает
+  вложенный и требуемый RF.
+- Слоты подсвечиваются цветом роли по текущей настройке сторон; подсказка на пустом слоте
+  говорит, что в него класть.
+- **Закрепление линий**: Shift+ПКМ по занятому входному слоту закрепляет линию за этим
+  предметом — туда не попадёт ничего другого, ни руками, ни трубами, ни автовходом.
+- **Вкладка «Информация»** с описанием машины и подсказками (прокрутка колёсиком).
+- Открытая вкладка запоминается между машинами, клики озвучены тонами оригинала, баки
+  нарисованы текстурой самой жидкости.
 
 ## Собственные расширения мода
 
-Два «запредельных» расширения, которых нет в настоящем Thermal Expansion; крафтятся
-«прокачкой» максимального тира соответствующего расширения TE:
-
 - **Расширение: Скорость Уровень 4** — x10 скорость обработки за +200% к расходу RF/т сверх
-  и без того дорогого 3-го тира. Работает на Измельчителе, Печи, Лесопилке и Заряднике.
-- **Расширение: Вторичное сито уровень 4** — +200% к шансу вторичного выхода (фактически
-  гарантирует срабатывание для любого рецепта с ненулевым шансом) за +25% к расходу RF/т.
-  Работает на Измельчителе и Лесопилке.
+  3-го уровня. Работает на всех машинах мода, кроме Сборщика.
+- **Расширение: Вторичное сито уровень 4** — +200% к шансу вторичного выхода за +25% к
+  расходу RF/т. Работает на Измельчителе, Лесопилке, Индукционной печи и Транспозере. Как и в
+  TE, Индукционная печь (любой побочный продукт) и Лесопилка (опилки) при сите могут выдать
+  второй экземпляр.
 
 ## Настройка
 
-При первом запуске создаётся `config/ThermalADD.cfg`. В нём можно задать:
+При первом запуске создаётся `config/ThermalADD.cfg`:
 
 - у каждой машины — ёмкость буфера, скорость приёма RF и базовый расход RF/т;
-- ёмкость Сингулярной ячейки;
-- включение/отключение любого рецепта крафта по отдельности (сам блок остаётся
-  зарегистрированным, так что существующие миры не ломаются);
+- ёмкость Сингулярной ячейки и вместимость Сингулярного бака;
+- отключение любого рецепта по отдельности (блок остаётся зарегистрированным, миры не
+  ломаются);
 - `gui.colorBlindPalette` — палитра рамок слотов, безопасная для дальтоников.
 
-Значения ограничиваются безопасным диапазоном: часть показаний GUI передаётся ванильным
-16-битным протоколом, и выход за его пределы приводил бы к мусору на экране. Пределы указаны
-в комментариях самого конфига.
+Значения ограничиваются безопасным диапазоном (пределы описаны в самом конфиге). На сервере
+его значения передаются клиентам при входе, так что GUI показывает настоящие цифры сервера.
 
 ## Сборка
 
-Требуются jar-файлы CoFHCore, ThermalExpansion и ThermalFoundation (не входят в репозиторий —
-см. [`libs/README.txt`](libs/README.txt)), их нужно положить в `libs/`. Затем из этой папки:
+Нужны jar-файлы CoFHCore, ThermalExpansion и ThermalFoundation (и NotEnoughItems — только для
+компиляции интеграции). Они не входят в репозиторий — см. [`libs/README.txt`](libs/README.txt).
+Положите их в `libs/` и выполните:
 
 ```powershell
 gradle build
@@ -114,6 +133,7 @@ gradle build
 - ThermalExpansion 4.1.5+
 - ThermalFoundation 1.2.6+
 - Waila 1.5.10 *(опционально)*
+- NotEnoughItems *(опционально)*
 
 ## Благодарности
 
@@ -126,101 +146,118 @@ gradle build
 ## 🇬🇧 English
 
 A [Thermal Expansion 4](https://www.curseforge.com/minecraft/mc-mods/thermal-expansion) addon
-for Minecraft **1.7.10** (Forge). Adds upgraded, multi-slot, `UltimateResonant`-tier versions
-of TE4 machines, each running on Thermal Expansion's own real recipe lists, plus a couple of
-mod-original "beyond spec" augments and an ultra-capacity energy cell.
+for Minecraft **1.7.10** (Forge). Adds upgraded, multi-line, `UltimateResonant`-tier versions of
+TE4 machines running on Thermal Expansion's own recipe lists, ultra-capacity storage, a kit that
+upgrades machines already in the world, and a couple of mod-original "beyond spec" augments.
 
 ## Machines
 
-- **Singularity Pulverizer** — 3 parallel processing lines instead of one, 9 augment slots, its
-  own RF tier.
-- **Singularity Redstone Furnace** — 3 parallel lines instead of one, 9 augment slots.
-- **Singularity Sawmill** — 3 parallel lines, primary and secondary output, 9 augment slots.
-- **Singularity Charger** — 9 simultaneous charging lines instead of the real Charger's single
-  slot. Each line independently supports both of the original's modes: it either charges an
-  inserted RF-holding item (capacitors, tools, armor) in place, or runs a normal flat-cost
+Every machine processes several lines in parallel from one shared RF buffer, has 9 augment
+slots and its own RF tier.
+
+- **Singularity Pulverizer** — 3 lines, primary and secondary output.
+- **Singularity Redstone Furnace** — 3 lines.
+- **Singularity Sawmill** — 3 lines, primary and secondary output.
+- **Singularity Induction Smelter** — 3 lines with two inputs each, on TE's Induction Smelter
+  recipes. A line's second input only takes what forms a recipe with its first, so pipes and
+  auto input build valid pairs on their own. All 8 of the original's side modes, including
+  separate inputs for the first and second ingredient.
+- **Singularity Magma Crucible** — 3 lines melting into a shared **100,000 mB** tank, with TE's
+  fluid-filled progress arrow.
+- **Singularity Fluid Transposer** — 3 lines around a shared **100,000 mB** tank; a button
+  switches the whole machine between filling and extracting. Portable tanks and other fluid
+  containers are filled or emptied gradually, one per line.
+- **Singularity Charger** — 9 lines. Each either charges an inserted RF-holding item or runs a
   Charger recipe.
-- **Singularity Cyclic Assembler** — 6 parallel schematic slots instead of one, accepts genuine
-  TE schematics, 9 augment slots, and its own **100,000 mB** fluid tank (the same
-  filled-container-substitution mechanic real TE's Cyclic Assembler uses).
-- **Singularity Energy Cell** — a single, symmetric energy storage block modeled on TE's own
-  Resonant Energy Cell, pushed past what the standard RF API can normally express. Its true
-  storage holds up to **1,000,000,000,000 RF**; the GUI displays the real number, not the
-  ~2.15 billion ceiling the `int`-based RF API can report to other mods. Every side accepts or
-  gives as much RF as a single transfer call allows.
+- **Singularity Cyclic Assembler** — 6 parallel schematic slots, genuine TE schematics, an
+  18-slot buffer and a **100,000 mB** tank (fluid stands in for filled containers in a recipe,
+  as on the real Cyclic Assembler).
+
+## Storage
+
+- **Singularity Energy Cell** — up to **1,000,000,000,000 RF** (one trillion). The GUI and
+  Waila show the real number, not the ~2.15 billion ceiling the `int`-based RF API can report.
+- **Singularity Tank** — **4,096,000 mB**, eight times TE's Resonant tank. The fluid shows
+  through the glass; a wrench toggles pour-down mode (orange frame), overflow goes into the tank
+  above, buckets work on right-click, and a comparator reads the level.
+- **Singularity Strongbox** — **120 slots** (TE's Resonant Strongbox tops out at 104), with TE's
+  own strongbox model and opening lid.
+
+The tank and the strongbox keep their contents inside the dropped item however they are broken.
+Machines with a tank (Crucible, Transposer) carry their fluid along when dismantled too.
+
+## Upgrade Kit
+
+Right-click a placed TE machine (Pulverizer, Furnace, Sawmill, Induction Smelter, Magma
+Crucible, Fluid Transposer, Charger, Cyclic Assembler), portable tank or strongbox with the
+**Singularity Upgrade Kit** to turn it into its singularity version in place. Items, augments,
+RF, fluid, facing, side configuration and name carry over; anything with no place is handed to
+the player. Someone else's secured block cannot be upgraded.
 
 The mod also adds a **Singularity Gear** and a **Machine Frame (Singularity)** — the shared
-crafting base for every machine.
+crafting base for every machine. Every recipe uses crafted materials only.
 
 ## Thermal Expansion parity
 
-The mod deliberately mirrors the original's behaviour rather than inventing its own:
+The mod deliberately mirrors the original's behaviour:
 
 - **Real TE augments** — Auto Input/Output, Reconfigurable Sides, Redstone Control, Machine
-  Speed, Machine Secondary, Energy Storage. The same augment can never occupy two slots: the
-  block refuses the duplicate outright rather than silently ignoring it the way real TE does.
-- **CoFH-style Configuration tab** with in-world connection badges (blue/red/yellow/orange)
-  showing each face's mode. Same gestures: left-click cycles forward, right-click back, shift
-  resets.
+  Speed, Machine Secondary, Energy Storage. An augment slot holds exactly one item, and a type
+  cannot be installed twice.
+- **CoFH-style Configuration tab** with in-world badges. Left-click cycles forward, right-click
+  back, shift resets. As in TE, automation only moves through Input and Output sides; an "All"
+  side is for pipes.
 - **Redstone Control tab** (Disabled / Low / High).
-- **Crescent Hammer**: a plain click rotates the machine, **sneak + right-click dismantles** it
-  into an item that keeps its augments, side configuration and stored energy. `IDismantleable`
-  is implemented, so other mods' wrenches work too.
-- **TE's Redprint copies settings** between machines via `IPortableData` — side configuration
-  and redstone mode, only between machines of the same type.
-- **Comparator output** on every block: machines report how many lines are busy, the Assembler
-  its ingredient buffer, the Cell its charge.
-- **Working sound** on the Pulverizer, Furnace and Sawmill, using Thermal Expansion's own sound
-  events.
-- **Waila** (if installed) shows each machine's stored RF, current draw and active line count,
-  and the Cell's real beyond-`int` capacity.
+- **Wrench**: a click rotates the machine along with its side setup, **sneak + right-click
+  dismantles** it into an item keeping its augments, settings and energy. `IDismantleable` is
+  implemented, so other mods' wrenches work too. Any tool breaks the blocks without losing
+  their contents.
+- **TE's Redprint** copies side and redstone settings between machines of the same type.
+- **Comparator output**: machines report busy lines, the Assembler its buffer, the Cell its
+  charge, the Tank its fluid level.
+- **Working sounds** use Thermal Expansion's own sound events.
+- **Waila** (optional) — stored RF, draw, active lines and tank contents.
+- **NEI** (optional) — clicking a progress arrow opens that machine's recipes.
 
-A freshly placed block already carries the same 3 default augments real TE machines do (Auto
-Output, Redstone Control, Reconfigurable Sides). Machines can be renamed in an anvil; the name
-survives placement and comes back on the dropped item.
+A freshly placed machine carries the same 3 default augments TE machines do. Machines can be
+renamed in an anvil; the name is kept.
 
 ## Interface
 
-Slots get a role-coloured highlight ring that tracks the matching side's live configuration -
-the ring only appears once the player has actually configured a face (a freshly placed block
-starts with every face Disabled). Processing progress uses Thermal Expansion's own filling
-arrow next to the machine's signature glyph. The RF bar is drawn with TE's own gauge texture,
-shows the exact stored amount on hover, and has a dedicated slot beneath it for Capacitors -
-whatever is dropped in there drains straight into the machine's buffer.
-
-Configuration and redstone buttons click with the same pitches as the original. The tab you had
-open is remembered and re-opens in the next machine. Tooltips are suppressed while a stack is
-on the cursor.
+- Progress uses TE's filling arrow and machine glyph; a tooltip shows RF invested and required.
+- Slots get a role-coloured ring from the live side setup; hovering an empty slot says what goes
+  in it.
+- **Line locks**: shift + right-click a filled input slot to lock that line to its item —
+  nothing else gets in, by hand, pipe or auto input.
+- **Information tab** with the machine's description and tips (mouse-wheel scrolling).
+- The open tab is remembered between machines, clicks use the original's pitches, and tanks are
+  drawn with the fluid's own texture.
 
 ## Mod-original augments
 
-Two "beyond spec" augments that don't exist in real Thermal Expansion, crafted by upgrading
-TE's own top-tier augment items:
-
-- **Augment: Speed Level 4** — x10 processing speed for +200% RF/t over Level 3's already-steep
-  cost. Works on the Pulverizer, Furnace, Sawmill and Charger.
-- **Augment: Secondary Sieve Level 4** — +200% secondary output chance (effectively guarantees
-  any recipe with a nonzero secondary chance) for +25% RF/t. Works on the Pulverizer and
-  Sawmill.
+- **Augment: Speed Level 4** — x10 processing speed for +200% RF/t over Level 3. Works on every
+  machine in the mod except the Assembler.
+- **Augment: Secondary Sieve Level 4** — +200% secondary output chance for +25% RF/t. Works on
+  the Pulverizer, Sawmill, Induction Smelter and Transposer. As in TE, the Induction Smelter
+  (any byproduct) and the Sawmill (sawdust) can roll a second copy with a sieve installed.
 
 ## Configuration
 
-`config/ThermalADD.cfg` is created on first run. It lets you set:
+`config/ThermalADD.cfg` is created on first run:
 
-- per machine: energy buffer, RF intake rate and base RF/t processing cost;
-- the Singularity Cell's capacity;
-- an individual on/off switch for every crafting recipe (the block itself stays registered, so
-  existing worlds are unaffected);
-- `gui.colorBlindPalette` — a colour-blind-safe palette for the slot role rings.
+- per machine: energy buffer, RF intake rate and base RF/t cost;
+- the Singularity Cell's capacity and the Singularity Tank's volume;
+- an on/off switch for every recipe (the block stays registered, worlds are unaffected);
+- `gui.colorBlindPalette` — a colour-blind-safe palette for the slot rings.
 
-Values are clamped to a safe range: some GUI readouts travel over vanilla's 16-bit window
-property protocol, and exceeding it would show garbage on screen. The limits are documented in
-the config file itself.
+Values are clamped to a safe range (the limits are documented in the file). A server sends its
+values to clients on login, so the GUI shows the server's real numbers.
 
 ## Building
 
-Requires the CoFHCore, ThermalExpansion and ThermalFoundation jars (not included - see
-[`libs/README.txt`](libs/README.txt)) placed in `libs/`. Then, from this directory:
+Requires the CoFHCore, ThermalExpansion and ThermalFoundation jars (and NotEnoughItems, only to
+compile the integration). They are not included — see [`libs/README.txt`](libs/README.txt). Put
+them in `libs/` and run:
 
 ```powershell
 gradle build
@@ -235,6 +272,7 @@ The mod jar is produced under `build/libs/`.
 - ThermalExpansion 4.1.5+
 - ThermalFoundation 1.2.6+
 - Waila 1.5.10 *(optional)*
+- NotEnoughItems *(optional)*
 
 ## Credits
 
