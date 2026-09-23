@@ -23,9 +23,15 @@ import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
+import net.thermaladd.mod.tileentity.TileSingularCrucible;
 import net.thermaladd.mod.tileentity.TileSingularSmelter;
+import net.thermaladd.mod.tileentity.TileSingularTransposer;
+import net.thermaladd.mod.client.gui.GuiSingularCrucible;
 import net.thermaladd.mod.client.gui.GuiSingularSmelter;
+import net.thermaladd.mod.client.gui.GuiSingularTransposer;
+import net.thermaladd.mod.inventory.ContainerSingularCrucible;
 import net.thermaladd.mod.inventory.ContainerSingularSmelter;
+import net.thermaladd.mod.inventory.ContainerSingularTransposer;
 
 public class GuiHandler implements IGuiHandler {
 
@@ -53,6 +59,12 @@ public class GuiHandler implements IGuiHandler {
         if (id == ThermalADD.GUI_ID_SINGULAR_SMELTER && te instanceof TileSingularSmelter) {
             return new ContainerSingularSmelter(player.inventory, (TileSingularSmelter) te);
         }
+        if (id == ThermalADD.GUI_ID_SINGULAR_CRUCIBLE && te instanceof TileSingularCrucible) {
+            return new ContainerSingularCrucible(player.inventory, (TileSingularCrucible) te);
+        }
+        if (id == ThermalADD.GUI_ID_SINGULAR_TRANSPOSER && te instanceof TileSingularTransposer) {
+            return new ContainerSingularTransposer(player.inventory, (TileSingularTransposer) te);
+        }
         return null;
     }
 
@@ -79,6 +91,12 @@ public class GuiHandler implements IGuiHandler {
         }
         if (id == ThermalADD.GUI_ID_SINGULAR_SMELTER && te instanceof TileSingularSmelter) {
             return new GuiSingularSmelter(player.inventory, (TileSingularSmelter) te);
+        }
+        if (id == ThermalADD.GUI_ID_SINGULAR_CRUCIBLE && te instanceof TileSingularCrucible) {
+            return new GuiSingularCrucible(player.inventory, (TileSingularCrucible) te);
+        }
+        if (id == ThermalADD.GUI_ID_SINGULAR_TRANSPOSER && te instanceof TileSingularTransposer) {
+            return new GuiSingularTransposer(player.inventory, (TileSingularTransposer) te);
         }
         return null;
     }

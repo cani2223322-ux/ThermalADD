@@ -8,7 +8,9 @@ import net.thermaladd.mod.block.BlockAdvancedSawmill;
 import net.thermaladd.mod.block.BlockImprovedAssembler;
 import net.thermaladd.mod.block.BlockSingularityCell;
 import net.thermaladd.mod.block.BlockSingularityFrame;
+import net.thermaladd.mod.block.BlockSingularCrucible;
 import net.thermaladd.mod.block.BlockSingularSmelter;
+import net.thermaladd.mod.block.BlockSingularTransposer;
 import net.thermaladd.mod.item.ItemBlockSingularityMachine;
 import net.thermaladd.mod.item.ItemBlockAdvancedCharger;
 import net.thermaladd.mod.item.ItemBlockAdvancedFurnace;
@@ -27,9 +29,13 @@ public class ModBlocks {
     public static BlockSingularityCell singularityCell;
     public static BlockSingularityFrame singularityFrame;
     public static BlockSingularSmelter singularSmelter;
+    public static BlockSingularCrucible singularCrucible;
+    public static BlockSingularTransposer singularTransposer;
 
     public static void init() {
         singularSmelter = new BlockSingularSmelter();
+        singularCrucible = new BlockSingularCrucible();
+        singularTransposer = new BlockSingularTransposer();
         advancedPulverizer = new BlockAdvancedPulverizer();
         improvedAssembler = new BlockImprovedAssembler();
         advancedFurnace = new BlockAdvancedFurnace();
@@ -47,6 +53,8 @@ public class ModBlocks {
         GameRegistry.registerBlock(advancedCharger, ItemBlockAdvancedCharger.class, "advancedCharger");
         GameRegistry.registerBlock(singularityCell, ItemBlockSingularityCell.class, "singularityCell");
         GameRegistry.registerBlock(singularSmelter, ItemBlockSingularityMachine.class, "singularSmelter");
+        GameRegistry.registerBlock(singularCrucible, ItemBlockSingularityMachine.class, "singularCrucible");
+        GameRegistry.registerBlock(singularTransposer, ItemBlockSingularityMachine.class, "singularTransposer");
         // Plain crafting material, no custom tooltip/behavior needed - default ItemBlock is fine.
         GameRegistry.registerBlock(singularityFrame, "singularityFrame");
     }

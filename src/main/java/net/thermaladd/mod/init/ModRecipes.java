@@ -7,6 +7,7 @@ import cofh.thermalexpansion.block.TEBlocks;
 import cofh.thermalexpansion.block.cell.BlockCell;
 import cofh.thermalexpansion.block.machine.BlockMachine;
 import cofh.thermalexpansion.block.simple.BlockFrame;
+import cofh.thermalexpansion.block.tank.BlockTank;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.item.TEItems;
 import cofh.thermalfoundation.item.TFItems;
@@ -68,6 +69,16 @@ public class ModRecipes {
         registerSafely("Singular Induction Smelter", ModConfig.recipeSingularSmelter, new RecipeRegistration() {
             public void register() {
                 registerSingularSmelterRecipe();
+            }
+        });
+        registerSafely("Singular Magma Crucible", ModConfig.recipeSingularCrucible, new RecipeRegistration() {
+            public void register() {
+                registerSingularCrucibleRecipe();
+            }
+        });
+        registerSafely("Singular Fluid Transposer", ModConfig.recipeSingularTransposer, new RecipeRegistration() {
+            public void register() {
+                registerSingularTransposerRecipe();
             }
         });
         registerSafely("Speed Level 4 augment", ModConfig.recipeSpeedLevel4Augment, new RecipeRegistration() {
@@ -273,6 +284,50 @@ public class ModRecipes {
                 'G', ModItems.singularityGear,
                 'P', "dustPyrotheum",
                 'S', smelter,
+                'F', ModBlocks.singularityFrame));
+    }
+
+    /**
+     * Frame + Gear base again: Hardened Glass (Induction-Smelter-made from obsidian dust and lead)
+     * at the corners, the heat-proof glass real TE builds its own Crucible from, and Invar ingots.
+     */
+    private static void registerSingularCrucibleRecipe() {
+        ItemStack crucible = new ItemStack(TEBlocks.blockMachine, 1, BlockMachine.Types.CRUCIBLE.ordinal());
+
+        // H G H      H = Hardened Glass (crafted), G = Singularity Gear
+        // I C I      I = Invar ingot, C = real Magma Crucible
+        // H F H      F = Singularity Frame
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModBlocks.singularCrucible),
+                "HGH",
+                "ICI",
+                "HFH",
+                'H', "blockGlassHardened",
+                'G', ModItems.singularityGear,
+                'I', "ingotInvar",
+                'C', crucible,
+                'F', ModBlocks.singularityFrame));
+    }
+
+    /**
+     * Frame + Gear base with Lumium ingots and a pair of Reinforced Portable Tanks - TE's own
+     * crafted tanks, for a machine that is built around its tank.
+     */
+    private static void registerSingularTransposerRecipe() {
+        ItemStack transposer = new ItemStack(TEBlocks.blockMachine, 1, BlockMachine.Types.TRANSPOSER.ordinal());
+
+        // L G L      L = Lumium ingot, G = Singularity Gear
+        // K T K      K = Reinforced Portable Tank (crafted), T = real Fluid Transposer
+        // L F L      F = Singularity Frame
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModBlocks.singularTransposer),
+                "LGL",
+                "KTK",
+                "LFL",
+                'L', "ingotLumium",
+                'G', ModItems.singularityGear,
+                'K', BlockTank.tankReinforced,
+                'T', transposer,
                 'F', ModBlocks.singularityFrame));
     }
 

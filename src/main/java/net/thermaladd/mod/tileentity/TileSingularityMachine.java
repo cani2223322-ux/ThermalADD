@@ -714,6 +714,26 @@ public abstract class TileSingularityMachine extends TileEntity
         return tank == null ? 0 : tank.getCapacity();
     }
 
+    /** Tank contents carried by a dismantled machine's item - see BlockSingularityMachine. */
+    public static final String TAG_FLUID = "Fluid";
+
+    public void writeTankToItem(NBTTagCompound tag) {
+        if (tank != null && tank.getFluidAmount() > 0) {
+            tag.setTag(TAG_FLUID, tank.getFluid().writeToNBT(new NBTTagCompound()));
+        }
+    }
+
+    public void readTankFromItem(NBTTagCompound tag) {
+        if (tank != null && tag.hasKey(TAG_FLUID)) {
+            FluidStack fluid = FluidStack.loadFluidStackFromNBT(tag.getCompoundTag(TAG_FLUID));
+            if (fluid != null) {
+                fluid.amount = Math.min(fluid.amount, tank.getCapacity());
+                tank.setFluid(fluid);
+                markDirty();
+            }
+        }
+    }
+
     private int clientFluidId = -1;
     private int clientFluidAmount = 0;
 

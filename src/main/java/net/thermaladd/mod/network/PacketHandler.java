@@ -16,5 +16,6 @@ public class PacketHandler {
         INSTANCE.registerMessage(MessageSetRedstoneControlHandler.class, MessageSetRedstoneControl.class, 2, Side.SERVER);
         INSTANCE.registerMessage(MessageEnergyCellSyncHandler.class, MessageEnergyCellSync.class, 3, Side.CLIENT);
         INSTANCE.registerMessage(MessageConfigSyncHandler.class, MessageConfigSync.class, 4, Side.CLIENT);
+        INSTANCE.registerMessage(MessageMachineModeHandler.class, MessageMachineMode.class, 5, Side.SERVER);
     }
 }

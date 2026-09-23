@@ -8,6 +8,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.StatCollector;
+import net.minecraftforge.fluids.FluidStack;
 import net.thermaladd.mod.block.BlockSingularityMachine;
 import net.thermaladd.mod.tileentity.TileSingularityMachine;
 
@@ -30,5 +31,12 @@ public class ItemBlockSingularityMachine extends ItemBlock {
                 String.format(Locale.ROOT, "%,d", block.getItemCapacity())));
         list.add(StatCollector.translateToLocalFormatted("tooltip.thermaladd.input",
                 String.format(Locale.ROOT, "%,d", block.getItemReceiveRate())));
+        if (stack.hasTagCompound() && stack.getTagCompound().hasKey(TileSingularityMachine.TAG_FLUID)) {
+            FluidStack fluid = FluidStack.loadFluidStackFromNBT(stack.getTagCompound().getCompoundTag(TileSingularityMachine.TAG_FLUID));
+            if (fluid != null) {
+                list.add(StatCollector.translateToLocalFormatted("tooltip.thermaladd.fluid",
+                        fluid.getLocalizedName(), String.format(Locale.ROOT, "%,d", fluid.amount)));
+            }
+        }
     }
 }

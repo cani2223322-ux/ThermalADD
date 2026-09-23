@@ -26,7 +26,9 @@ import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
+import net.thermaladd.mod.tileentity.TileSingularCrucible;
 import net.thermaladd.mod.tileentity.TileSingularSmelter;
+import net.thermaladd.mod.tileentity.TileSingularTransposer;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
 /**
@@ -88,6 +90,8 @@ public class ThermalADD {
         GameRegistry.registerTileEntity(TileAdvancedSawmill.class, MODID + "_advanced_sawmill_tile");
         GameRegistry.registerTileEntity(TileAdvancedCharger.class, MODID + "_advanced_charger_tile");
         GameRegistry.registerTileEntity(TileSingularSmelter.class, MODID + "_singular_smelter_tile");
+        GameRegistry.registerTileEntity(TileSingularCrucible.class, MODID + "_singular_crucible_tile");
+        GameRegistry.registerTileEntity(TileSingularTransposer.class, MODID + "_singular_transposer_tile");
         proxy.registerRenderers();
         PacketHandler.init();
     }

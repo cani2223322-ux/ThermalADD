@@ -10,7 +10,9 @@ import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
+import net.thermaladd.mod.tileentity.TileSingularCrucible;
 import net.thermaladd.mod.tileentity.TileSingularSmelter;
+import net.thermaladd.mod.tileentity.TileSingularTransposer;
 
 /**
  * Loads config/ThermalADD.cfg and writes the tunable values straight into the tiles' own
@@ -39,6 +41,8 @@ public final class ModConfig {
     private static final String CAT_ASSEMBLER = "machines.assembler";
     private static final String CAT_CELL = "machines.cell";
     private static final String CAT_SMELTER = "machines.smelter";
+    private static final String CAT_CRUCIBLE = "machines.crucible";
+    private static final String CAT_TRANSPOSER = "machines.transposer";
     private static final String CAT_RECIPES = "recipes";
     private static final String CAT_GUI = "gui";
 
@@ -88,6 +92,8 @@ public final class ModConfig {
     public static boolean recipeAdvancedCharger = true;
     public static boolean recipeImprovedAssembler = true;
     public static boolean recipeSingularSmelter = true;
+    public static boolean recipeSingularCrucible = true;
+    public static boolean recipeSingularTransposer = true;
     public static boolean recipeSingularityCell = true;
     public static boolean recipeSingularityGear = true;
     public static boolean recipeSingularityFrame = true;
@@ -159,6 +165,20 @@ public final class ModConfig {
         TileSingularSmelter.BASE_ENERGY_PER_TICK = process(cfg, CAT_SMELTER,
                 TileSingularSmelter.BASE_ENERGY_PER_TICK, MAX_PROCESS_ENERGY_SINGULAR);
 
+        TileSingularCrucible.BASE_ENERGY_CAPACITY = capacity(cfg, CAT_CRUCIBLE,
+                TileSingularCrucible.BASE_ENERGY_CAPACITY, MAX_CAPACITY);
+        TileSingularCrucible.ENERGY_RECEIVE_PER_TICK = transfer(cfg, CAT_CRUCIBLE,
+                TileSingularCrucible.ENERGY_RECEIVE_PER_TICK);
+        TileSingularCrucible.BASE_ENERGY_PER_TICK = process(cfg, CAT_CRUCIBLE,
+                TileSingularCrucible.BASE_ENERGY_PER_TICK, MAX_PROCESS_ENERGY_SINGULAR);
+
+        TileSingularTransposer.BASE_ENERGY_CAPACITY = capacity(cfg, CAT_TRANSPOSER,
+                TileSingularTransposer.BASE_ENERGY_CAPACITY, MAX_CAPACITY);
+        TileSingularTransposer.ENERGY_RECEIVE_PER_TICK = transfer(cfg, CAT_TRANSPOSER,
+                TileSingularTransposer.ENERGY_RECEIVE_PER_TICK);
+        TileSingularTransposer.BASE_ENERGY_PER_TICK = process(cfg, CAT_TRANSPOSER,
+                TileSingularTransposer.BASE_ENERGY_PER_TICK, MAX_PROCESS_ENERGY_SINGULAR);
+
         TileSingularityCell.CAPACITY = cellCapacity(cfg, TileSingularityCell.CAPACITY);
 
         // Cross-checks between values that are each individually in range. A machine only starts a
@@ -179,6 +199,10 @@ public final class ModConfig {
                 TileImprovedAssembler.ENERGY_CAPACITY, TileImprovedAssembler.PROCESS_ENERGY, 1);
         TileSingularSmelter.BASE_ENERGY_CAPACITY = ensureRunnable(CAT_SMELTER,
                 TileSingularSmelter.BASE_ENERGY_CAPACITY, TileSingularSmelter.BASE_ENERGY_PER_TICK, WORST_COST_WITH_SIEVE);
+        TileSingularCrucible.BASE_ENERGY_CAPACITY = ensureRunnable(CAT_CRUCIBLE,
+                TileSingularCrucible.BASE_ENERGY_CAPACITY, TileSingularCrucible.BASE_ENERGY_PER_TICK, WORST_COST_SPEED_ONLY);
+        TileSingularTransposer.BASE_ENERGY_CAPACITY = ensureRunnable(CAT_TRANSPOSER,
+                TileSingularTransposer.BASE_ENERGY_CAPACITY, TileSingularTransposer.BASE_ENERGY_PER_TICK, WORST_COST_WITH_SIEVE);
     }
 
     /** Machine Speed IV's energy multiplier. */
@@ -206,7 +230,7 @@ public final class ModConfig {
      * the server sends its values on login (MessageConfigSync) and the client puts its own back on
      * disconnect. Order is fixed and shared by snapshotMachineValues/applyMachineValues.
      */
-    public static final int SYNCED_VALUE_COUNT = 18;
+    public static final int SYNCED_VALUE_COUNT = 24;
 
     private static int[] localMachineValues;
     private static long localCellCapacity;
@@ -218,7 +242,9 @@ public final class ModConfig {
                 TileAdvancedSawmill.BASE_ENERGY_CAPACITY, TileAdvancedSawmill.ENERGY_RECEIVE_PER_TICK, TileAdvancedSawmill.BASE_ENERGY_PER_TICK,
                 TileAdvancedCharger.BASE_ENERGY_CAPACITY, TileAdvancedCharger.ENERGY_RECEIVE_PER_TICK, TileAdvancedCharger.BASE_ENERGY_PER_TICK,
                 TileImprovedAssembler.ENERGY_CAPACITY, TileImprovedAssembler.ENERGY_RECEIVE_PER_TICK, TileImprovedAssembler.PROCESS_ENERGY,
-                TileSingularSmelter.BASE_ENERGY_CAPACITY, TileSingularSmelter.ENERGY_RECEIVE_PER_TICK, TileSingularSmelter.BASE_ENERGY_PER_TICK
+                TileSingularSmelter.BASE_ENERGY_CAPACITY, TileSingularSmelter.ENERGY_RECEIVE_PER_TICK, TileSingularSmelter.BASE_ENERGY_PER_TICK,
+                TileSingularCrucible.BASE_ENERGY_CAPACITY, TileSingularCrucible.ENERGY_RECEIVE_PER_TICK, TileSingularCrucible.BASE_ENERGY_PER_TICK,
+                TileSingularTransposer.BASE_ENERGY_CAPACITY, TileSingularTransposer.ENERGY_RECEIVE_PER_TICK, TileSingularTransposer.BASE_ENERGY_PER_TICK
         };
     }
 
@@ -245,6 +271,12 @@ public final class ModConfig {
         TileSingularSmelter.BASE_ENERGY_CAPACITY = v[15];
         TileSingularSmelter.ENERGY_RECEIVE_PER_TICK = v[16];
         TileSingularSmelter.BASE_ENERGY_PER_TICK = v[17];
+        TileSingularCrucible.BASE_ENERGY_CAPACITY = v[18];
+        TileSingularCrucible.ENERGY_RECEIVE_PER_TICK = v[19];
+        TileSingularCrucible.BASE_ENERGY_PER_TICK = v[20];
+        TileSingularTransposer.BASE_ENERGY_CAPACITY = v[21];
+        TileSingularTransposer.ENERGY_RECEIVE_PER_TICK = v[22];
+        TileSingularTransposer.BASE_ENERGY_PER_TICK = v[23];
         if (cellCapacity > 0L) {
             TileSingularityCell.CAPACITY = cellCapacity;
         }
@@ -336,6 +368,8 @@ public final class ModConfig {
         recipeAdvancedCharger = recipe(cfg, "advancedCharger");
         recipeImprovedAssembler = recipe(cfg, "improvedAssembler");
         recipeSingularSmelter = recipe(cfg, "singularSmelter");
+        recipeSingularCrucible = recipe(cfg, "singularCrucible");
+        recipeSingularTransposer = recipe(cfg, "singularTransposer");
         recipeSingularityCell = recipe(cfg, "singularityCell");
         recipeSingularityGear = recipe(cfg, "singularityGear");
         recipeSingularityFrame = recipe(cfg, "singularityFrame");

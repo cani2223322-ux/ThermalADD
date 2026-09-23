@@ -25,7 +25,9 @@ import net.thermaladd.mod.block.BlockAdvancedPulverizer;
 import net.thermaladd.mod.block.BlockAdvancedSawmill;
 import net.thermaladd.mod.block.BlockImprovedAssembler;
 import net.thermaladd.mod.block.BlockSingularityCell;
+import net.thermaladd.mod.block.BlockSingularCrucible;
 import net.thermaladd.mod.block.BlockSingularSmelter;
+import net.thermaladd.mod.block.BlockSingularTransposer;
 import net.thermaladd.mod.tileentity.TileSingularityMachine;
 import net.thermaladd.mod.tileentity.TileAdvancedCharger;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
@@ -86,6 +88,8 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
         register(registrar, provider, BlockAdvancedCharger.class);
         register(registrar, provider, BlockImprovedAssembler.class);
         register(registrar, provider, BlockSingularSmelter.class);
+        register(registrar, provider, BlockSingularCrucible.class);
+        register(registrar, provider, BlockSingularTransposer.class);
     }
 
     /** Both halves are needed: the NBT provider produces the numbers server-side, the body provider draws them. */

@@ -11,6 +11,7 @@ import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
 import net.minecraft.util.MathHelper;
@@ -133,6 +134,9 @@ public abstract class BlockSingularityMachine extends BlockContainer implements 
                     tile.installDefaultAugments();
                 }
                 MachineDismantle.restoreSidesAndEnergy(stack, tile);
+                if (stack.hasTagCompound()) {
+                    tile.readTankFromItem(stack.getTagCompound());
+                }
             }
         }
     }
@@ -228,7 +232,17 @@ public abstract class BlockSingularityMachine extends BlockContainer implements 
         ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileSingularityMachine) {
-            drops.add(MachineDismantle.createDrop(this, damageDropped(metadata), (TileSingularityMachine) te));
+            ItemStack drop = MachineDismantle.createDrop(this, damageDropped(metadata), (TileSingularityMachine) te);
+            // The tank travels with the machine too, so a Crucible full of lava can be moved.
+            NBTTagCompound fluidTag = new NBTTagCompound();
+            ((TileSingularityMachine) te).writeTankToItem(fluidTag);
+            if (!fluidTag.hasNoTags()) {
+                if (!drop.hasTagCompound()) {
+                    drop.setTagCompound(new NBTTagCompound());
+                }
+                drop.getTagCompound().setTag(TileSingularityMachine.TAG_FLUID, fluidTag.getTag(TileSingularityMachine.TAG_FLUID));
+            }
+            drops.add(drop);
         } else {
             drops.add(new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata)));
         }

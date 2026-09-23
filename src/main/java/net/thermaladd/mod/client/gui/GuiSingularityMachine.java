@@ -218,6 +218,44 @@ public abstract class GuiSingularityMachine extends TabbedMachineGui {
         drawRect(x + TANK_WIDTH, y - 1, x + TANK_WIDTH + 1, y + TANK_HEIGHT + 1, ringColor);
     }
 
+    protected static final ResourceLocation FLUID_ARROW_RIGHT =
+            new ResourceLocation("cofh", "textures/gui/elements/Progress_Fluid_Right.png");
+    protected static final ResourceLocation FLUID_ARROW_LEFT =
+            new ResourceLocation("cofh", "textures/gui/elements/Progress_Fluid_Left.png");
+
+    /**
+     * Real TE's fluid progress arrow (GuiCrucible/GuiTransposer): the empty frame at u=0, the
+     * fluid's texture over the filled part, then the frame at u=24 over just that part - it is
+     * transparent inside the arrow, so it cuts the fluid to the arrow's shape. A left-pointing
+     * arrow fills from the right. Absolute coordinates, 24x16.
+     */
+    protected void drawFluidArrow(ResourceLocation texture, int x, int y, int progress, int maxProgress,
+            FluidStack fluid, boolean fromRight) {
+        int filled = maxProgress <= 0 ? 0 : (int) Math.min(PROGRESS_ARROW_WIDTH, (long) progress * PROGRESS_ARROW_WIDTH / maxProgress);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        mc.getTextureManager().bindTexture(texture);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        drawQuad(x, y, PROGRESS_ARROW_WIDTH, PROGRESS_ARROW_HEIGHT, 0F, 0F, 24 / 64F, 1F);
+        if (filled > 0) {
+            int offset = fromRight ? PROGRESS_ARROW_WIDTH - filled : 0;
+            IIcon icon = fluid != null ? fluid.getFluid().getIcon(fluid) : null;
+            if (icon != null) {
+                mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
+                int color = fluid.getFluid().getColor(fluid);
+                GL11.glColor4f((color >> 16 & 0xFF) / 255F, (color >> 8 & 0xFF) / 255F, (color & 0xFF) / 255F, 1F);
+                drawIconBottom(icon, x + offset, y, Math.min(16, filled), PROGRESS_ARROW_HEIGHT);
+                if (filled > 16) {
+                    drawIconBottom(icon, x + offset + 16, y, filled - 16, PROGRESS_ARROW_HEIGHT);
+                }
+                GL11.glColor4f(1F, 1F, 1F, 1F);
+            }
+            mc.getTextureManager().bindTexture(texture);
+            drawQuad(x + offset, y, filled, PROGRESS_ARROW_HEIGHT, (24 + offset) / 64F, 0F, (24 + offset + filled) / 64F, 1F);
+        }
+        GL11.glDisable(GL11.GL_BLEND);
+    }
+
     /** The bottom {@code height} pixels of a 16x16 atlas icon, {@code width} wide. */
     private void drawIconBottom(IIcon icon, int x, int y, int width, int height) {
         float u1 = icon.getMinU();
