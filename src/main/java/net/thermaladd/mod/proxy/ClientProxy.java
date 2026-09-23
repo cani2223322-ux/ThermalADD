@@ -2,6 +2,12 @@ package net.thermaladd.mod.proxy;
 
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.network.simpleimpl.IMessage;
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
+import net.thermaladd.mod.network.MessageEnergyCellSync;
+import net.thermaladd.mod.network.MessageEnergyCellSyncHandler;
+import net.thermaladd.mod.network.MessageTileRenderSync;
+import net.thermaladd.mod.network.MessageTileRenderSyncHandler;
 import net.minecraft.item.Item;
 import net.minecraftforge.client.MinecraftForgeClient;
 import net.thermaladd.mod.client.render.RenderSingularityStrongbox;
@@ -12,6 +18,16 @@ import net.thermaladd.mod.tileentity.TileSingularityStrongbox;
 import net.thermaladd.mod.tileentity.TileSingularityTank;
 
 public class ClientProxy extends CommonProxy {
+
+    @Override
+    public IMessageHandler<MessageTileRenderSync, IMessage> tileRenderSyncHandler() {
+        return new MessageTileRenderSyncHandler();
+    }
+
+    @Override
+    public IMessageHandler<MessageEnergyCellSync, IMessage> energyCellSyncHandler() {
+        return new MessageEnergyCellSyncHandler();
+    }
 
     @Override
     public void registerClientEvents() {

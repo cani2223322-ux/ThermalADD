@@ -19,4 +19,10 @@ public class SlotAugmentFurnace extends Slot {
         }
         return !((TileAdvancedFurnace) this.inventory).hasDuplicateAugmentType(stack, getSlotIndex());
     }
+
+    /** One augment per slot, as in real TE's SlotAugment. */
+    @Override
+    public int getSlotStackLimit() {
+        return 1;
+    }
 }

@@ -135,8 +135,8 @@ public class ContainerAdvancedPulverizer extends Container {
                     return null;
                 }
             } else if (TileAdvancedPulverizer.isValidAugment(stackInSlot)) {
-                if (!mergeItemStack(stackInSlot, TileAdvancedPulverizer.AUGMENT_START,
-                        TileAdvancedPulverizer.AUGMENT_START + TileAdvancedPulverizer.AUGMENT_SLOTS, false)) {
+                if (!SlotMerge.mergeOnePerSlot(inventorySlots, stackInSlot, TileAdvancedPulverizer.AUGMENT_START,
+                        TileAdvancedPulverizer.AUGMENT_START + TileAdvancedPulverizer.AUGMENT_SLOTS)) {
                     return null;
                 }
             } else if (stackInSlot.getItem() instanceof IEnergyContainerItem) {

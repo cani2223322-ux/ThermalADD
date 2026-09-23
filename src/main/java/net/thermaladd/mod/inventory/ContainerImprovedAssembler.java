@@ -40,6 +40,11 @@ public class ContainerImprovedAssembler extends Container {
     private final TileImprovedAssembler tile;
     private final Slot[] augmentSlots = new Slot[TileImprovedAssembler.AUGMENT_SLOTS];
 
+    /** Container slot indices, in the order the constructor adds them. */
+    private static final int CONTAINER_SCHEMATIC_START = 0;
+    private static final int CONTAINER_BUFFER_START = TileImprovedAssembler.SCHEMATIC_SLOTS + TileImprovedAssembler.OUTPUT_SLOTS;
+    private static final int CONTAINER_AUGMENT_START = CONTAINER_BUFFER_START + TileImprovedAssembler.INPUT_SLOTS;
+    private static final int CONTAINER_CHARGE_SLOT = CONTAINER_AUGMENT_START + TileImprovedAssembler.AUGMENT_SLOTS;
     private static final int PLAYER_INV_START = TileImprovedAssembler.TOTAL_SLOTS;
     private static final int PLAYER_HOTBAR_END = PLAYER_INV_START + 36;
 
@@ -126,17 +131,23 @@ public class ContainerImprovedAssembler extends Container {
                     return null;
                 }
             } else if (TileImprovedAssembler.isValidAugment(stackInSlot)) {
-                if (!mergeItemStack(stackInSlot, TileImprovedAssembler.AUGMENT_START,
-                        TileImprovedAssembler.AUGMENT_START + TileImprovedAssembler.AUGMENT_SLOTS, false)) {
+                if (!SlotMerge.mergeOnePerSlot(inventorySlots, stackInSlot, CONTAINER_AUGMENT_START,
+                        CONTAINER_AUGMENT_START + TileImprovedAssembler.AUGMENT_SLOTS)) {
                     return null;
                 }
             } else if (stackInSlot.getItem() instanceof IEnergyContainerItem) {
-                if (!mergeItemStack(stackInSlot, TileImprovedAssembler.CHARGE_SLOT, TileImprovedAssembler.CHARGE_SLOT + 1, false)) {
+                if (!mergeItemStack(stackInSlot, CONTAINER_CHARGE_SLOT, CONTAINER_CHARGE_SLOT + 1, false)) {
                     return null;
                 }
+            } else if (tile.isItemValidForSlot(TileImprovedAssembler.SCHEMATIC_START, stackInSlot)
+                    && SlotMerge.mergeOnePerSlot(inventorySlots, stackInSlot, CONTAINER_SCHEMATIC_START,
+                            CONTAINER_SCHEMATIC_START + TileImprovedAssembler.SCHEMATIC_SLOTS)) {
+                // A schematic went into a free schematic slot, one per slot.
             } else {
-                if (!mergeItemStack(stackInSlot, TileImprovedAssembler.INPUT_START,
-                        TileImprovedAssembler.OUTPUT_START, false)) {
+                // Container order is schematics, OUTPUTS, then the buffer - unlike the tile's own
+                // order - so the buffer is addressed by container index, never the tile's.
+                if (!mergeItemStack(stackInSlot, CONTAINER_BUFFER_START,
+                        CONTAINER_BUFFER_START + TileImprovedAssembler.INPUT_SLOTS, false)) {
                     return null;
                 }
             }

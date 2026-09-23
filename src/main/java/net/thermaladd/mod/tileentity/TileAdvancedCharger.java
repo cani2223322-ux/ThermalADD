@@ -28,6 +28,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.util.IPortableMachineState;
+import net.thermaladd.mod.util.EnergyMath;
 import net.thermaladd.mod.util.LineLocks;
 import net.thermaladd.mod.util.SideRotation;
 
@@ -246,6 +247,11 @@ public class TileAdvancedCharger extends TileEntity
         for (int i = 0; i < inventory.length; i++) {
             inventory[i] = null;
         }
+    }
+
+    @Override
+    public boolean canReconfigureSides() {
+        return augmentReconfigSides;
     }
 
     @Override
@@ -813,13 +819,16 @@ public class TileAdvancedCharger extends TileEntity
         progressMax[line] = recipe.getEnergy();
 
         if (progress[line] < progressMax[line]) {
-            int energyCost = BASE_ENERGY_PER_TICK * speedEnergyMod;
+            int step = BASE_ENERGY_PER_TICK * speedProcessMod;
+            int remaining = progressMax[line] - progress[line];
+            // The last tick pays only for the progress it actually adds - see EnergyMath#tickCost.
+            int energyCost = EnergyMath.tickCost(BASE_ENERGY_PER_TICK * speedEnergyMod, step, remaining);
             if (energyStorage.getEnergyStored() < energyCost) {
                 return false;
             }
             energyStorage.modifyEnergyStored(-energyCost);
             energyPerTick += energyCost;
-            progress[line] += BASE_ENERGY_PER_TICK * speedProcessMod;
+            progress[line] += Math.min(step, remaining);
             return true;
         }
 
@@ -864,7 +873,12 @@ public class TileAdvancedCharger extends TileEntity
             return true;
         }
 
-        int rate = Math.min(BASE_ENERGY_PER_TICK * speedEnergyMod, Math.min(itemMax - itemEnergy, energyStorage.getEnergyStored()));
+        // A stack of N identical batteries shares one NBT, so charging it charges all N at once:
+        // it has to cost N times as much, or the stack comes out as N full batteries for the
+        // price of one. The tick's budget is split between them.
+        int count = Math.max(1, stack.stackSize);
+        int budget = Math.min(BASE_ENERGY_PER_TICK * speedEnergyMod, energyStorage.getEnergyStored());
+        int rate = Math.min(budget / count, itemMax - itemEnergy);
         if (rate <= 0) {
             return false;
         }
@@ -872,8 +886,8 @@ public class TileAdvancedCharger extends TileEntity
         if (accepted <= 0) {
             return false;
         }
-        energyStorage.modifyEnergyStored(-accepted);
-        energyPerTick += accepted;
+        energyStorage.modifyEnergyStored(-accepted * count);
+        energyPerTick += accepted * count;
         progress[line] = energyItem.getEnergyStored(stack);
         return true;
     }
@@ -903,6 +917,12 @@ public class TileAdvancedCharger extends TileEntity
     private boolean autoPullInputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
+            // Like TE: automation pulls only through Input sides and pushes only through Output
+            // sides. An All side is for pipes; auto I/O through it would feed the machine its own
+            // output (or, on the Charger, shuttle full batteries back and forth forever).
+            if (sideCache[side] == SIDE_MODE_ALL) {
+                continue;
+            }
             if (modeAllowsInsertInput(sideCache[side]) && pullFromSide(ForgeDirection.getOrientation(side))) {
                 moved = true;
             }
@@ -913,6 +933,10 @@ public class TileAdvancedCharger extends TileEntity
     private boolean autoPushOutputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
+            // See autoPullInputs: never through an All side.
+            if (sideCache[side] == SIDE_MODE_ALL) {
+                continue;
+            }
             if (modeAllowsExtractOutput(sideCache[side]) && pushToSide(ForgeDirection.getOrientation(side))) {
                 moved = true;
             }

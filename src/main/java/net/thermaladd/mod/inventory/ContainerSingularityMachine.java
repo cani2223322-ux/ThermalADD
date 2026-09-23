@@ -62,7 +62,13 @@ public abstract class ContainerSingularityMachine extends Container {
         addMachineSlots();
 
         for (int i = 0; i < TileSingularityMachine.AUGMENT_SLOTS; i++) {
-            augmentSlots[i] = new SlotValidated(tile, tile.getAugmentStart() + i, PARKED, PARKED);
+            augmentSlots[i] = new SlotValidated(tile, tile.getAugmentStart() + i, PARKED, PARKED) {
+                /** One augment per slot, as in real TE's SlotAugment. */
+                @Override
+                public int getSlotStackLimit() {
+                    return 1;
+                }
+            };
             addSlotToContainer(augmentSlots[i]);
         }
         addSlotToContainer(new SlotEnergy(tile, tile.getChargeSlot(), CHARGE_X, CHARGE_Y));
@@ -112,7 +118,7 @@ public abstract class ContainerSingularityMachine extends Container {
             }
         } else if (tile.isValidAugment(stackInSlot)) {
             int start = tile.getAugmentStart();
-            if (!mergeItemStack(stackInSlot, start, start + TileSingularityMachine.AUGMENT_SLOTS, false)) {
+            if (!SlotMerge.mergeOnePerSlot(inventorySlots, stackInSlot, start, start + TileSingularityMachine.AUGMENT_SLOTS)) {
                 return null;
             }
         } else if (stackInSlot.getItem() instanceof IEnergyContainerItem && tile.isItemValidForSlot(tile.getChargeSlot(), stackInSlot)

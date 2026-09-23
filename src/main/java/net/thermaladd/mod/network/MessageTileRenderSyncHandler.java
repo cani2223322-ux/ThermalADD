@@ -32,8 +32,8 @@ import cofh.lib.audio.SoundTile;
  * audio.ISound}), which only avoids crashing a dedicated server because CoFH's own ASM
  * transformer strips that interface back off server-side via an {@code @Strippable} annotation -
  * a CoFH-internal mechanism this addon has no access to. This message handler, by contrast, is
- * already registered {@code Side.CLIENT}-only (see PacketHandler#init), so FML never even loads
- * this class on a dedicated server in the first place - the same already-proven-safe pattern
+ * only ever created by ClientProxy (see PacketHandler#init - FML would instantiate a handler passed
+ * by class on the server too), so a dedicated server never loads this class in the first place - the same already-proven-safe pattern
  * this file already relied on for referencing {@code Minecraft.getMinecraft()} directly.
  */
 public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTileRenderSync, IMessage> {

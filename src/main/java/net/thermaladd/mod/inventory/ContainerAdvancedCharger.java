@@ -124,8 +124,8 @@ public class ContainerAdvancedCharger extends Container {
                     return null;
                 }
             } else if (TileAdvancedCharger.isValidAugment(stackInSlot)) {
-                if (!mergeItemStack(stackInSlot, TileAdvancedCharger.AUGMENT_START,
-                        TileAdvancedCharger.AUGMENT_START + TileAdvancedCharger.AUGMENT_SLOTS, false)) {
+                if (!SlotMerge.mergeOnePerSlot(inventorySlots, stackInSlot, TileAdvancedCharger.AUGMENT_START,
+                        TileAdvancedCharger.AUGMENT_START + TileAdvancedCharger.AUGMENT_SLOTS)) {
                     return null;
                 }
             } else if (stackInSlot.getItem() instanceof IEnergyContainerItem

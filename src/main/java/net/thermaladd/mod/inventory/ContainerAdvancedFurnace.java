@@ -112,8 +112,8 @@ public class ContainerAdvancedFurnace extends Container {
                     return null;
                 }
             } else if (TileAdvancedFurnace.isValidAugment(stackInSlot)) {
-                if (!mergeItemStack(stackInSlot, TileAdvancedFurnace.AUGMENT_START,
-                        TileAdvancedFurnace.AUGMENT_START + TileAdvancedFurnace.AUGMENT_SLOTS, false)) {
+                if (!SlotMerge.mergeOnePerSlot(inventorySlots, stackInSlot, TileAdvancedFurnace.AUGMENT_START,
+                        TileAdvancedFurnace.AUGMENT_START + TileAdvancedFurnace.AUGMENT_SLOTS)) {
                     return null;
                 }
             } else if (stackInSlot.getItem() instanceof IEnergyContainerItem) {

@@ -194,7 +194,10 @@ public final class MachineUpgrade {
         }
 
         installAugments(inventory, state, augments, leftovers);
-        if (sides != null) {
+        // Without the Reconfigurable Sides augment the new machine hides its Configuration tab and
+        // refuses side changes, so TE's factory sides would be stuck on it - leave them Disabled,
+        // as every machine here is without that augment.
+        if (sides != null && state.canReconfigureSides()) {
             state.applySideModes(sides, facing);
         }
         state.setStoredEnergy(energy);

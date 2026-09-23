@@ -118,8 +118,8 @@ public class ContainerAdvancedSawmill extends Container {
                     return null;
                 }
             } else if (TileAdvancedSawmill.isValidAugment(stackInSlot)) {
-                if (!mergeItemStack(stackInSlot, TileAdvancedSawmill.AUGMENT_START,
-                        TileAdvancedSawmill.AUGMENT_START + TileAdvancedSawmill.AUGMENT_SLOTS, false)) {
+                if (!SlotMerge.mergeOnePerSlot(inventorySlots, stackInSlot, TileAdvancedSawmill.AUGMENT_START,
+                        TileAdvancedSawmill.AUGMENT_START + TileAdvancedSawmill.AUGMENT_SLOTS)) {
                     return null;
                 }
             } else if (stackInSlot.getItem() instanceof IEnergyContainerItem) {

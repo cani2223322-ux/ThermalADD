@@ -32,6 +32,7 @@ import cofh.thermalexpansion.item.TEAugments;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
+import net.thermaladd.mod.util.EnergyMath;
 import net.thermaladd.mod.util.IPortableMachineState;
 import net.thermaladd.mod.util.LineLocks;
 import net.thermaladd.mod.util.SideRotation;
@@ -305,6 +306,11 @@ public abstract class TileSingularityMachine extends TileEntity
         for (int i = 0; i < inventory.length; i++) {
             inventory[i] = null;
         }
+    }
+
+    @Override
+    public boolean canReconfigureSides() {
+        return augmentReconfigSides;
     }
 
     @Override
@@ -936,13 +942,16 @@ public abstract class TileSingularityMachine extends TileEntity
         if (progress[line] >= progressMax[line]) {
             return false;
         }
-        int cost = getLineEnergyCost();
+        int step = getBaseEnergyPerTick() * speedProcessMod;
+        int remaining = progressMax[line] - progress[line];
+        // The last tick pays only for the progress it actually adds - see EnergyMath#tickCost.
+        int cost = EnergyMath.tickCost(getLineEnergyCost(), step, remaining);
         if (energyStorage.getEnergyStored() < cost) {
             return false;
         }
         energyStorage.modifyEnergyStored(-cost);
         energyPerTick += cost;
-        progress[line] += getBaseEnergyPerTick() * speedProcessMod;
+        progress[line] += Math.min(step, remaining);
         return true;
     }
 
@@ -1011,11 +1020,22 @@ public abstract class TileSingularityMachine extends TileEntity
     private boolean autoPullInputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
+            // Like TE: automation pulls only through Input sides and pushes only through Output
+            // sides. An All side is for pipes; auto I/O through it would feed the machine its own
+            // output (or, on the Charger, shuttle full batteries back and forth forever).
+            if (isAllMode(sideCache[side])) {
+                continue;
+            }
             if (modeInsertsAnything(sideCache[side]) && pullFromSide(side)) {
                 moved = true;
             }
         }
         return moved;
+    }
+
+    /** Every singularity machine lists All as its last side mode, like TE. */
+    protected boolean isAllMode(int mode) {
+        return mode == getSideModeCount() - 1;
     }
 
     private boolean modeInsertsAnything(int mode) {
@@ -1106,6 +1126,10 @@ public abstract class TileSingularityMachine extends TileEntity
     private boolean autoPushOutputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
+            // See autoPullInputs: never through an All side.
+            if (isAllMode(sideCache[side])) {
+                continue;
+            }
             int mode = sideCache[side];
             for (int slot = 0; slot < getAugmentStart(); slot++) {
                 if (isOutputSlot(slot) && sideExtracts(mode, slot) && inventory[slot] != null && pushSlot(side, slot)) {

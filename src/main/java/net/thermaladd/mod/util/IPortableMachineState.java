@@ -35,6 +35,9 @@ public interface IPortableMachineState {
 
     void setCustomName(String name);
 
+    /** Whether the Reconfigurable Sides augment is installed, i.e. the player can change sides. */
+    boolean canReconfigureSides();
+
     int getEnergy();
 
     void setStoredEnergy(int energy);

@@ -147,3 +147,14 @@ tooltip.thermaladd.upgradeKit.0=ПКМ по машине, баку или сей
 tooltip.thermaladd.upgradeKit.1=превращает её в сингулярную, сохраняя содержимое и настройки сторон
 chat.thermaladd.upgradeKit.done=§aУлучшено: §f%s
 chat.thermaladd.upgradeKit.denied=§cЭтот блок нельзя улучшить - он защищён владельцем.
+
+# Redprint data types (TE's Redprint shows these raw)
+tile.thermaladd.advancedPulverizer=Сингулярный измельчитель
+tile.thermaladd.advancedFurnace=Сингулярная красная печь
+tile.thermaladd.advancedSawmill=Сингулярная лесопилка
+tile.thermaladd.advancedCharger=Сингулярный зарядник
+tile.thermaladd.improvedAssembler=Сингулярный циклический сборщик
+tile.thermaladd.singularityCell=Сингулярная ячейка
+tile.thermaladd.singularSmelter=Сингулярная индукционная печь
+tile.thermaladd.singularCrucible=Сингулярный магматический тигель
+tile.thermaladd.singularTransposer=Сингулярный жидкостный транспозер

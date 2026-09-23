@@ -20,4 +20,10 @@ public class SlotAugmentAssembler extends Slot {
         }
         return !((TileImprovedAssembler) this.inventory).hasDuplicateAugmentType(stack, getSlotIndex());
     }
+
+    /** One augment per slot, as in real TE's SlotAugment. */
+    @Override
+    public int getSlotStackLimit() {
+        return 1;
+    }
 }

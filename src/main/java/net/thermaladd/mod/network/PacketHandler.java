@@ -12,9 +12,11 @@ public class PacketHandler {
 
     public static void init() {
         INSTANCE.registerMessage(MessageCycleSideHandler.class, MessageCycleSide.class, 0, Side.SERVER);
-        INSTANCE.registerMessage(MessageTileRenderSyncHandler.class, MessageTileRenderSync.class, 1, Side.CLIENT);
+        // Client-bound handlers come from the proxy: FML instantiates a handler passed by class on
+        // both sides, and the real ones cannot even be loaded on a dedicated server.
+        INSTANCE.registerMessage(ThermalADD.proxy.tileRenderSyncHandler(), MessageTileRenderSync.class, 1, Side.CLIENT);
         INSTANCE.registerMessage(MessageSetRedstoneControlHandler.class, MessageSetRedstoneControl.class, 2, Side.SERVER);
-        INSTANCE.registerMessage(MessageEnergyCellSyncHandler.class, MessageEnergyCellSync.class, 3, Side.CLIENT);
+        INSTANCE.registerMessage(ThermalADD.proxy.energyCellSyncHandler(), MessageEnergyCellSync.class, 3, Side.CLIENT);
         INSTANCE.registerMessage(MessageConfigSyncHandler.class, MessageConfigSync.class, 4, Side.CLIENT);
         INSTANCE.registerMessage(MessageMachineModeHandler.class, MessageMachineMode.class, 5, Side.SERVER);
     }

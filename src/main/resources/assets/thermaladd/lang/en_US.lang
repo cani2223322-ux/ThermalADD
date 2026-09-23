@@ -147,3 +147,14 @@ tooltip.thermaladd.upgradeKit.0=Right-click a Thermal Expansion machine, tank or
 tooltip.thermaladd.upgradeKit.1=to turn it into its singularity version, keeping contents and side setup
 chat.thermaladd.upgradeKit.done=§aUpgraded to: §f%s
 chat.thermaladd.upgradeKit.denied=§cThis block cannot be upgraded - it is secured by its owner.
+
+# Redprint data types (TE's Redprint shows these raw)
+tile.thermaladd.advancedPulverizer=Singularity Pulverizer
+tile.thermaladd.advancedFurnace=Singularity Redstone Furnace
+tile.thermaladd.advancedSawmill=Singularity Sawmill
+tile.thermaladd.advancedCharger=Singularity Charger
+tile.thermaladd.improvedAssembler=Singularity Cyclic Assembler
+tile.thermaladd.singularityCell=Singularity Energy Cell
+tile.thermaladd.singularSmelter=Singularity Induction Smelter
+tile.thermaladd.singularCrucible=Singularity Magma Crucible
+tile.thermaladd.singularTransposer=Singularity Fluid Transposer

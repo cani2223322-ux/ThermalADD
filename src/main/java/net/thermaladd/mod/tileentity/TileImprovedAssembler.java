@@ -301,6 +301,11 @@ public class TileImprovedAssembler extends TileEntity
     }
 
     @Override
+    public boolean canReconfigureSides() {
+        return augmentReconfigSides;
+    }
+
+    @Override
     public void setStoredEnergy(int energy) {
         energyStored = Math.max(0, Math.min(energy, ENERGY_CAPACITY));
         markDirty();
@@ -854,6 +859,12 @@ public class TileImprovedAssembler extends TileEntity
     private boolean autoPullInputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
+            // Like TE: automation pulls only through Input sides and pushes only through Output
+            // sides. An All side is for pipes; auto I/O through it would feed the machine its own
+            // output (or, on the Charger, shuttle full batteries back and forth forever).
+            if (sideCache[side] == SIDE_MODE_ALL) {
+                continue;
+            }
             int mode = sideCache[side];
             boolean row1 = modeInsertsRow1(mode);
             boolean row2 = modeInsertsRow2(mode);
@@ -867,6 +878,10 @@ public class TileImprovedAssembler extends TileEntity
     private boolean autoPushOutputs() {
         boolean moved = false;
         for (int side = 0; side < 6; side++) {
+            // See autoPullInputs: never through an All side.
+            if (sideCache[side] == SIDE_MODE_ALL) {
+                continue;
+            }
             if (modeExtractsOutput(sideCache[side]) && pushToSide(ForgeDirection.getOrientation(side))) {
                 moved = true;
             }
