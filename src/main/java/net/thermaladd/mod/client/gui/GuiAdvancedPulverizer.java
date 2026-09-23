@@ -1,5 +1,6 @@
 package net.thermaladd.mod.client.gui;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -185,6 +186,21 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
      * centred in the same gap between the input and output columns, and vertically centred in the
      * line's own 18px row.
      */
+    /**
+     * Each line's progress arrow, panel-relative. With NEI installed, clicking one opens real
+     * Thermal Expansion's own Pulverizer recipes - the same thing clicking the arrow in TE's own
+     * GUI does. See NEIThermalADDConfig.
+     */
+    public static Rectangle[] recipeAreas() {
+        Rectangle[] areas = new Rectangle[TileAdvancedPulverizer.INPUT_SLOTS];
+        for (int line = 0; line < areas.length; line++) {
+            int y = ContainerAdvancedPulverizer.INPUT_Y + line * ContainerAdvancedPulverizer.SLOT_SIZE
+                    + (ContainerAdvancedPulverizer.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
+            areas[line] = new Rectangle(ARROW_X, y, PROGRESS_ARROW_WIDTH, PROGRESS_ARROW_HEIGHT);
+        }
+        return areas;
+    }
+
     @Override
     protected String slotRoleKey(int slot) {
         if (slot < TileAdvancedPulverizer.OUTPUT_PRIMARY_START) {
@@ -328,7 +344,9 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
         for (int line = 0; line < TileAdvancedPulverizer.INPUT_SLOTS; line++) {
             int rowY = ContainerAdvancedPulverizer.INPUT_Y + line * ContainerAdvancedPulverizer.SLOT_SIZE
                     + (ContainerAdvancedPulverizer.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
-            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ARROW_X + PROGRESS_ARROW_WIDTH - SCALE_X,
+            // The glyph only: the arrow belongs to NEI's own "Recipes" click area (see
+            // recipeAreas), and two tooltips over one spot would draw on top of each other.
+            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ACTIVITY_SCALE_SIZE,
                     PROGRESS_ARROW_HEIGHT, tile.getProgress(line), tile.getProgressMax(line))) {
                 return;
             }

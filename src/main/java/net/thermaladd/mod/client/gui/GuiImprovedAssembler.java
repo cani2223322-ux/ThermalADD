@@ -1,5 +1,6 @@
 package net.thermaladd.mod.client.gui;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -203,6 +204,23 @@ public class GuiImprovedAssembler extends TabbedMachineGui {
         }
         energyTab.drawBackground(left, top);
         infoTab.drawBackground(left, top);
+    }
+
+    /**
+     * The gap holding each schematic -> output arrow, panel-relative. With NEI installed, clicking
+     * it opens the ordinary crafting-table recipes - an Assembler crafts exactly those.
+     */
+    public static Rectangle[] recipeAreas() {
+        Rectangle[] areas = new Rectangle[ContainerImprovedAssembler.ROW_Y.length * ContainerImprovedAssembler.PAIR_X.length];
+        int i = 0;
+        for (int row = 0; row < ContainerImprovedAssembler.ROW_Y.length; row++) {
+            for (int col = 0; col < ContainerImprovedAssembler.PAIR_X.length; col++) {
+                int x = ContainerImprovedAssembler.PAIR_X[col] + ContainerImprovedAssembler.SLOT_SIZE;
+                int width = ContainerImprovedAssembler.OUTPUT_OFFSET - ContainerImprovedAssembler.SLOT_SIZE - 1;
+                areas[i++] = new Rectangle(x, ContainerImprovedAssembler.ROW_Y[row], width, 16);
+            }
+        }
+        return areas;
     }
 
     /** Small static right-pointing triangle (7x7) marking schematic -> output direction; the real Assembler crafts instantly, so there's no progress fraction to animate here. */

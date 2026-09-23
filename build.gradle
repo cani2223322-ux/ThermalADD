@@ -50,7 +50,10 @@ dependencies {
             // Compile-only, for net.thermaladd.mod.waila.ThermalADDWailaPlugin - see
             // libs/README.txt and that class's own javadoc for why the mod builds and runs
             // fine with or without Waila actually present at runtime.
-            'libs/Waila-1.5.10_1.7.10.jar'
+            'libs/Waila-1.5.10_1.7.10.jar',
+            // Compile-only as well, for net.thermaladd.mod.nei.NEIThermalADDConfig. NEI finds
+            // that class by its name and only loads it when NEI itself is installed.
+            'libs/NotEnoughItems-1.7.10-1.0.5.120-universal.jar'
     )
 }
 

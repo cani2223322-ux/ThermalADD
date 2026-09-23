@@ -1,5 +1,6 @@
 package net.thermaladd.mod.client.gui;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -148,6 +149,17 @@ public class GuiAdvancedSawmill extends TabbedMachineGui {
         drawEnergyStored(left + ENERGY_X, top + ENERGY_Y, tile.getEnergy(), tile.getMaxEnergy());
     }
 
+    /** Each line's progress arrow, panel-relative - NEI opens TE's Sawmill recipes from it. */
+    public static Rectangle[] recipeAreas() {
+        Rectangle[] areas = new Rectangle[TileAdvancedSawmill.INPUT_SLOTS];
+        for (int line = 0; line < areas.length; line++) {
+            int y = ContainerAdvancedSawmill.INPUT_Y + line * ContainerAdvancedSawmill.SLOT_SIZE
+                    + (ContainerAdvancedSawmill.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
+            areas[line] = new Rectangle(ARROW_X, y, PROGRESS_ARROW_WIDTH, PROGRESS_ARROW_HEIGHT);
+        }
+        return areas;
+    }
+
     @Override
     protected String slotRoleKey(int slot) {
         if (slot < TileAdvancedSawmill.OUTPUT_PRIMARY_START) {
@@ -273,7 +285,8 @@ public class GuiAdvancedSawmill extends TabbedMachineGui {
         for (int line = 0; line < TileAdvancedSawmill.INPUT_SLOTS; line++) {
             int rowY = ContainerAdvancedSawmill.INPUT_Y + line * ContainerAdvancedSawmill.SLOT_SIZE
                     + (ContainerAdvancedSawmill.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
-            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ARROW_X + PROGRESS_ARROW_WIDTH - SCALE_X,
+            // The glyph only - the arrow is NEI's click area, see GuiAdvancedPulverizer.
+            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ACTIVITY_SCALE_SIZE,
                     PROGRESS_ARROW_HEIGHT, tile.getProgress(line), tile.getProgressMax(line))) {
                 return;
             }

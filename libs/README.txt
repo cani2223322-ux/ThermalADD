@@ -6,6 +6,7 @@ and were copied from an existing Minecraft install on this machine:
   ThermalExpansion-1.7.10-4.1.5-248.jar <- thermalexpansion-1.7.10-4.1.5-248.jar
   ThermalFoundation-1.7.10-1.2.6-118.jar <- thermalfoundation-1.7.10-1.2.6-118.jar
   Waila-1.5.10_1.7.10.jar               <- Waila-1.5.10_1.7.10.jar
+  NotEnoughItems-1.7.10-1.0.5.120-universal.jar <- NotEnoughItems-1.7.10-1.0.5.120-universal.jar
 
 build.gradle references them via `flatDir { dirs 'libs' }` + `deobfCompile name: '...'`.
 If you upgrade CoFHCore/ThermalExpansion, replace the jars here (keep the filenames in sync
@@ -19,3 +20,7 @@ CoFHCore/ThermalExpansion/ThermalFoundation, nothing in the mod hard-requires th
 present for the mod to build or run correctly without Waila - it's only here so
 ThermalADDWailaPlugin has real mcp.mobius.waila.api.* interfaces to compile against instead of
 hand-written stand-ins that could drift from the real API.
+
+NotEnoughItems-1.7.10-1.0.5.120-universal.jar is compile-only in exactly the same way, for
+net.thermaladd.mod.nei.NEIThermalADDConfig. NEI discovers that class itself (by its NEI*Config
+name) and only when NEI is installed; nothing else in the mod references it.

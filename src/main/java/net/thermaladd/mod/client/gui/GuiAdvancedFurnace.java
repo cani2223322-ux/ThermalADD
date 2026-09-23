@@ -1,5 +1,6 @@
 package net.thermaladd.mod.client.gui;
 
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -144,6 +145,17 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         drawEnergyStored(left + ENERGY_X, top + ENERGY_Y, tile.getEnergy(), tile.getMaxEnergy());
     }
 
+    /** Each line's progress arrow, panel-relative - NEI opens TE's Furnace recipes from it. */
+    public static Rectangle[] recipeAreas() {
+        Rectangle[] areas = new Rectangle[TileAdvancedFurnace.INPUT_SLOTS];
+        for (int line = 0; line < areas.length; line++) {
+            int y = ContainerAdvancedFurnace.INPUT_Y + line * ContainerAdvancedFurnace.SLOT_SIZE
+                    + (ContainerAdvancedFurnace.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
+            areas[line] = new Rectangle(ARROW_X, y, PROGRESS_ARROW_WIDTH, PROGRESS_ARROW_HEIGHT);
+        }
+        return areas;
+    }
+
     @Override
     protected String slotRoleKey(int slot) {
         if (slot < TileAdvancedFurnace.OUTPUT_START) {
@@ -266,7 +278,8 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
         for (int line = 0; line < TileAdvancedFurnace.INPUT_SLOTS; line++) {
             int rowY = ContainerAdvancedFurnace.INPUT_Y + line * ContainerAdvancedFurnace.SLOT_SIZE
                     + (ContainerAdvancedFurnace.SLOT_SIZE - PROGRESS_ARROW_HEIGHT) / 2;
-            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ARROW_X + PROGRESS_ARROW_WIDTH - SCALE_X,
+            // The glyph only - the arrow is NEI's click area, see GuiAdvancedPulverizer.
+            if (drawProgressTooltip(mouseX, mouseY, SCALE_X, rowY, ACTIVITY_SCALE_SIZE,
                     PROGRESS_ARROW_HEIGHT, tile.getProgress(line), tile.getProgressMax(line))) {
                 return;
             }
