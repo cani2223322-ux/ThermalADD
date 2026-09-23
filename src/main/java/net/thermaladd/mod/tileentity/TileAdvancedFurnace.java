@@ -28,6 +28,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.util.IPortableMachineState;
+import net.thermaladd.mod.util.SideRotation;
 
 /**
  * Advanced Furnace tile entity - the third "improved TE machine" in this mod, same overall
@@ -165,13 +166,14 @@ public class TileAdvancedFurnace extends TileEntity
     @Override
     public void writePortableData(EntityPlayer player, NBTTagCompound tag) {
         tag.setByteArray("SideCache", sideCache.clone());
+        tag.setByte("Facing", facing);
         tag.setByte("RSControl", (byte) rsMode.ordinal());
     }
 
     @Override
     public void readPortableData(EntityPlayer player, NBTTagCompound tag) {
         if (augmentReconfigSides && tag.hasKey("SideCache")) {
-            applySideModes(tag.getByteArray("SideCache"));
+            applySideModes(tag.getByteArray("SideCache"), tag.hasKey("Facing") ? tag.getByte("Facing") : -1);
         }
         if (augmentRedstoneControl && tag.hasKey("RSControl")) {
             int ordinal = tag.getByte("RSControl") & 0xFF;
@@ -189,12 +191,33 @@ public class TileAdvancedFurnace extends TileEntity
         return sideCache.clone();
     }
 
+    /** Rotated onto this machine's facing, front forced Disabled - see TileAdvancedPulverizer. */
     @Override
-    public void applySideModes(byte[] modes) {
-        if (modes != null && modes.length == sideCache.length && isValidSideArray(modes)) {
-            sideCache = modes.clone();
-            markDirty();
-            syncRenderState();
+    public void applySideModes(byte[] modes, int sourceFacing) {
+        if (modes == null || modes.length != sideCache.length || !isValidSideArray(modes)) {
+            return;
+        }
+        byte[] rotated = SideRotation.rotate(modes, sourceFacing, facing);
+        if (facing >= 0 && facing < rotated.length) {
+            rotated[facing] = SIDE_MODE_DISABLED;
+        }
+        sideCache = rotated;
+        markDirty();
+        syncRenderState();
+    }
+
+    /** Wrench rotation carries the side configuration along - see TileAdvancedPulverizer. */
+    public void rotateFacing(int newFacing) {
+        byte[] rotated = SideRotation.rotate(sideCache, facing, newFacing);
+        rotated[newFacing] = SIDE_MODE_DISABLED;
+        sideCache = rotated;
+        setFacing(newFacing);
+    }
+
+    /** Empties every slot after breakBlock spilled them - see TileAdvancedPulverizer. */
+    public void clearContentsOnBreak() {
+        for (int i = 0; i < inventory.length; i++) {
+            inventory[i] = null;
         }
     }
 
@@ -1144,7 +1167,6 @@ public class TileAdvancedFurnace extends TileEntity
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
-        energyStorage.readFromNBT(tag);
         facing = tag.getByte("Facing");
         if (tag.hasKey("CustomName")) {
             customName = tag.getString("CustomName");
@@ -1189,6 +1211,9 @@ public class TileAdvancedFurnace extends TileEntity
         }
 
         installAugments();
+        // After installAugments(), never before - see TileAdvancedPulverizer#readFromNBT: CoFH clamps
+        // the loaded value to the current capacity, which the Energy Storage augment only raises here.
+        energyStorage.readFromNBT(tag);
 
         isActive = false;
         for (int i = 0; i < INPUT_SLOTS; i++) {

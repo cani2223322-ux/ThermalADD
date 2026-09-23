@@ -20,8 +20,15 @@ public interface IPortableMachineState {
     /** A defensive copy - callers must not be able to write straight into the tile's own array. */
     byte[] getSideModesCopy();
 
-    /** Ignores an array of the wrong length or with an out-of-range mode in it. */
-    void applySideModes(byte[] modes);
+    /**
+     * Applies a side configuration that was captured on a machine facing {@code sourceFacing},
+     * rotated onto this machine's own facing (see SideRotation), and always leaves the front
+     * Disabled - the front is never configurable. Ignores an array of the wrong length or with an
+     * out-of-range mode in it. Pass -1 when the source facing is unknown.
+     */
+    void applySideModes(byte[] modes, int sourceFacing);
+
+    int getFacing();
 
     int getEnergy();
 

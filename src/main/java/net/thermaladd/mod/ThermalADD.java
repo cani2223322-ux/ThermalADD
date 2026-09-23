@@ -1,5 +1,6 @@
 package net.thermaladd.mod;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.FMLLog;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
@@ -12,6 +13,7 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import net.thermaladd.mod.config.ModConfig;
+import net.thermaladd.mod.handler.ConfigSyncEvents;
 import net.thermaladd.mod.handler.GuiHandler;
 import net.thermaladd.mod.init.ModAugments;
 import net.thermaladd.mod.init.ModBlocks;
@@ -88,6 +90,8 @@ public class ThermalADD {
     @EventHandler
     public void init(FMLInitializationEvent event) {
         NetworkRegistry.INSTANCE.registerGuiHandler(instance, new GuiHandler());
+        FMLCommonHandler.instance().bus().register(new ConfigSyncEvents());
+        proxy.registerClientEvents();
     }
 
     @EventHandler

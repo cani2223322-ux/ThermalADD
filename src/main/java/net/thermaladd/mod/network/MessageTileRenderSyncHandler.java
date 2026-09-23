@@ -38,22 +38,17 @@ import cofh.lib.audio.SoundTile;
 public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTileRenderSync, IMessage> {
 
     /**
-     * FML runs onMessage on the NETWORK IO thread, not the client thread. Everything below touches
-     * client-thread-owned state: World#getTileEntity and #markBlockForUpdate, and - worse -
-     * SoundHandler#playSound, which mutates the same playingSounds/tickableSounds maps
-     * SoundManager#updateAllSounds iterates every client tick. Starting a machine while other
-     * sounds were playing could therefore throw a ConcurrentModificationException out of the
-     * client's own sound tick. Minecraft#func_152344_a hands the work to the client thread, which
-     * runs it at the start of its next tick.
+     * Applied directly. In 1.7.10 this already runs on the client thread: FMLProxyPacket does not
+     * override hasPriority(), so NetworkManager queues it and processReceivedPackets handles it
+     * from the client tick. (That is a 1.8+ concern, where packet handling moved off-thread.)
+     * An earlier version routed this through Minecraft#func_152344_a on the mistaken belief that
+     * it ran on the network thread - which deferred nothing, since that method runs the task
+     * inline when already on the main thread, but did wrap it in a catch that silently
+     * swallowed any exception thrown here.
      */
     @Override
-    public IMessage onMessage(final MessageTileRenderSync message, MessageContext ctx) {
-        Minecraft.getMinecraft().func_152344_a(new Runnable() {
-            @Override
-            public void run() {
-                apply(message);
-            }
-        });
+    public IMessage onMessage(MessageTileRenderSync message, MessageContext ctx) {
+        apply(message);
         return null;
     }
 

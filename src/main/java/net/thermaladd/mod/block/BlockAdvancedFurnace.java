@@ -191,7 +191,7 @@ public class BlockAdvancedFurnace extends BlockContainer implements IDismantleab
                             TileAdvancedFurnace tile = (TileAdvancedFurnace) te;
                             int next = nextFacing(tile.getFacing());
                             world.setBlockMetadataWithNotify(x, y, z, next, 3);
-                            tile.setFacing(next);
+                            tile.rotateFacing(next);
                         }
                     }
                     hammer.toolUsed(held, player, x, y, z);
@@ -238,6 +238,7 @@ public class BlockAdvancedFurnace extends BlockContainer implements IDismantleab
                     world.spawnEntityInWorld(entityItem);
                 }
             }
+            tile.clearContentsOnBreak();
         }
         super.breakBlock(world, x, y, z, block, meta);
     }

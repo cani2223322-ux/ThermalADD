@@ -28,6 +28,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.util.IPortableMachineState;
+import net.thermaladd.mod.util.SideRotation;
 
 /**
  * Advanced Charger tile entity - the fifth "improved TE machine" in this mod, and a genuinely
@@ -86,20 +87,6 @@ public class TileAdvancedCharger extends TileEntity
     public static int BASE_ENERGY_CAPACITY = 2000000;
     /** Larger than the other machines' own 10,000 for the same reason - sized to sustain all 9 lines charging flat-out at once (9 * 16,000 = 144,000 RF/t) with margin. */
     public static int ENERGY_RECEIVE_PER_TICK = 200000;
-
-    /**
-     * See TileAdvancedPulverizer#ENERGY_SYNC_SCALE for the base windowProperty short-overflow
-     * fix - but this tile needs a bigger divisor than the other 4 machines' own 256: this
-     * machine's own capacity ceiling is already 2x theirs (2,000,000 * 8 = 16,000,000 with a
-     * maxed Energy Storage augment, vs. their 8,000,000), and unlike their own small flat
-     * recipe-RF progress values, THIS tile's own progress/progressMax (see {@link
-     * #setProgressClient}) reuses this same scale for a charging line's item-charge progress -
-     * a real Resonant Capacitor alone holds 4,000,000 RF (see {@code cofh.thermalexpansion.item.
-     * ItemCapacitor.CAPACITY}). 1024 keeps even the 16,000,000 capacity ceiling safely under the
-     * windowProperty channel's 32,767 short limit (16,000,000 / 1024 = 15,625) with real margin
-     * to spare for a Capacitor's own progress value too.
-     */
-    public static final int ENERGY_SYNC_SCALE = 1024;
 
     /** Real TE has no ambient sound event for the Charger either (no {@code blockMachineCharger} entry in the vendored jar's own sounds.json) - it doesn't grind continuously, so there's nothing to loop, same reasoning as why the Assembler has none. */
 
@@ -205,13 +192,14 @@ public class TileAdvancedCharger extends TileEntity
     @Override
     public void writePortableData(EntityPlayer player, NBTTagCompound tag) {
         tag.setByteArray("SideCache", sideCache.clone());
+        tag.setByte("Facing", facing);
         tag.setByte("RSControl", (byte) rsMode.ordinal());
     }
 
     @Override
     public void readPortableData(EntityPlayer player, NBTTagCompound tag) {
         if (augmentReconfigSides && tag.hasKey("SideCache")) {
-            applySideModes(tag.getByteArray("SideCache"));
+            applySideModes(tag.getByteArray("SideCache"), tag.hasKey("Facing") ? tag.getByte("Facing") : -1);
         }
         if (augmentRedstoneControl && tag.hasKey("RSControl")) {
             int ordinal = tag.getByte("RSControl") & 0xFF;
@@ -229,12 +217,33 @@ public class TileAdvancedCharger extends TileEntity
         return sideCache.clone();
     }
 
+    /** Rotated onto this machine's facing, front forced Disabled - see TileAdvancedPulverizer. */
     @Override
-    public void applySideModes(byte[] modes) {
-        if (modes != null && modes.length == sideCache.length && isValidSideArray(modes)) {
-            sideCache = modes.clone();
-            markDirty();
-            syncRenderState();
+    public void applySideModes(byte[] modes, int sourceFacing) {
+        if (modes == null || modes.length != sideCache.length || !isValidSideArray(modes)) {
+            return;
+        }
+        byte[] rotated = SideRotation.rotate(modes, sourceFacing, facing);
+        if (facing >= 0 && facing < rotated.length) {
+            rotated[facing] = SIDE_MODE_DISABLED;
+        }
+        sideCache = rotated;
+        markDirty();
+        syncRenderState();
+    }
+
+    /** Wrench rotation carries the side configuration along - see TileAdvancedPulverizer. */
+    public void rotateFacing(int newFacing) {
+        byte[] rotated = SideRotation.rotate(sideCache, facing, newFacing);
+        rotated[newFacing] = SIDE_MODE_DISABLED;
+        sideCache = rotated;
+        setFacing(newFacing);
+    }
+
+    /** Empties every slot after breakBlock spilled them - see TileAdvancedPulverizer. */
+    public void clearContentsOnBreak() {
+        for (int i = 0; i < inventory.length; i++) {
+            inventory[i] = null;
         }
     }
 
@@ -582,20 +591,25 @@ public class TileAdvancedCharger extends TileEntity
     }
 
     /**
-     * Unlike the other 3 machines' own flat, small real-TE recipe RF costs, a charging line's
-     * progress/progressMax can be as large as whatever RF-storing item is sitting in it - a real
-     * Resonant Capacitor alone holds 4,000,000 RF (see {@code cofh.thermalexpansion.item.
-     * ItemCapacitor.CAPACITY}), and even the cheapest real Capacitor tier (32,000) already
-     * exceeds the windowProperty channel's 16-bit short limit (32,767) on its own. Scaled by the
-     * same ENERGY_SYNC_SCALE the main energy bar already needs for the same reason - see
-     * ContainerAdvancedCharger's own division on the way out.
+     * A charging line's progress/progressMax is whatever RF the item in it holds - up to
+     * 20,000,000 for a Creative Capacitor, far past the window property's signed 16-bit limit.
+     * Received as exact low/high halves (see ContainerAdvancedCharger); the low half arrives
+     * sign-extended, hence the masks.
      */
-    public void setProgressClient(int line, int scaled) {
-        progress[line] = scaled * ENERGY_SYNC_SCALE;
+    public void setProgressClient(int line, int low) {
+        progress[line] = (progress[line] & 0xFFFF0000) | (low & 0xFFFF);
     }
 
-    public void setProgressMaxClient(int line, int scaled) {
-        progressMax[line] = scaled * ENERGY_SYNC_SCALE;
+    public void setProgressHighClient(int line, int high) {
+        progress[line] = ((high & 0xFFFF) << 16) | (progress[line] & 0xFFFF);
+    }
+
+    public void setProgressMaxClient(int line, int low) {
+        progressMax[line] = (progressMax[line] & 0xFFFF0000) | (low & 0xFFFF);
+    }
+
+    public void setProgressMaxHighClient(int line, int high) {
+        progressMax[line] = ((high & 0xFFFF) << 16) | (progressMax[line] & 0xFFFF);
     }
 
     public int getEnergyPerTick() {
@@ -1211,7 +1225,6 @@ public class TileAdvancedCharger extends TileEntity
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
-        energyStorage.readFromNBT(tag);
         facing = tag.getByte("Facing");
         if (tag.hasKey("CustomName")) {
             customName = tag.getString("CustomName");
@@ -1253,6 +1266,9 @@ public class TileAdvancedCharger extends TileEntity
         }
 
         installAugments();
+        // After installAugments(), never before - see TileAdvancedPulverizer#readFromNBT: CoFH clamps
+        // the loaded value to the current capacity, which the Energy Storage augment only raises here.
+        energyStorage.readFromNBT(tag);
 
         isActive = false;
         for (int i = 0; i < LINE_SLOTS; i++) {

@@ -48,6 +48,14 @@ public class ContainerAdvancedCharger extends Container {
     private int lastMaxEnergy = -1;
     private final int[] lastProgress = new int[TileAdvancedCharger.LINE_SLOTS];
     private final int[] lastProgressMax = new int[TileAdvancedCharger.LINE_SLOTS];
+    /** High halves of each line's progress / progressMax; the low halves keep ids 2-10 / 11-19. */
+    private static final int PROGRESS_HIGH_ID = 37;
+    private static final int PROGRESS_MAX_HIGH_ID = PROGRESS_HIGH_ID + TileAdvancedCharger.LINE_SLOTS;
+    {
+        // -1 = "never sent" - see ContainerAdvancedPulverizer.
+        java.util.Arrays.fill(lastProgress, -1);
+        java.util.Arrays.fill(lastProgressMax, -1);
+    }
     private final int[] lastSideModes = new int[6];
     private int lastReconfigSides = -1;
     private int lastAutoInput = -1;
@@ -171,18 +179,20 @@ public class ContainerAdvancedCharger extends Container {
                 crafter.sendProgressBarUpdate(this, 34, maxEnergy >>> 16);
             }
             for (int line = 0; line < TileAdvancedCharger.LINE_SLOTS; line++) {
-                // See TileAdvancedCharger#setProgressClient's own doc for why this needs the
-                // same ENERGY_SYNC_SCALE division the main energy bar already needs - a
-                // charging line's progress/progressMax can be as large as a real Capacitor's
-                // own RF capacity (millions), which overflows the windowProperty short on its
-                // own otherwise.
-                int p = tile.getProgress(line) / TileAdvancedCharger.ENERGY_SYNC_SCALE;
-                int pMax = tile.getProgressMax(line) / TileAdvancedCharger.ENERGY_SYNC_SCALE;
+                // A charging line's progress is the charged item's own RF - millions for a real
+                // Capacitor. It used to be divided by a scale of 1024 to fit the signed-short
+                // window property, which still wrapped negative for any item past
+                // 32,767 * 1024 = 33.5M RF. Sent as exact low/high halves instead, the same as
+                // the energy readouts (see TileAdvancedPulverizer#applyClientEnergy).
+                int p = tile.getProgress(line);
+                int pMax = tile.getProgressMax(line);
                 if (lastProgress[line] != p) {
-                    crafter.sendProgressBarUpdate(this, 2 + line, p);
+                    crafter.sendProgressBarUpdate(this, 2 + line, p & 0xFFFF);
+                    crafter.sendProgressBarUpdate(this, PROGRESS_HIGH_ID + line, p >>> 16);
                 }
                 if (lastProgressMax[line] != pMax) {
-                    crafter.sendProgressBarUpdate(this, 11 + line, pMax);
+                    crafter.sendProgressBarUpdate(this, 11 + line, pMax & 0xFFFF);
+                    crafter.sendProgressBarUpdate(this, PROGRESS_MAX_HIGH_ID + line, pMax >>> 16);
                 }
             }
             for (int side = 0; side < 6; side++) {
@@ -227,12 +237,8 @@ public class ContainerAdvancedCharger extends Container {
         lastEnergy = energy;
         lastMaxEnergy = maxEnergy;
         for (int line = 0; line < TileAdvancedCharger.LINE_SLOTS; line++) {
-            // Must store the same SCALED value the comparison above uses (see the /
-            // ENERGY_SYNC_SCALE division a few lines up) - storing the raw unscaled value here
-            // would make the two almost never match, forcing a redundant resend every tick even
-            // when nothing actually changed.
-            lastProgress[line] = tile.getProgress(line) / TileAdvancedCharger.ENERGY_SYNC_SCALE;
-            lastProgressMax[line] = tile.getProgressMax(line) / TileAdvancedCharger.ENERGY_SYNC_SCALE;
+            lastProgress[line] = tile.getProgress(line);
+            lastProgressMax[line] = tile.getProgressMax(line);
         }
         for (int side = 0; side < 6; side++) {
             lastSideModes[side] = tile.getSideMode(side);
@@ -260,6 +266,10 @@ public class ContainerAdvancedCharger extends Container {
             tile.setEnergyPerTickHighClient(value);
         } else if (id == 36) {
             tile.setMaxEnergyPerTickHighClient(value);
+        } else if (id >= PROGRESS_HIGH_ID && id < PROGRESS_HIGH_ID + TileAdvancedCharger.LINE_SLOTS) {
+            tile.setProgressHighClient(id - PROGRESS_HIGH_ID, value);
+        } else if (id >= PROGRESS_MAX_HIGH_ID && id < PROGRESS_MAX_HIGH_ID + TileAdvancedCharger.LINE_SLOTS) {
+            tile.setProgressMaxHighClient(id - PROGRESS_MAX_HIGH_ID, value);
         } else if (id >= 2 && id <= 10) {
             tile.setProgressClient(id - 2, value);
         } else if (id >= 11 && id <= 19) {

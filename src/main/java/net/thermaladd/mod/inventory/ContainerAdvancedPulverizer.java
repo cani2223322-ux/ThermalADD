@@ -59,6 +59,13 @@ public class ContainerAdvancedPulverizer extends Container {
     private int lastMaxEnergy = -1;
     private final int[] lastProgress = new int[TileAdvancedPulverizer.INPUT_SLOTS];
     private final int[] lastProgressMax = new int[TileAdvancedPulverizer.INPUT_SLOTS];
+    {
+        // -1 = "never sent", so a freshly opened GUI always receives every line. Starting at 0
+        // left a line that had gone idle since the GUI was last open showing its old half-full
+        // arrow: the server's 0 equalled the cached 0, so it was never sent.
+        java.util.Arrays.fill(lastProgress, -1);
+        java.util.Arrays.fill(lastProgressMax, -1);
+    }
     private final int[] lastSideModes = new int[6];
     private int lastReconfigSides = -1;
     private int lastAutoInput = -1;

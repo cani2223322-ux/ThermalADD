@@ -96,7 +96,9 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
 
     private long energyStored = 0L;
     /** Last light level pushed to the lighting engine - see relightIfNeeded(). */
-    private int lastLightValue = -1;
+    private int lastLightValue = 0;
+    private int relightCooldown = 0;
+    private static final int RELIGHT_COOLDOWN_TICKS = 20;
     private byte[] sideCache = DEFAULT_SIDES.clone();
 
     /** RF actually moved in/out on the tick just finished - "Вход"/"Выход" in the GUI. */
@@ -196,9 +198,11 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
 
     /** Client-side only: applies values received via MessageEnergyCellSync. */
     public void setEnergyStoredClient(long stored, long in, long out) {
+        int previousLight = getLightValue();
         energyStored = stored;
         energyInLastTick = in;
         energyOutLastTick = out;
+        relightClientIfChanged(previousLight);
     }
 
     /** Same idea as real TE's TileCell#getLightValue - a faint glow that brightens as it fills. */
@@ -281,6 +285,10 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
             }
         }
         markDirty();
+        // Without this a Redprint paste changed the modes server-side only: the client kept
+        // showing the old badges (in the world AND in the Config tab) until the chunk reloaded,
+        // and the next GUI click then cycled from the server's value, not the one on screen.
+        syncRenderState();
     }
 
     /** Same "server can't repaint the client's own World" problem as the other tiles - see TileAdvancedPulverizer#syncRenderState. */
@@ -353,10 +361,22 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
      * sitting at a steady charge costs nothing.
      */
     private void relightIfNeeded() {
+        if (relightCooldown > 0) {
+            relightCooldown--;
+            return;
+        }
         int light = getLightValue();
         if (light != lastLightValue) {
             lastLightValue = light;
             worldObj.func_147451_t(xCoord, yCoord, zCoord);
+            // Relighting the SERVER world is not enough on its own: the server's WorldManager
+            // ignores render updates, so light changes never reach clients, and the client never
+            // ticks this tile to notice by itself. A description packet carries the new charge
+            // over, and onDataPacket relights the client's world from it.
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            // A charge hovering right on a level boundary would otherwise flip the level - and
+            // send a packet - every single tick.
+            relightCooldown = RELIGHT_COOLDOWN_TICKS;
         }
     }
 
@@ -371,6 +391,9 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
         energyStored = tag.getLong("Energy");
+        // The saved light already matches the saved charge - starting from it keeps every cell from
+        // relighting (and sending a packet) on its first tick after each chunk load.
+        lastLightValue = getLightValue();
         if (tag.hasKey("Sides")) {
             byte[] sides = tag.getByteArray("Sides");
             // See setSideModes' own doc for why this is validated - a mode outside MODE_COUNT
@@ -400,8 +423,17 @@ public class TileSingularityCell extends TileEntity implements IEnergyHandler, I
 
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity packet) {
+        int previousLight = getLightValue();
         readFromNBT(packet.func_148857_g());
+        relightClientIfChanged(previousLight);
         worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+    }
+
+    /** The client-side half of relightIfNeeded() - see that method for why both are needed. */
+    private void relightClientIfChanged(int previousLight) {
+        if (worldObj != null && worldObj.isRemote && getLightValue() != previousLight) {
+            worldObj.func_147451_t(xCoord, yCoord, zCoord);
+        }
     }
 
     /** Not an IInventory (no slots here), but ContainerSingularityCell wants the same "still there, still in range" gate every other tile's GUI uses. */

@@ -197,7 +197,7 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
             redstoneTab.setOpen(false);
             energyTab.setOpen(false);
             tab.setOpen(!wasOpen);
-            TabTracker.setOpen(tab, !wasOpen);
+            TabTracker.record(augmentsTab, configTab, redstoneTab, energyTab);
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {

@@ -9,7 +9,6 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 import net.minecraft.world.World;
 
 /**
@@ -37,6 +36,7 @@ public final class MachineDismantle {
     public static final String TAG_AUGMENTS = "Augments";
     public static final String TAG_SIDES = "Sides";
     public static final String TAG_ENERGY = "Energy";
+    public static final String TAG_FACING = "Facing";
 
     private MachineDismantle() {
     }
@@ -45,23 +45,26 @@ public final class MachineDismantle {
      * The single ItemStack a machine drops, carrying its installed augments, its per-side
      * configuration and whatever RF was left in its buffer.
      *
-     * Tags are only written when they carry something: an untouched machine (no augments, every
-     * side still Disabled, empty buffer) drops with no NBT at all, so it still stacks with a
-     * freshly crafted one instead of sitting in its own single-item stack forever.
+     * The augment list is always written (see the comment in the body for why); side
+     * configuration and energy only when they carry something.
      */
     public static ItemStack createDrop(Block block, int metadata, IPortableMachineState state) {
         ItemStack drop = new ItemStack(Item.getItemFromBlock(block), 1, metadata);
         NBTTagCompound tag = new NBTTagCompound();
 
-        // writeAugmentsToNBT always sets the key, with an empty list when nothing is installed -
-        // check the list itself, or a machine with an empty augment bay would still be tagged.
-        NBTTagList augments = state.writeAugmentsToNBT(new NBTTagCompound()).getTagList(TAG_AUGMENTS, 10);
-        if (augments.tagCount() > 0) {
-            tag.setTag(TAG_AUGMENTS, augments);
-        }
+        // ALWAYS written, even as an empty list. The placing block reads "no Augments tag" as "a
+        // freshly crafted machine" and installs the real-TE default set of three - so omitting the
+        // tag for an empty augment bay (done once, so emptied machines would stack with crafted
+        // ones) let a player pull the three defaults out, break the machine, place it, and get
+        // three brand-new ones: an infinite augment generator. Losing stackability for a machine
+        // that has actually been placed is the right trade.
+        tag.setTag(TAG_AUGMENTS, state.writeAugmentsToNBT(new NBTTagCompound()).getTagList(TAG_AUGMENTS, 10));
         byte[] sides = state.getSideModesCopy();
         if (isConfigured(sides)) {
             tag.setByteArray(TAG_SIDES, sides);
+            // Sides are stored by absolute world direction, so the facing they were captured at
+            // has to travel too - restoreSidesAndEnergy rotates them onto the new placement.
+            tag.setByte(TAG_FACING, (byte) state.getFacing());
         }
         int energy = state.getEnergy();
         if (energy > 0) {
@@ -93,7 +96,10 @@ public final class MachineDismantle {
         }
         NBTTagCompound tag = stack.getTagCompound();
         if (tag.hasKey(TAG_SIDES)) {
-            state.applySideModes(tag.getByteArray(TAG_SIDES));
+            // -1 for items dropped before the facing was recorded: no rotation, but the front is
+            // still forced Disabled, so an old item can never leave a hidden working mode behind.
+            int sourceFacing = tag.hasKey(TAG_FACING) ? tag.getByte(TAG_FACING) : -1;
+            state.applySideModes(tag.getByteArray(TAG_SIDES), sourceFacing);
         }
         if (tag.hasKey(TAG_ENERGY)) {
             state.setStoredEnergy(tag.getInteger(TAG_ENERGY));

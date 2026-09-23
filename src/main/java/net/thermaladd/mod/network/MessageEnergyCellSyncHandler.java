@@ -8,17 +8,12 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
-/** Handed to the client thread for the same reason as MessageTileRenderSyncHandler - see that class. */
+/** Applied directly - already on the client thread in 1.7.10, see MessageTileRenderSyncHandler#onMessage. */
 public class MessageEnergyCellSyncHandler implements IMessageHandler<MessageEnergyCellSync, IMessage> {
 
     @Override
-    public IMessage onMessage(final MessageEnergyCellSync message, MessageContext ctx) {
-        Minecraft.getMinecraft().func_152344_a(new Runnable() {
-            @Override
-            public void run() {
-                apply(message);
-            }
-        });
+    public IMessage onMessage(MessageEnergyCellSync message, MessageContext ctx) {
+        apply(message);
         return null;
     }
 

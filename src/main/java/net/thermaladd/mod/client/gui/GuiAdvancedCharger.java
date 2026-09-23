@@ -3,8 +3,11 @@ package net.thermaladd.mod.client.gui;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.StatCollector;
 import net.thermaladd.mod.inventory.ContainerAdvancedCharger;
 import net.thermaladd.mod.tileentity.TileAdvancedCharger;
@@ -180,7 +183,7 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
             redstoneTab.setOpen(false);
             energyTab.setOpen(false);
             tab.setOpen(!wasOpen);
-            TabTracker.setOpen(tab, !wasOpen);
+            TabTracker.record(augmentsTab, configTab, redstoneTab, energyTab);
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {
@@ -211,22 +214,7 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
             return;
         }
 
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < ContainerAdvancedCharger.COLS; col++) {
-                int line = row * ContainerAdvancedCharger.COLS + col;
-                int x = left + ContainerAdvancedCharger.LINE_X[col];
-                int y = top + ContainerAdvancedCharger.ROW_Y[row];
-                if (mouseX >= x && mouseX < x + 18 && mouseY >= y && mouseY < y + 18) {
-                    int max = tile.getProgressMax(line);
-                    if (max > 0) {
-                        List<String> lineTooltip = new ArrayList<String>();
-                        lineTooltip.add(tile.getProgress(line) + " / " + max + " RF");
-                        drawHoveringText(lineTooltip, mouseX, mouseY, fontRendererObj);
-                    }
-                    break;
-                }
-            }
-        }
+        // A line's progress is NOT drawn here any more - see renderToolTip below.
 
         List<String> tooltip = new ArrayList<String>();
         augmentsTab.addTooltip(mouseX, mouseY, left, top, tooltip);
@@ -240,5 +228,43 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
         if (!tooltip.isEmpty()) {
             drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
         }
+    }
+
+    /**
+     * A line's progress is appended to the item's OWN tooltip rather than drawn as a second box.
+     * It used to be drawn separately from drawScreen, and since a line only has progress while an
+     * item sits in it, that box always landed on top of vanilla's item tooltip for the same slot.
+     * Line colouring matches vanilla's own renderToolTip: rarity colour on the name, grey below.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    protected void renderToolTip(ItemStack stack, int x, int y) {
+        int line = lineAt(x, y);
+        int max = line < 0 ? 0 : tile.getProgressMax(line);
+        if (max <= 0) {
+            super.renderToolTip(stack, x, y);
+            return;
+        }
+        List<String> lines = stack.getTooltip(mc.thePlayer, mc.gameSettings.advancedItemTooltips);
+        for (int i = 0; i < lines.size(); i++) {
+            lines.set(i, (i == 0 ? stack.getRarity().rarityColor : EnumChatFormatting.GRAY) + lines.get(i));
+        }
+        lines.add(EnumChatFormatting.GRAY + String.valueOf(tile.getProgress(line)) + " / " + max + " RF");
+        FontRenderer font = stack.getItem().getFontRenderer(stack);
+        drawHoveringText(lines, x, y, font == null ? fontRendererObj : font);
+    }
+
+    /** Which charging line's input slot is under the given screen position, or -1. */
+    private int lineAt(int mouseX, int mouseY) {
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < ContainerAdvancedCharger.COLS; col++) {
+                int x = guiLeft + ContainerAdvancedCharger.LINE_X[col];
+                int y = guiTop + ContainerAdvancedCharger.ROW_Y[row];
+                if (mouseX >= x && mouseX < x + 18 && mouseY >= y && mouseY < y + 18) {
+                    return row * ContainerAdvancedCharger.COLS + col;
+                }
+            }
+        }
+        return -1;
     }
 }

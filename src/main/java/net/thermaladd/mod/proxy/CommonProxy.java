@@ -5,4 +5,8 @@ public class CommonProxy {
     public void registerRenderers() {
         // no-op on the dedicated server
     }
+
+    public void registerClientEvents() {
+        // no-op on the dedicated server
+    }
 }

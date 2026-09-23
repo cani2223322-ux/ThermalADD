@@ -229,7 +229,7 @@ public class BlockAdvancedPulverizer extends BlockContainer implements IDismantl
                             TileAdvancedPulverizer tile = (TileAdvancedPulverizer) te;
                             int next = nextFacing(tile.getFacing());
                             world.setBlockMetadataWithNotify(x, y, z, next, 3);
-                            tile.setFacing(next);
+                            tile.rotateFacing(next);
                         }
                     }
                     hammer.toolUsed(held, player, x, y, z);
@@ -276,6 +276,9 @@ public class BlockAdvancedPulverizer extends BlockContainer implements IDismantl
                     world.spawnEntityInWorld(entityItem);
                 }
             }
+            // The copies above are now in the world; the originals must go, or another player
+            // with this GUI still open could shift-click them out in the same tick.
+            tile.clearContentsOnBreak();
         }
         super.breakBlock(world, x, y, z, block, meta);
     }

@@ -31,8 +31,6 @@ import cofh.api.energy.IEnergyContainerItem;
 import cofh.api.energy.IEnergyReceiver;
 import cofh.api.item.IAugmentItem;
 import cofh.api.tileentity.IEnergyInfo;
-import net.minecraft.entity.item.EntityItem;
-
 import cofh.api.tileentity.IPortableData;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
@@ -40,6 +38,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.util.IPortableMachineState;
+import net.thermaladd.mod.util.SideRotation;
 
 /**
  * Improved Cyclic Assembler.
@@ -168,6 +167,8 @@ public class TileImprovedAssembler extends TileEntity
      */
     private final ItemStack[] cachedSchematicRef = new ItemStack[SCHEMATIC_SLOTS];
     private final IRecipe[] cachedRecipe = new IRecipe[SCHEMATIC_SLOTS];
+    /** The exact grid each cachedRecipe entry was resolved against - see resolveRecipe(). */
+    private final ItemStack[][] cachedGrid = new ItemStack[SCHEMATIC_SLOTS][];
     private int energyStored = 0;
     /** RF actually spent on the tick just finished (PROCESS_ENERGY per schematic that crafted) - "Energy Consumption" in the GUI. */
     private int energyPerTick = 0;
@@ -236,13 +237,14 @@ public class TileImprovedAssembler extends TileEntity
     @Override
     public void writePortableData(EntityPlayer player, NBTTagCompound tag) {
         tag.setByteArray("SideCache", sideCache.clone());
+        tag.setByte("Facing", (byte) getFacing());
         tag.setByte("RSControl", (byte) rsMode.ordinal());
     }
 
     @Override
     public void readPortableData(EntityPlayer player, NBTTagCompound tag) {
         if (augmentReconfigSides && tag.hasKey("SideCache")) {
-            applySideModes(tag.getByteArray("SideCache"));
+            applySideModes(tag.getByteArray("SideCache"), tag.hasKey("Facing") ? tag.getByte("Facing") : -1);
         }
         if (augmentRedstoneControl && tag.hasKey("RSControl")) {
             int ordinal = tag.getByte("RSControl") & 0xFF;
@@ -260,12 +262,41 @@ public class TileImprovedAssembler extends TileEntity
         return sideCache.clone();
     }
 
+    /**
+     * Rotated onto this machine's facing, front forced Disabled - see TileAdvancedPulverizer.
+     * This machine's facing lives in the block metadata, which callers must already have set.
+     */
     @Override
-    public void applySideModes(byte[] modes) {
-        if (modes != null && modes.length == sideCache.length && isValidSideArray(modes)) {
-            sideCache = modes.clone();
-            markDirty();
-            syncRenderState();
+    public void applySideModes(byte[] modes, int sourceFacing) {
+        if (modes == null || modes.length != sideCache.length || !isValidSideArray(modes)) {
+            return;
+        }
+        int facing = getFacing();
+        byte[] rotated = SideRotation.rotate(modes, sourceFacing, facing);
+        if (facing >= 0 && facing < rotated.length) {
+            rotated[facing] = SIDE_MODE_DISABLED;
+        }
+        sideCache = rotated;
+        markDirty();
+        syncRenderState();
+    }
+
+    /**
+     * Wrench rotation carries the side configuration along - see TileAdvancedPulverizer. Called
+     * by the block BEFORE it writes the new facing into the metadata.
+     */
+    public void rotateSides(int oldFacing, int newFacing) {
+        byte[] rotated = SideRotation.rotate(sideCache, oldFacing, newFacing);
+        rotated[newFacing] = SIDE_MODE_DISABLED;
+        sideCache = rotated;
+        markDirty();
+        syncRenderState();
+    }
+
+    /** Empties every slot after breakBlock spilled them - see TileAdvancedPulverizer. */
+    public void clearContentsOnBreak() {
+        for (int i = 0; i < inventory.length; i++) {
+            inventory[i] = null;
         }
     }
 
@@ -983,32 +1014,58 @@ public class TileImprovedAssembler extends TileEntity
             return false;
         }
 
+        // Consume on a COPY of the buffer and commit only if every container item found a home -
+        // the same clone-and-commit real Thermal Expansion's TileAssembler#createItem does. A
+        // recipe with a container ingredient (a milk bucket in a cake, a bowl in a stew) hands the
+        // empty vessel back; when there is nowhere to put it, TE refuses the craft rather than
+        // destroying the vessel or dropping it on the floor, and so does this. The buffer can be
+        // emptied of those vessels by a pipe on a side set to "All" (see canExtractItem).
+        ItemStack[] buffer = new ItemStack[INPUT_SLOTS];
+        for (int i = 0; i < INPUT_SLOTS; i++) {
+            ItemStack buf = inventory[INPUT_START + i];
+            buffer[i] = buf == null ? null : buf.copy();
+        }
         for (int cell = 0; cell < 9; cell++) {
             int bufferIndex = usedBufferSlot[cell];
-            if (bufferIndex == FLUID_CELL) {
-                // Re-derive from the schematic's own recorded ingredient rather than trusting
-                // any state carried over from matchGrid() - deterministic either way, since
-                // nothing else touches the schematic or the tank between the two calls.
-                FluidStack needed = FluidContainerRegistry.getFluidForFilledItem(getSchematicSlot(schematic, cell));
-                if (needed != null) {
-                    tank.drain(needed.amount, true);
-                }
-                continue;
-            }
             if (bufferIndex < 0) {
                 continue;
             }
-            ItemStack buf = inventory[INPUT_START + bufferIndex];
-            // Recipes with a container ingredient (a milk bucket in a cake, a bowl in a stew) hand
-            // the empty vessel back in every other crafting context; this used to just delete it,
-            // so automating cake silently destroyed 3 buckets per craft.
-            ItemStack container = buf.getItem().hasContainerItem(buf) ? buf.getItem().getContainerItem(buf) : null;
+            ItemStack buf = buffer[bufferIndex];
+            ItemStack container = containerItemFor(buf);
             buf.stackSize--;
             if (buf.stackSize <= 0) {
-                inventory[INPUT_START + bufferIndex] = null;
+                buffer[bufferIndex] = null;
             }
-            if (container != null) {
-                returnContainerItem(container);
+            if (container == null) {
+                continue;
+            }
+            boolean placed = buf.getItem().doesContainerItemLeaveCraftingGrid(buf)
+                    ? addToBuffer(buffer, container)
+                    : false;
+            if (!placed) {
+                // Real TE's fallback: a container that cannot go anywhere else may take the slot
+                // its own ingredient just vacated - otherwise the craft does not happen at all.
+                if (buffer[bufferIndex] != null) {
+                    return false;
+                }
+                buffer[bufferIndex] = container;
+            }
+        }
+
+        for (int i = 0; i < INPUT_SLOTS; i++) {
+            inventory[INPUT_START + i] = buffer[i];
+        }
+        for (int cell = 0; cell < 9; cell++) {
+            if (usedBufferSlot[cell] != FLUID_CELL) {
+                continue;
+            }
+            // Drained only after the item side has committed, so a refused craft costs no fluid.
+            // Re-derived from the schematic's own recorded ingredient rather than trusting any
+            // state carried over from matchGrid() - deterministic either way, since nothing else
+            // touches the schematic or the tank between the two calls.
+            FluidStack needed = FluidContainerRegistry.getFluidForFilledItem(getSchematicSlot(schematic, cell));
+            if (needed != null) {
+                tank.drain(needed.amount, true);
             }
         }
 
@@ -1024,32 +1081,43 @@ public class TileImprovedAssembler extends TileEntity
     }
 
     /**
-     * Puts a crafting container item (the empty bucket a milk bucket leaves behind, and so on)
-     * back into the ingredient buffer, merging into an existing stack where it can. If the buffer
-     * has no room it is dropped next to the machine rather than destroyed - the alternative,
-     * refusing the craft until space appears, would deadlock a buffer that the returned item
-     * itself is what fills.
+     * The item a crafting ingredient leaves behind, or null. A container whose damage has run past
+     * its maximum is treated as broken and discarded - exactly what vanilla's SlotCrafting and real
+     * TE's TileAssembler both do. Without that check, a tool that returns a damaged copy of itself
+     * as its "container" and relies on this discard to wear out went back into the buffer forever,
+     * i.e. became unbreakable.
      */
-    private void returnContainerItem(ItemStack container) {
-        for (int i = 0; i < INPUT_SLOTS; i++) {
-            ItemStack buf = inventory[INPUT_START + i];
-            if (buf == null) {
-                inventory[INPUT_START + i] = container;
-                return;
-            }
-            if (buf.getItem() == container.getItem()
-                    && buf.getItemDamage() == container.getItemDamage()
-                    && ItemStack.areItemStackTagsEqual(buf, container)
-                    && buf.stackSize + container.stackSize <= buf.getMaxStackSize()) {
-                buf.stackSize += container.stackSize;
-                return;
+    private static ItemStack containerItemFor(ItemStack ingredient) {
+        if (!ingredient.getItem().hasContainerItem(ingredient)) {
+            return null;
+        }
+        ItemStack container = ingredient.getItem().getContainerItem(ingredient);
+        if (container != null && container.isItemStackDamageable()
+                && container.getItemDamage() > container.getMaxDamage()) {
+            return null;
+        }
+        return container;
+    }
+
+    /** Merges into a matching stack if one has room, otherwise takes the first empty slot. */
+    private static boolean addToBuffer(ItemStack[] buffer, ItemStack stack) {
+        for (int i = 0; i < buffer.length; i++) {
+            ItemStack buf = buffer[i];
+            if (buf != null && buf.getItem() == stack.getItem()
+                    && buf.getItemDamage() == stack.getItemDamage()
+                    && ItemStack.areItemStackTagsEqual(buf, stack)
+                    && buf.stackSize + stack.stackSize <= buf.getMaxStackSize()) {
+                buf.stackSize += stack.stackSize;
+                return true;
             }
         }
-        if (worldObj != null && !worldObj.isRemote) {
-            EntityItem drop = new EntityItem(worldObj, xCoord + 0.5D, yCoord + 1.0D, zCoord + 0.5D, container);
-            drop.delayBeforeCanPickup = 10;
-            worldObj.spawnEntityInWorld(drop);
+        for (int i = 0; i < buffer.length; i++) {
+            if (buffer[i] == null) {
+                buffer[i] = stack;
+                return true;
+            }
         }
+        return false;
     }
 
     /**
@@ -1135,41 +1203,53 @@ public class TileImprovedAssembler extends TileEntity
     }
 
     /**
-     * Which {@link IRecipe} a schematic's fixed 3x3 pattern resolves to can never change while
-     * the schematic itself doesn't - {@link #matchGrid} always copies exactly 1 of each
-     * ingredient's identity into the grid regardless of how much sits in the buffer, so the
-     * match result depends only on the schematic's own (immutable, once written) pattern, not on
-     * buffer quantities. Caching it here - keyed on the schematic {@code ItemStack}'s own object
-     * identity, which changes the instant a player swaps in a different one via
-     * {@link #setInventorySlotContents} - turns what would otherwise be a full linear scan of
-     * every registered vanilla-style recipe, for every one of the {@value #SCHEMATIC_SLOTS}
-     * schematic slots, EVERY server tick, into a single cache hit for the overwhelmingly common
-     * case of a schematic just sitting in its slot craft after craft.
+     * Caches the matched {@link IRecipe} per schematic slot, so a schematic sitting in its slot
+     * craft after craft costs one cache hit instead of a scan of every registered recipe, for every
+     * one of the {@value #SCHEMATIC_SLOTS} slots, every tick.
+     *
+     * The cache is keyed on the schematic AND an exact copy of the grid it was resolved against.
+     * Both parts are load-bearing:
+     * - Keyed on the schematic alone, it went stale: matchesRequirement accepts any item carrying
+     *   the schematic's OreDictionary name, so one schematic legitimately resolves to different
+     *   recipes as the buffer changes. An oak-log schematic kept its cached oak-plank recipe after
+     *   the buffer switched to spruce logs and produced OAK planks from a spruce log.
+     * - Rescanning whenever the cached entry was null (the first fix for that) turned a schematic
+     *   whose ingredients are present but match nothing - a recipe disabled in the config, or
+     *   removed by another mod - into a full recipe-list scan every tick.
+     * With the grid in the key, a miss is cached exactly as long as the grid stays the same, and
+     * any change to the grid forces a rescan. ItemStack#areItemStacksEqual compares item, damage,
+     * NBT and size, so there is no hash to collide.
      */
     private IRecipe resolveRecipe(int schematicSlot, ItemStack schematic, InventoryCrafting grid) {
-        if (cachedSchematicRef[schematicSlot] == schematic) {
-            IRecipe cached = cachedRecipe[schematicSlot];
-            // The cache is keyed on the schematic, but the recipe is decided by what is actually
-            // IN the grid, and those are not the same thing: matchesRequirement accepts any item
-            // carrying the schematic's OreDictionary name, so one schematic can legitimately
-            // resolve to different recipes on different ticks. Without this re-check, an oak-log
-            // schematic that had cached vanilla's oak-plank recipe kept returning it after the
-            // buffer was switched to spruce logs - getCraftingResult then handed back OAK planks
-            // while a spruce log was consumed, turning any unevenly-valued ore tag into a
-            // transmutation exploit. Re-matching one known recipe is cheap next to the full
-            // recipe-list scan this cache exists to avoid.
-            //
-            // Re-scanning when the cached entry is null matters too: a null used to be cached
-            // permanently, so a slot that failed to match once never crafted again until the
-            // player physically pulled the schematic out and put it back.
-            if (cached != null && cached.matches(grid, worldObj)) {
-                return cached;
-            }
+        if (cachedSchematicRef[schematicSlot] == schematic && sameGrid(cachedGrid[schematicSlot], grid)) {
+            return cachedRecipe[schematicSlot];
         }
         IRecipe recipe = findMatchingRecipe(grid);
         cachedSchematicRef[schematicSlot] = schematic;
         cachedRecipe[schematicSlot] = recipe;
+        cachedGrid[schematicSlot] = snapshotGrid(grid);
         return recipe;
+    }
+
+    private static ItemStack[] snapshotGrid(InventoryCrafting grid) {
+        ItemStack[] copy = new ItemStack[9];
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = grid.getStackInSlot(i);
+            copy[i] = stack == null ? null : stack.copy();
+        }
+        return copy;
+    }
+
+    private static boolean sameGrid(ItemStack[] cached, InventoryCrafting grid) {
+        if (cached == null) {
+            return false;
+        }
+        for (int i = 0; i < 9; i++) {
+            if (!ItemStack.areItemStacksEqual(cached[i], grid.getStackInSlot(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @SuppressWarnings("unchecked")
@@ -1371,9 +1451,20 @@ public class TileImprovedAssembler extends TileEntity
         return rel < BUFFER_ROW_SIZE ? modeInsertsRow1(mode) : modeInsertsRow2(mode);
     }
 
+    /**
+     * Output slots from any output-capable side, and - on a side set to "All" only - the
+     * ingredient buffer too. That second part is real Thermal Expansion's own rule (TileAssembler's
+     * side config gives mode 5 every buffer slot with extraction allowed), and it is the only way
+     * the empty vessels crafting hands back (see tryCraft) can leave the machine automatically;
+     * without it they piled up until the buffer was full and crafting stopped for good.
+     */
     @Override
     public boolean canExtractItem(int slot, ItemStack stack, int side) {
-        return slot >= OUTPUT_START && slot < AUGMENT_START && modeExtractsOutput(sideCache[side]);
+        int mode = sideCache[side];
+        if (slot >= OUTPUT_START && slot < AUGMENT_START) {
+            return modeExtractsOutput(mode);
+        }
+        return slot >= INPUT_START && slot < OUTPUT_START && mode == SIDE_MODE_ALL;
     }
 
     @Override

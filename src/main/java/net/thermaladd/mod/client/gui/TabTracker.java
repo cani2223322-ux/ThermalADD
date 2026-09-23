@@ -22,14 +22,30 @@ public final class TabTracker {
     private TabTracker() {
     }
 
-    /** Called when the player toggles a tab, so the choice carries to the next machine. */
-    public static void setOpen(GuiSideTab tab, boolean open) {
-        Class<?> value = open ? tab.getClass() : null;
-        if (tab.isLeftSide()) {
-            openLeft = value;
-        } else {
-            openRight = value;
+    /**
+     * Called after the player toggles a tab, with EVERY tab the GUI has. Records whichever tab is
+     * actually open on each side afterwards - or none.
+     *
+     * Recording only the clicked tab was wrong: clicking one tab also closes the others, on both
+     * sides, and those side-effect closes went unrecorded. Open Energy, click Configuration, and
+     * the next machine came up with both expanded - a state no sequence of clicks can produce.
+     */
+    public static void record(GuiSideTab... tabs) {
+        Class<?> left = null;
+        Class<?> right = null;
+        for (int i = 0; i < tabs.length; i++) {
+            GuiSideTab tab = tabs[i];
+            if (!tab.open) {
+                continue;
+            }
+            if (tab.isLeftSide()) {
+                left = tab.getClass();
+            } else {
+                right = tab.getClass();
+            }
         }
+        openLeft = left;
+        openRight = right;
     }
 
     /**

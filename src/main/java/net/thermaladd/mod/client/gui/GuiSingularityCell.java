@@ -135,7 +135,7 @@ public class GuiSingularityCell extends TabbedMachineGui {
 
         if (mouseButton == 0 && configTab.isMouseOverIcon(mouseX, mouseY, left, top)) {
             configTab.setOpen(!configTab.open);
-            TabTracker.setOpen(configTab, configTab.open);
+            TabTracker.record(configTab);
             return;
         }
         if (configTab.isFullyOpen() && configTab.isMouseOverFlap(mouseX, mouseY, left, top)) {

@@ -105,8 +105,11 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
 
         String energyLine = StatCollector.translateToLocalFormatted("waila.thermaladd.energy",
                 format(data.getLong(KEY_ENERGY)), format(data.getLong(KEY_CAPACITY)));
-        if (accessor.getTileEntity() instanceof TileSingularityCell && currenttip instanceof ITaggedList) {
-            // Replace Waila's own int-capped RF line rather than adding a second, contradictory one.
+        if (currenttip instanceof ITaggedList) {
+            // Replace Waila's own RF line on every block, not just the Cell. The machines are
+            // IEnergyReceiver + IEnergyInfo too, so Waila's bundled TE handler adds its own
+            // "X / Y RF" to them as well - leaving it there showed the energy twice. Tagging ours
+            // the same way also stops that handler adding its line if it happens to run after us.
             ITaggedList<String, String> tagged = (ITaggedList<String, String>) currenttip;
             tagged.removeEntries(TAG_ENERGY);
             tagged.add(energyLine, TAG_ENERGY);

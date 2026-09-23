@@ -28,6 +28,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.util.IPortableMachineState;
+import net.thermaladd.mod.util.SideRotation;
 
 /**
  * Advanced Pulverizer tile entity.
@@ -247,9 +248,10 @@ public class TileAdvancedPulverizer extends TileEntity
      * the Furnace has 4), and TE's own ItemDiagram refuses the paste outright when the types don't
      * match rather than writing something meaningless.
      *
-     * Faces are copied by their absolute world side, NOT relative to facing, and the facing itself
-     * is deliberately not copied - pasting a configuration should never silently spin a machine
-     * the player already placed.
+     * The configuration is pasted RELATIVE to the machine: the source's facing travels with the
+     * data and the sides are rotated onto the target's own facing, so "input on the left" stays
+     * input on the left however the target is turned. The target's facing itself is never
+     * changed - pasting a configuration must not spin a machine the player already placed.
      */
     @Override
     public String getDataType() {
@@ -259,6 +261,7 @@ public class TileAdvancedPulverizer extends TileEntity
     @Override
     public void writePortableData(EntityPlayer player, NBTTagCompound tag) {
         tag.setByteArray("SideCache", sideCache.clone());
+        tag.setByte("Facing", facing);
         tag.setByte("RSControl", (byte) rsMode.ordinal());
     }
 
@@ -267,7 +270,7 @@ public class TileAdvancedPulverizer extends TileEntity
         // Same augment gates the GUI itself enforces - a Redprint must not be a way around a
         // machine that has no Reconfigurable Sides / Redstone Control augment installed.
         if (augmentReconfigSides && tag.hasKey("SideCache")) {
-            applySideModes(tag.getByteArray("SideCache"));
+            applySideModes(tag.getByteArray("SideCache"), tag.hasKey("Facing") ? tag.getByte("Facing") : -1);
         }
         if (augmentRedstoneControl && tag.hasKey("RSControl")) {
             int ordinal = tag.getByte("RSControl") & 0xFF;
@@ -286,13 +289,46 @@ public class TileAdvancedPulverizer extends TileEntity
     }
 
     @Override
-    public void applySideModes(byte[] modes) {
+    public void applySideModes(byte[] modes, int sourceFacing) {
         // Same validation the NBT load path uses - a wrong-length or out-of-range array would
         // later index the block's per-mode icon arrays out of bounds while rendering.
-        if (modes != null && modes.length == sideCache.length && isValidSideArray(modes)) {
-            sideCache = modes.clone();
-            markDirty();
-            syncRenderState();
+        if (modes == null || modes.length != sideCache.length || !isValidSideArray(modes)) {
+            return;
+        }
+        byte[] rotated = SideRotation.rotate(modes, sourceFacing, facing);
+        // The front is never configurable - enforced here too, so data from an older save (or a
+        // source whose facing is unknown) can never leave a hidden, working mode behind it.
+        // Range-checked because facing is read from NBT unvalidated.
+        if (facing >= 0 && facing < rotated.length) {
+            rotated[facing] = SIDE_MODE_DISABLED;
+        }
+        sideCache = rotated;
+        markDirty();
+        syncRenderState();
+    }
+
+    /**
+     * Wrench rotation: turns the machine AND its side configuration together, exactly like real
+     * Thermal Expansion's TileReconfigurable#rotateBlock - see SideRotation for what went wrong
+     * when only the facing changed.
+     */
+    public void rotateFacing(int newFacing) {
+        byte[] rotated = SideRotation.rotate(sideCache, facing, newFacing);
+        rotated[newFacing] = SIDE_MODE_DISABLED;
+        sideCache = rotated;
+        setFacing(newFacing);
+    }
+
+    /**
+     * Empties every slot once breakBlock has spilled them. Without this the tile kept its
+     * originals after the copies were dropped, and another player with the GUI still open could
+     * shift-click them out in the same tick the machine was destroyed - a straight duplication.
+     * Done on the raw array on purpose: setInventorySlotContents on an augment slot would
+     * re-run installAugments on a block that is being removed.
+     */
+    public void clearContentsOnBreak() {
+        for (int i = 0; i < inventory.length; i++) {
+            inventory[i] = null;
         }
     }
 
@@ -1429,7 +1465,6 @@ public class TileAdvancedPulverizer extends TileEntity
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
-        energyStorage.readFromNBT(tag);
         facing = tag.getByte("Facing");
         if (tag.hasKey("CustomName")) {
             customName = tag.getString("CustomName");
@@ -1476,6 +1511,12 @@ public class TileAdvancedPulverizer extends TileEntity
         }
 
         installAugments();
+        // Only AFTER installAugments(): CoFH's EnergyStorage#readFromNBT clamps the stored value to
+        // the CURRENT capacity, and until the Energy Storage augment above has been applied that
+        // is still the base capacity. Reading it first silently threw away everything past the
+        // base buffer on every chunk load - an augmented machine holding 5,000,000 RF came back
+        // with 1,000,000.
+        energyStorage.readFromNBT(tag);
 
         isActive = false;
         for (int i = 0; i < INPUT_SLOTS; i++) {

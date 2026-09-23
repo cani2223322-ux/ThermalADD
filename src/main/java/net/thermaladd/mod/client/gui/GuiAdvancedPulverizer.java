@@ -249,7 +249,7 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
             energyTab.setOpen(false);
             tab.setOpen(!wasOpen);
             // Remember the choice so the next machine opens with the same tab already out.
-            TabTracker.setOpen(tab, !wasOpen);
+            TabTracker.record(augmentsTab, configTab, redstoneTab, energyTab);
             return true;
         }
         if (tab.isFullyOpen() && tab.isMouseOverFlap(mouseX, mouseY, left, top)) {

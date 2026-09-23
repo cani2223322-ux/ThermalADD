@@ -203,7 +203,13 @@ public class BlockImprovedAssembler extends BlockContainer implements IDismantle
                         dismantleBlock(player, world, x, y, z, false);
                     } else {
                         int facing = world.getBlockMetadata(x, y, z);
-                        world.setBlockMetadataWithNotify(x, y, z, nextFacing(facing), 3);
+                        int next = nextFacing(facing);
+                        // Sides first, while the metadata still holds the old facing.
+                        TileEntity te = world.getTileEntity(x, y, z);
+                        if (te instanceof TileImprovedAssembler) {
+                            ((TileImprovedAssembler) te).rotateSides(facing, next);
+                        }
+                        world.setBlockMetadataWithNotify(x, y, z, next, 3);
                     }
                     hammer.toolUsed(held, player, x, y, z);
                 }
@@ -248,6 +254,7 @@ public class BlockImprovedAssembler extends BlockContainer implements IDismantle
                     world.spawnEntityInWorld(entityItem);
                 }
             }
+            tile.clearContentsOnBreak();
         }
         super.breakBlock(world, x, y, z, block, meta);
     }

@@ -56,7 +56,10 @@ public final class ModConfig {
      * an unusually expensive third-party recipe.
      */
     private static final int MAX_PROCESS_ENERGY_3LINE = 1000;
-    /** The Charger's progress is scaled by its own ENERGY_SYNC_SCALE of 1024, so it has far more headroom. */
+    /**
+     * The Charger's per-line progress is sent as exact halves, so no short limit applies to it;
+     * this ceiling only keeps the cost in the same order of magnitude as its default of 16,000.
+     */
     private static final int MAX_PROCESS_ENERGY_CHARGER = 40000;
     /** The Assembler has no accumulating progress at all - a craft completes within one tick. */
     private static final int MAX_PROCESS_ENERGY_ASSEMBLER = 1000;
@@ -99,6 +102,10 @@ public final class ModConfig {
                 cfg.save();
             }
         }
+        // Taken whatever happened above, so a client always has its own values to go back to
+        // after leaving a server that sent different ones.
+        localMachineValues = snapshotMachineValues();
+        localCellCapacity = TileSingularityCell.CAPACITY;
     }
 
     private static void loadMachines(Configuration cfg) {
@@ -138,6 +145,95 @@ public final class ModConfig {
                 TileImprovedAssembler.PROCESS_ENERGY, MAX_PROCESS_ENERGY_ASSEMBLER);
 
         TileSingularityCell.CAPACITY = cellCapacity(cfg, TileSingularityCell.CAPACITY);
+
+        // Cross-checks between values that are each individually in range. A machine only starts a
+        // tick of work when its buffer holds that tick's whole cost, and the worst case is the
+        // base cost times the Machine Speed IV energy multiplier (60), times 1.25 more on the two
+        // machines that take the level-4 Secondary Sieve. A buffer smaller than that means the
+        // machine, once fitted with those augments, never starts at all - e.g. a Charger at the
+        // maximum cost of 40,000 needs 2,400,000 against a default buffer of 2,000,000.
+        TileAdvancedPulverizer.BASE_ENERGY_CAPACITY = ensureRunnable(CAT_PULVERIZER,
+                TileAdvancedPulverizer.BASE_ENERGY_CAPACITY, TileAdvancedPulverizer.BASE_ENERGY_PER_TICK, WORST_COST_WITH_SIEVE);
+        TileAdvancedFurnace.BASE_ENERGY_CAPACITY = ensureRunnable(CAT_FURNACE,
+                TileAdvancedFurnace.BASE_ENERGY_CAPACITY, TileAdvancedFurnace.BASE_ENERGY_PER_TICK, WORST_COST_SPEED_ONLY);
+        TileAdvancedSawmill.BASE_ENERGY_CAPACITY = ensureRunnable(CAT_SAWMILL,
+                TileAdvancedSawmill.BASE_ENERGY_CAPACITY, TileAdvancedSawmill.BASE_ENERGY_PER_TICK, WORST_COST_WITH_SIEVE);
+        TileAdvancedCharger.BASE_ENERGY_CAPACITY = ensureRunnable(CAT_CHARGER,
+                TileAdvancedCharger.BASE_ENERGY_CAPACITY, TileAdvancedCharger.BASE_ENERGY_PER_TICK, WORST_COST_SPEED_ONLY);
+        TileImprovedAssembler.ENERGY_CAPACITY = ensureRunnable(CAT_ASSEMBLER,
+                TileImprovedAssembler.ENERGY_CAPACITY, TileImprovedAssembler.PROCESS_ENERGY, 1);
+    }
+
+    /** Machine Speed IV's energy multiplier. */
+    private static final int WORST_COST_SPEED_ONLY = 60;
+    /** Machine Speed IV (x60) plus the level-4 Secondary Sieve surcharge (x1.25). */
+    private static final int WORST_COST_WITH_SIEVE = 75;
+
+    private static int ensureRunnable(String category, int capacity, int cost, int worstMultiplier) {
+        int required = cost * worstMultiplier;
+        if (capacity >= required) {
+            return capacity;
+        }
+        FMLLog.warning("[ThermalADD] %s.energyCapacity (%d) cannot hold a single tick of work at the most"
+                        + " expensive augment setup (%d RF), so the machine would never start - raising it to %d.",
+                category, Integer.valueOf(capacity), Integer.valueOf(required), Integer.valueOf(required));
+        return required;
+    }
+
+    // ------------------------------------------------ server -> client sync
+
+    /**
+     * The values each machine's GUI, tooltips and client-side augment maths are computed from.
+     * A client joining a server with a different config would otherwise show its OWN numbers - a
+     * wrong capacity, a wrong RF/t, the Cell's light level computed against the wrong capacity - so
+     * the server sends its values on login (MessageConfigSync) and the client puts its own back on
+     * disconnect. Order is fixed and shared by snapshotMachineValues/applyMachineValues.
+     */
+    public static final int SYNCED_VALUE_COUNT = 15;
+
+    private static int[] localMachineValues;
+    private static long localCellCapacity;
+
+    public static int[] snapshotMachineValues() {
+        return new int[]{
+                TileAdvancedPulverizer.BASE_ENERGY_CAPACITY, TileAdvancedPulverizer.ENERGY_RECEIVE_PER_TICK, TileAdvancedPulverizer.BASE_ENERGY_PER_TICK,
+                TileAdvancedFurnace.BASE_ENERGY_CAPACITY, TileAdvancedFurnace.ENERGY_RECEIVE_PER_TICK, TileAdvancedFurnace.BASE_ENERGY_PER_TICK,
+                TileAdvancedSawmill.BASE_ENERGY_CAPACITY, TileAdvancedSawmill.ENERGY_RECEIVE_PER_TICK, TileAdvancedSawmill.BASE_ENERGY_PER_TICK,
+                TileAdvancedCharger.BASE_ENERGY_CAPACITY, TileAdvancedCharger.ENERGY_RECEIVE_PER_TICK, TileAdvancedCharger.BASE_ENERGY_PER_TICK,
+                TileImprovedAssembler.ENERGY_CAPACITY, TileImprovedAssembler.ENERGY_RECEIVE_PER_TICK, TileImprovedAssembler.PROCESS_ENERGY
+        };
+    }
+
+    /** Values come off the network, so a wrong-length array is ignored rather than trusted. */
+    public static void applyMachineValues(int[] v, long cellCapacity) {
+        if (v == null || v.length != SYNCED_VALUE_COUNT) {
+            return;
+        }
+        TileAdvancedPulverizer.BASE_ENERGY_CAPACITY = v[0];
+        TileAdvancedPulverizer.ENERGY_RECEIVE_PER_TICK = v[1];
+        TileAdvancedPulverizer.BASE_ENERGY_PER_TICK = v[2];
+        TileAdvancedFurnace.BASE_ENERGY_CAPACITY = v[3];
+        TileAdvancedFurnace.ENERGY_RECEIVE_PER_TICK = v[4];
+        TileAdvancedFurnace.BASE_ENERGY_PER_TICK = v[5];
+        TileAdvancedSawmill.BASE_ENERGY_CAPACITY = v[6];
+        TileAdvancedSawmill.ENERGY_RECEIVE_PER_TICK = v[7];
+        TileAdvancedSawmill.BASE_ENERGY_PER_TICK = v[8];
+        TileAdvancedCharger.BASE_ENERGY_CAPACITY = v[9];
+        TileAdvancedCharger.ENERGY_RECEIVE_PER_TICK = v[10];
+        TileAdvancedCharger.BASE_ENERGY_PER_TICK = v[11];
+        TileImprovedAssembler.ENERGY_CAPACITY = v[12];
+        TileImprovedAssembler.ENERGY_RECEIVE_PER_TICK = v[13];
+        TileImprovedAssembler.PROCESS_ENERGY = v[14];
+        if (cellCapacity > 0L) {
+            TileSingularityCell.CAPACITY = cellCapacity;
+        }
+    }
+
+    /** Puts this client's own config back after leaving a server that sent different values. */
+    public static void restoreLocalValues() {
+        if (localMachineValues != null) {
+            applyMachineValues(localMachineValues, localCellCapacity);
+        }
     }
 
     private static int capacity(Configuration cfg, String category, int def, int max) {

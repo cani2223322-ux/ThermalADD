@@ -45,6 +45,11 @@ public class ContainerAdvancedFurnace extends Container {
     private int lastMaxEnergy = -1;
     private final int[] lastProgress = new int[TileAdvancedFurnace.INPUT_SLOTS];
     private final int[] lastProgressMax = new int[TileAdvancedFurnace.INPUT_SLOTS];
+    {
+        // -1 = "never sent" - see ContainerAdvancedPulverizer.
+        java.util.Arrays.fill(lastProgress, -1);
+        java.util.Arrays.fill(lastProgressMax, -1);
+    }
     private final int[] lastSideModes = new int[6];
     private int lastReconfigSides = -1;
     private int lastAutoInput = -1;
