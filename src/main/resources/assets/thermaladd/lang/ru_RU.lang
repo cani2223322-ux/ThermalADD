@@ -27,6 +27,9 @@ gui.thermaladd.slot.schematic=Схема
 gui.thermaladd.slot.buffer=Буфер ингредиентов
 gui.thermaladd.slot.chargerLine=Вход: предмет для зарядки или рецепт Зарядника
 gui.thermaladd.progress=Прогресс: %s / %s RF
+gui.thermaladd.lock.lockedTo=Закреплено за: %s
+gui.thermaladd.lock.hintUnlock=Shift+ПКМ по слоту — снять закрепление
+gui.thermaladd.lock.hintLock=Shift+ПКМ по занятому слоту — закрепить линию за предметом
 
 gui.thermaladd.energy.title=Энергия
 gui.thermaladd.energy.tab.consumption=Расход:

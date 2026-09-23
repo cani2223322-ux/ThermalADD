@@ -127,8 +127,7 @@ public class ContainerAdvancedSawmill extends Container {
                     return null;
                 }
             } else if (SawmillManager.recipeExists(stackInSlot)) {
-                if (!mergeItemStack(stackInSlot, TileAdvancedSawmill.INPUT_START,
-                        TileAdvancedSawmill.OUTPUT_PRIMARY_START, false)) {
+                if (!mergeIntoLines(stackInSlot)) {
                     return null;
                 }
             } else {
@@ -143,6 +142,37 @@ public class ContainerAdvancedSawmill extends Container {
         }
 
         return result;
+    }
+
+    /** Shift-click into the lines, honouring line locks - see ContainerAdvancedPulverizer#mergeIntoLines. */
+    private boolean mergeIntoLines(ItemStack stack) {
+        boolean moved = false;
+        for (int pass = 0; pass < 3 && stack.stackSize > 0; pass++) {
+            for (int i = 0; i < TileAdvancedSawmill.INPUT_SLOTS && stack.stackSize > 0; i++) {
+                int slot = TileAdvancedSawmill.INPUT_START + i;
+                boolean occupied = tile.getStackInSlot(slot) != null;
+                boolean locked = tile.getLineLocks().isLocked(i);
+                boolean inThisPass = pass == 0 ? occupied : !occupied && (pass == 1) == locked;
+                if (inThisPass && tile.isItemValidForSlot(slot, stack) && mergeItemStack(stack, slot, slot + 1, false)) {
+                    moved = true;
+                }
+            }
+        }
+        return moved;
+    }
+
+    /** Shift + right-click on a line's input slot toggles its lock - see ContainerAdvancedPulverizer#slotClick. */
+    @Override
+    public ItemStack slotClick(int slotId, int button, int mode, EntityPlayer player) {
+        if (mode == 1 && button == 1 && player.inventory.getItemStack() == null
+                && slotId >= TileAdvancedSawmill.INPUT_START
+                && slotId < TileAdvancedSawmill.INPUT_START + TileAdvancedSawmill.INPUT_SLOTS) {
+            if (!player.worldObj.isRemote) {
+                tile.toggleLineLock(slotId - TileAdvancedSawmill.INPUT_START);
+            }
+            return null;
+        }
+        return super.slotClick(slotId, button, mode, player);
     }
 
     @SuppressWarnings("unchecked")

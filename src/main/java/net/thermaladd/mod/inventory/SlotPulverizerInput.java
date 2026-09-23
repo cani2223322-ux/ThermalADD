@@ -4,9 +4,11 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 
-import cofh.thermalexpansion.util.crafting.PulverizerManager;
-
-/** Only accepts items that actually have a real Pulverizer recipe - same rule Thermal Expansion's own Pulverizer GUI enforces. */
+/**
+ * Only accepts what the tile accepts for this line: an item with a real Pulverizer recipe - the
+ * same rule Thermal Expansion's own Pulverizer GUI enforces - and, if the line is locked, only
+ * the item it is locked to. Asking the tile keeps both rules in one place.
+ */
 public class SlotPulverizerInput extends Slot {
 
     public SlotPulverizerInput(IInventory inventory, int slotIndex, int x, int y) {
@@ -15,6 +17,6 @@ public class SlotPulverizerInput extends Slot {
 
     @Override
     public boolean isItemValid(ItemStack stack) {
-        return PulverizerManager.recipeExists(stack);
+        return inventory.isItemValidForSlot(getSlotIndex(), stack);
     }
 }

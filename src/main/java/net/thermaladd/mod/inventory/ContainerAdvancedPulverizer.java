@@ -144,8 +144,7 @@ public class ContainerAdvancedPulverizer extends Container {
                     return null;
                 }
             } else if (PulverizerManager.recipeExists(stackInSlot)) {
-                if (!mergeItemStack(stackInSlot, TileAdvancedPulverizer.INPUT_START,
-                        TileAdvancedPulverizer.OUTPUT_PRIMARY_START, false)) {
+                if (!mergeIntoLines(stackInSlot)) {
                     return null;
                 }
             } else {
@@ -160,6 +159,47 @@ public class ContainerAdvancedPulverizer extends Container {
         }
 
         return result;
+    }
+
+    /**
+     * Shift-click into the processing lines, honouring line locks. Vanilla mergeItemStack never
+     * asks a slot whether an item is valid, so merging over the whole input range would drop
+     * anything into a line locked to something else. Three passes, in order: top up a line that
+     * already holds the item, then fill an empty line locked to it, then any empty free line.
+     */
+    private boolean mergeIntoLines(ItemStack stack) {
+        boolean moved = false;
+        for (int pass = 0; pass < 3 && stack.stackSize > 0; pass++) {
+            for (int i = 0; i < TileAdvancedPulverizer.INPUT_SLOTS && stack.stackSize > 0; i++) {
+                int slot = TileAdvancedPulverizer.INPUT_START + i;
+                boolean occupied = tile.getStackInSlot(slot) != null;
+                boolean locked = tile.getLineLocks().isLocked(i);
+                boolean inThisPass = pass == 0 ? occupied : !occupied && (pass == 1) == locked;
+                if (inThisPass && tile.isItemValidForSlot(slot, stack) && mergeItemStack(stack, slot, slot + 1, false)) {
+                    moved = true;
+                }
+            }
+        }
+        return moved;
+    }
+
+    /**
+     * Shift + right-click on a line's input slot with nothing on the cursor toggles that line's
+     * lock instead of quick-moving the stack out (shift + left-click still quick-moves). Runs on
+     * both sides, like every slot click; only the server changes anything, and both return null,
+     * so the server does not see a mismatch and resend the inventory.
+     */
+    @Override
+    public ItemStack slotClick(int slotId, int button, int mode, EntityPlayer player) {
+        if (mode == 1 && button == 1 && player.inventory.getItemStack() == null
+                && slotId >= TileAdvancedPulverizer.INPUT_START
+                && slotId < TileAdvancedPulverizer.INPUT_START + TileAdvancedPulverizer.INPUT_SLOTS) {
+            if (!player.worldObj.isRemote) {
+                tile.toggleLineLock(slotId - TileAdvancedPulverizer.INPUT_START);
+            }
+            return null;
+        }
+        return super.slotClick(slotId, button, mode, player);
     }
 
     @SuppressWarnings("unchecked")

@@ -28,6 +28,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.util.IPortableMachineState;
+import net.thermaladd.mod.util.LineLocks;
 import net.thermaladd.mod.util.SideRotation;
 
 /**
@@ -933,13 +934,22 @@ public class TileAdvancedFurnace extends TileEntity
         return false;
     }
 
+    /** Lock-aware - see TileAdvancedPulverizer#findInputSlotFor. */
     private int findInputSlotFor(ItemStack stack) {
-        int emptySlot = -1;
+        int emptyLocked = -1;
+        int emptyFree = -1;
         for (int i = 0; i < INPUT_SLOTS; i++) {
+            if (!lineLocks.accepts(i, stack)) {
+                continue;
+            }
             ItemStack buf = inventory[INPUT_START + i];
             if (buf == null) {
-                if (emptySlot < 0) {
-                    emptySlot = INPUT_START + i;
+                if (lineLocks.isLocked(i)) {
+                    if (emptyLocked < 0) {
+                        emptyLocked = INPUT_START + i;
+                    }
+                } else if (emptyFree < 0) {
+                    emptyFree = INPUT_START + i;
                 }
                 continue;
             }
@@ -948,7 +958,26 @@ public class TileAdvancedFurnace extends TileEntity
                 return INPUT_START + i;
             }
         }
-        return emptySlot;
+        return emptyLocked >= 0 ? emptyLocked : emptyFree;
+    }
+
+    // ---------------------------------------------------------------- line locks
+
+    private final LineLocks lineLocks = new LineLocks(INPUT_SLOTS);
+
+    public LineLocks getLineLocks() {
+        return lineLocks;
+    }
+
+    /** See TileAdvancedPulverizer#toggleLineLock. */
+    public void toggleLineLock(int line) {
+        if (line < 0 || line >= INPUT_SLOTS) {
+            return;
+        }
+        if (lineLocks.toggle(line, inventory[INPUT_START + line])) {
+            markDirty();
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     private boolean insertIntoInventory(IInventory inv, ForgeDirection side, ItemStack stack) {
@@ -1093,7 +1122,7 @@ public class TileAdvancedFurnace extends TileEntity
             return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }
         if (slot < OUTPUT_START) {
-            return FurnaceManager.recipeExists(stack);
+            return FurnaceManager.recipeExists(stack) && lineLocks.accepts(slot - INPUT_START, stack);
         }
         return false;
     }
@@ -1122,7 +1151,7 @@ public class TileAdvancedFurnace extends TileEntity
 
     @Override
     public boolean canInsertItem(int slot, ItemStack stack, int side) {
-        return slot < OUTPUT_START && modeAllowsInsertInput(sideCache[side]) && FurnaceManager.recipeExists(stack);
+        return slot < OUTPUT_START && modeAllowsInsertInput(sideCache[side]) && isItemValidForSlot(slot, stack);
     }
 
     @Override
@@ -1151,6 +1180,7 @@ public class TileAdvancedFurnace extends TileEntity
         if (hasCustomInventoryName()) {
             tag.setString("CustomName", customName);
         }
+        lineLocks.writeToNBT(tag);
 
         NBTTagList items = new NBTTagList();
         for (int i = 0; i < inventory.length; i++) {
@@ -1171,6 +1201,7 @@ public class TileAdvancedFurnace extends TileEntity
         if (tag.hasKey("CustomName")) {
             customName = tag.getString("CustomName");
         }
+        lineLocks.readFromNBT(tag);
         if (tag.hasKey("RSControl")) {
             // Range-checked exactly like the Sides array below - an out-of-range ordinal from a
             // corrupt or hand-edited tag threw straight out of readFromNBT, killing the chunk load.

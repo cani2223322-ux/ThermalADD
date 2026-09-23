@@ -4,14 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
 
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 import net.thermaladd.mod.config.ModConfig;
@@ -330,8 +334,58 @@ public abstract class TabbedMachineGui extends GuiContainer {
         }
         List<String> lines = new ArrayList<String>();
         lines.add(StatCollector.translateToLocal(key));
+        addSlotTooltipLines(slot.getSlotIndex(), lines);
         drawHoveringText(lines, mouseX, mouseY, fontRendererObj);
         return true;
+    }
+
+    /** Extra lines under an empty slot's role, e.g. its line lock. Overridden per machine. */
+    protected void addSlotTooltipLines(int tileSlot, List<String> lines) {
+    }
+
+    /** What a line's lock means and how to change it - see LineLocks. */
+    protected static void addLineLockLines(ItemStack filter, List<String> lines) {
+        if (filter != null) {
+            lines.add(EnumChatFormatting.GOLD
+                    + StatCollector.translateToLocalFormatted("gui.thermaladd.lock.lockedTo", filter.getDisplayName()));
+            lines.add(EnumChatFormatting.GRAY + StatCollector.translateToLocal("gui.thermaladd.lock.hintUnlock"));
+        } else {
+            lines.add(EnumChatFormatting.GRAY + StatCollector.translateToLocal("gui.thermaladd.lock.hintLock"));
+        }
+    }
+
+    private static final int LOCK_MARKER = 0xFFE1C92F;
+    /** The slot's own recessed grey, at ~2/3 opacity - enough to read the ghost as "not really there". */
+    private static final int GHOST_FADE = 0xAA8B8B8B;
+
+    /**
+     * A locked line: a gold corner marker always, plus a faded "ghost" of the item it is locked
+     * to while the line is empty. Drawn in the BACKGROUND layer, so vanilla's hover highlight and
+     * any real item still land on top of it. Absolute screen coordinates of the slot's 16x16 area.
+     */
+    protected void drawLineLock(ItemStack filter, int x, int y, boolean slotEmpty) {
+        if (filter == null) {
+            return;
+        }
+        boolean depth = GL11.glIsEnabled(GL11.GL_DEPTH_TEST);
+        if (slotEmpty) {
+            RenderHelper.enableGUIStandardItemLighting();
+            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            itemRender.renderItemAndEffectIntoGUI(fontRendererObj, mc.getTextureManager(), filter, x, y);
+            GL11.glDisable(GL12.GL_RESCALE_NORMAL);
+            RenderHelper.disableStandardItemLighting();
+            // The item may have written depth well above z=0 (3D block items do), so the fade
+            // has to ignore depth or it would disappear behind the icon it is meant to cover.
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            drawRect(x, y, x + 16, y + 16, GHOST_FADE);
+        }
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        drawRect(x + 13, y, x + 16, y + 3, LOCK_MARKER);
+        if (depth) {
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+        }
+        GL11.glColor4f(1F, 1F, 1F, 1F);
     }
 
     /**

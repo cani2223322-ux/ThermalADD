@@ -4,9 +4,7 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 
-import cofh.thermalexpansion.util.crafting.FurnaceManager;
-
-/** Only accepts items that actually have a real Furnace recipe - same rule Thermal Expansion's own Furnace GUI enforces. */
+/** Accepts what the tile accepts for this line: a real Furnace recipe input, honouring the line's lock. */
 public class SlotFurnaceInput extends Slot {
 
     public SlotFurnaceInput(IInventory inventory, int slotIndex, int x, int y) {
@@ -15,6 +13,6 @@ public class SlotFurnaceInput extends Slot {
 
     @Override
     public boolean isItemValid(ItemStack stack) {
-        return FurnaceManager.recipeExists(stack);
+        return inventory.isItemValidForSlot(getSlotIndex(), stack);
     }
 }

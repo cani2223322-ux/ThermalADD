@@ -28,6 +28,7 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
 import net.thermaladd.mod.util.IPortableMachineState;
+import net.thermaladd.mod.util.LineLocks;
 import net.thermaladd.mod.util.SideRotation;
 
 /**
@@ -1210,13 +1211,27 @@ public class TileAdvancedPulverizer extends TileEntity
         return false;
     }
 
+    /**
+     * Where auto-input should put {@code stack}: a line already holding it, else an empty line
+     * LOCKED to it, else any empty unlocked line. Preferring the locked line matters - otherwise
+     * a free line took the item and the line reserved for it stayed empty. Lines locked to
+     * something else are skipped entirely.
+     */
     private int findInputSlotFor(ItemStack stack) {
-        int emptySlot = -1;
+        int emptyLocked = -1;
+        int emptyFree = -1;
         for (int i = 0; i < INPUT_SLOTS; i++) {
+            if (!lineLocks.accepts(i, stack)) {
+                continue;
+            }
             ItemStack buf = inventory[INPUT_START + i];
             if (buf == null) {
-                if (emptySlot < 0) {
-                    emptySlot = INPUT_START + i;
+                if (lineLocks.isLocked(i)) {
+                    if (emptyLocked < 0) {
+                        emptyLocked = INPUT_START + i;
+                    }
+                } else if (emptyFree < 0) {
+                    emptyFree = INPUT_START + i;
                 }
                 continue;
             }
@@ -1225,7 +1240,30 @@ public class TileAdvancedPulverizer extends TileEntity
                 return INPUT_START + i;
             }
         }
-        return emptySlot;
+        return emptyLocked >= 0 ? emptyLocked : emptyFree;
+    }
+
+    // ---------------------------------------------------------------- line locks
+
+    private final LineLocks lineLocks = new LineLocks(INPUT_SLOTS);
+
+    public LineLocks getLineLocks() {
+        return lineLocks;
+    }
+
+    /**
+     * Shift + right-click on a line's input slot (see the container's slotClick): locks the line
+     * to whatever it holds, or releases an existing lock. Server-side only; the description
+     * packet then carries the lock to clients, which draw it as a ghost item in the empty slot.
+     */
+    public void toggleLineLock(int line) {
+        if (line < 0 || line >= INPUT_SLOTS) {
+            return;
+        }
+        if (lineLocks.toggle(line, inventory[INPUT_START + line])) {
+            markDirty();
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
     }
 
     private boolean insertIntoInventory(IInventory inv, ForgeDirection side, ItemStack stack) {
@@ -1375,7 +1413,7 @@ public class TileAdvancedPulverizer extends TileEntity
             return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }
         if (slot < OUTPUT_PRIMARY_START) {
-            return PulverizerManager.recipeExists(stack);
+            return PulverizerManager.recipeExists(stack) && lineLocks.accepts(slot - INPUT_START, stack);
         }
         return false;
     }
@@ -1417,7 +1455,7 @@ public class TileAdvancedPulverizer extends TileEntity
 
     @Override
     public boolean canInsertItem(int slot, ItemStack stack, int side) {
-        return slot < OUTPUT_PRIMARY_START && modeAllowsInsertInput(sideCache[side]) && PulverizerManager.recipeExists(stack);
+        return slot < OUTPUT_PRIMARY_START && modeAllowsInsertInput(sideCache[side]) && isItemValidForSlot(slot, stack);
     }
 
     @Override
@@ -1449,6 +1487,7 @@ public class TileAdvancedPulverizer extends TileEntity
         if (hasCustomInventoryName()) {
             tag.setString("CustomName", customName);
         }
+        lineLocks.writeToNBT(tag);
 
         NBTTagList items = new NBTTagList();
         for (int i = 0; i < inventory.length; i++) {
@@ -1469,6 +1508,7 @@ public class TileAdvancedPulverizer extends TileEntity
         if (tag.hasKey("CustomName")) {
             customName = tag.getString("CustomName");
         }
+        lineLocks.readFromNBT(tag);
         if (tag.hasKey("RSControl")) {
             // Range-checked exactly like the Sides array below - an out-of-range ordinal from a
             // corrupt or hand-edited tag threw straight out of readFromNBT, killing the chunk load.

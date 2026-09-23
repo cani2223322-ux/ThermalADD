@@ -105,6 +105,9 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
             drawTESlot(left + ContainerAdvancedFurnace.INPUT_X - 1,
                     top + ContainerAdvancedFurnace.INPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE - 1, inputHighlight);
             drawProgressBar(left, top, i);
+            drawLineLock(tile.getLineLocks().get(i), left + ContainerAdvancedFurnace.INPUT_X,
+                    top + ContainerAdvancedFurnace.INPUT_Y + i * ContainerAdvancedFurnace.SLOT_SIZE,
+                    tile.getStackInSlot(TileAdvancedFurnace.INPUT_START + i) == null);
         }
         for (int i = 0; i < TileAdvancedFurnace.OUTPUT_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedFurnace.OUTPUT_X - 1,
@@ -143,6 +146,14 @@ public class GuiAdvancedFurnace extends TabbedMachineGui {
             return "gui.thermaladd.mode.output";
         }
         return slot < TileAdvancedFurnace.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
+    }
+
+    @Override
+    protected void addSlotTooltipLines(int slot, List<String> lines) {
+        int line = slot - TileAdvancedFurnace.INPUT_START;
+        if (line >= 0 && line < TileAdvancedFurnace.INPUT_SLOTS) {
+            addLineLockLines(tile.getLineLocks().get(line), lines);
+        }
     }
 
     /** Real TE's own activity glyph plus progress arrow, per line - see TabbedMachineGui. */

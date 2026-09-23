@@ -135,6 +135,9 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
             drawTESlot(left + ContainerAdvancedPulverizer.INPUT_X - 1,
                     top + ContainerAdvancedPulverizer.INPUT_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE - 1, inputHighlight);
             drawProgressBar(left, top, i);
+            drawLineLock(tile.getLineLocks().get(i), left + ContainerAdvancedPulverizer.INPUT_X,
+                    top + ContainerAdvancedPulverizer.INPUT_Y + i * ContainerAdvancedPulverizer.SLOT_SIZE,
+                    tile.getStackInSlot(TileAdvancedPulverizer.INPUT_START + i) == null);
         }
         for (int i = 0; i < TileAdvancedPulverizer.OUTPUT_PRIMARY_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedPulverizer.OUTPUT_PRIMARY_X - 1,
@@ -187,6 +190,14 @@ public class GuiAdvancedPulverizer extends TabbedMachineGui {
             return "gui.thermaladd.mode.outputSecondary";
         }
         return slot < TileAdvancedPulverizer.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
+    }
+
+    @Override
+    protected void addSlotTooltipLines(int slot, List<String> lines) {
+        int line = slot - TileAdvancedPulverizer.INPUT_START;
+        if (line >= 0 && line < TileAdvancedPulverizer.INPUT_SLOTS) {
+            addLineLockLines(tile.getLineLocks().get(line), lines);
+        }
     }
 
     private void drawProgressBar(int left, int top, int line) {

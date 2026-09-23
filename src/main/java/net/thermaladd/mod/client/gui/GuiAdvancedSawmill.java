@@ -105,6 +105,9 @@ public class GuiAdvancedSawmill extends TabbedMachineGui {
             drawTESlot(left + ContainerAdvancedSawmill.INPUT_X - 1,
                     top + ContainerAdvancedSawmill.INPUT_Y + i * ContainerAdvancedSawmill.SLOT_SIZE - 1, inputHighlight);
             drawProgressBar(left, top, i);
+            drawLineLock(tile.getLineLocks().get(i), left + ContainerAdvancedSawmill.INPUT_X,
+                    top + ContainerAdvancedSawmill.INPUT_Y + i * ContainerAdvancedSawmill.SLOT_SIZE,
+                    tile.getStackInSlot(TileAdvancedSawmill.INPUT_START + i) == null);
         }
         for (int i = 0; i < TileAdvancedSawmill.OUTPUT_PRIMARY_SLOTS; i++) {
             drawTESlot(left + ContainerAdvancedSawmill.OUTPUT_PRIMARY_X - 1,
@@ -150,6 +153,14 @@ public class GuiAdvancedSawmill extends TabbedMachineGui {
             return "gui.thermaladd.mode.outputSecondary";
         }
         return slot < TileAdvancedSawmill.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
+    }
+
+    @Override
+    protected void addSlotTooltipLines(int slot, List<String> lines) {
+        int line = slot - TileAdvancedSawmill.INPUT_START;
+        if (line >= 0 && line < TileAdvancedSawmill.INPUT_SLOTS) {
+            addLineLockLines(tile.getLineLocks().get(line), lines);
+        }
     }
 
     /** Real TE's own activity glyph plus progress arrow, per line - see TabbedMachineGui. */

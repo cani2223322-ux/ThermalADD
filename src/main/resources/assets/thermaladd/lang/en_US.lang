@@ -27,6 +27,9 @@ gui.thermaladd.slot.schematic=Schematic
 gui.thermaladd.slot.buffer=Ingredient buffer
 gui.thermaladd.slot.chargerLine=Input: an item to charge, or a Charger recipe
 gui.thermaladd.progress=Progress: %s / %s RF
+gui.thermaladd.lock.lockedTo=Locked to: %s
+gui.thermaladd.lock.hintUnlock=Shift + right-click the slot to unlock
+gui.thermaladd.lock.hintLock=Shift + right-click a filled slot to lock this line to its item
 
 gui.thermaladd.energy.title=Energy
 gui.thermaladd.energy.tab.consumption=Consumption:

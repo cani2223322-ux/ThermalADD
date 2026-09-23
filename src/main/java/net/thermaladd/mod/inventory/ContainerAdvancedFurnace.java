@@ -121,8 +121,7 @@ public class ContainerAdvancedFurnace extends Container {
                     return null;
                 }
             } else if (FurnaceManager.recipeExists(stackInSlot)) {
-                if (!mergeItemStack(stackInSlot, TileAdvancedFurnace.INPUT_START,
-                        TileAdvancedFurnace.OUTPUT_START, false)) {
+                if (!mergeIntoLines(stackInSlot)) {
                     return null;
                 }
             } else {
@@ -137,6 +136,37 @@ public class ContainerAdvancedFurnace extends Container {
         }
 
         return result;
+    }
+
+    /** Shift-click into the lines, honouring line locks - see ContainerAdvancedPulverizer#mergeIntoLines. */
+    private boolean mergeIntoLines(ItemStack stack) {
+        boolean moved = false;
+        for (int pass = 0; pass < 3 && stack.stackSize > 0; pass++) {
+            for (int i = 0; i < TileAdvancedFurnace.INPUT_SLOTS && stack.stackSize > 0; i++) {
+                int slot = TileAdvancedFurnace.INPUT_START + i;
+                boolean occupied = tile.getStackInSlot(slot) != null;
+                boolean locked = tile.getLineLocks().isLocked(i);
+                boolean inThisPass = pass == 0 ? occupied : !occupied && (pass == 1) == locked;
+                if (inThisPass && tile.isItemValidForSlot(slot, stack) && mergeItemStack(stack, slot, slot + 1, false)) {
+                    moved = true;
+                }
+            }
+        }
+        return moved;
+    }
+
+    /** Shift + right-click on a line's input slot toggles its lock - see ContainerAdvancedPulverizer#slotClick. */
+    @Override
+    public ItemStack slotClick(int slotId, int button, int mode, EntityPlayer player) {
+        if (mode == 1 && button == 1 && player.inventory.getItemStack() == null
+                && slotId >= TileAdvancedFurnace.INPUT_START
+                && slotId < TileAdvancedFurnace.INPUT_START + TileAdvancedFurnace.INPUT_SLOTS) {
+            if (!player.worldObj.isRemote) {
+                tile.toggleLineLock(slotId - TileAdvancedFurnace.INPUT_START);
+            }
+            return null;
+        }
+        return super.slotClick(slotId, button, mode, player);
     }
 
     @SuppressWarnings("unchecked")

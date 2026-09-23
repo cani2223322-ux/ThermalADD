@@ -104,6 +104,9 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
                 int y = top + ContainerAdvancedCharger.ROW_Y[row];
                 drawTESlot(x - 1, y - 1, inputHighlight);
                 drawTESlot(x + ContainerAdvancedCharger.OUTPUT_OFFSET - 1, y - 1, outputHighlight);
+                int line = row * ContainerAdvancedCharger.COLS + col;
+                drawLineLock(tile.getLineLocks().get(line), x, y,
+                        tile.getStackInSlot(TileAdvancedCharger.LINE_START + line) == null);
             }
         }
 
@@ -266,6 +269,14 @@ public class GuiAdvancedCharger extends TabbedMachineGui {
             return "gui.thermaladd.mode.output";
         }
         return slot < TileAdvancedCharger.CHARGE_SLOT ? "gui.thermaladd.slot.augment" : "gui.thermaladd.slot.charge";
+    }
+
+    @Override
+    protected void addSlotTooltipLines(int slot, List<String> lines) {
+        int line = slot - TileAdvancedCharger.LINE_START;
+        if (line >= 0 && line < TileAdvancedCharger.LINE_SLOTS) {
+            addLineLockLines(tile.getLineLocks().get(line), lines);
+        }
     }
 
     /** Which charging line's input slot is under the given screen position, or -1. */

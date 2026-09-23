@@ -135,8 +135,7 @@ public class ContainerAdvancedCharger extends Container {
                 // are this machine's whole reason to exist - route it there first, same
                 // priority order the other 4 machines already give their own charge slot only
                 // once nothing more specific claims the stack.
-                if (!mergeItemStack(stackInSlot, TileAdvancedCharger.LINE_START,
-                        TileAdvancedCharger.OUTPUT_START, false)) {
+                if (!mergeIntoLines(stackInSlot)) {
                     return null;
                 }
             } else {
@@ -153,14 +152,43 @@ public class ContainerAdvancedCharger extends Container {
         return result;
     }
 
+    /** Shift-click into the lines, honouring line locks - see ContainerAdvancedPulverizer#mergeIntoLines. */
+    private boolean mergeIntoLines(ItemStack stack) {
+        boolean moved = false;
+        for (int pass = 0; pass < 3 && stack.stackSize > 0; pass++) {
+            for (int i = 0; i < TileAdvancedCharger.LINE_SLOTS && stack.stackSize > 0; i++) {
+                int slot = TileAdvancedCharger.LINE_START + i;
+                boolean occupied = tile.getStackInSlot(slot) != null;
+                boolean locked = tile.getLineLocks().isLocked(i);
+                boolean inThisPass = pass == 0 ? occupied : !occupied && (pass == 1) == locked;
+                if (inThisPass && tile.isItemValidForSlot(slot, stack) && mergeItemStack(stack, slot, slot + 1, false)) {
+                    moved = true;
+                }
+            }
+        }
+        return moved;
+    }
+
+    /** Shift + right-click on a line's input slot toggles its lock - see ContainerAdvancedPulverizer#slotClick. */
+    @Override
+    public ItemStack slotClick(int slotId, int button, int mode, EntityPlayer player) {
+        if (mode == 1 && button == 1 && player.inventory.getItemStack() == null
+                && slotId >= TileAdvancedCharger.LINE_START
+                && slotId < TileAdvancedCharger.LINE_START + TileAdvancedCharger.LINE_SLOTS) {
+            if (!player.worldObj.isRemote) {
+                tile.toggleLineLock(slotId - TileAdvancedCharger.LINE_START);
+            }
+            return null;
+        }
+        return super.slotClick(slotId, button, mode, player);
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
         List<ICrafting> list = (List<ICrafting>) crafters;
         // Sent as exact low/high 16-bit halves - see TileAdvancedPulverizer#applyClientEnergy.
-        // (progress/progressMax below still use ENERGY_SYNC_SCALE: those drive a bar rather than a
-        // printed number, and a capacitor's RF charge would need 18 extra properties to split.)
         int energy = tile.getEnergy();
         int maxEnergy = tile.getMaxEnergy();
         int reconfigSides = tile.augmentReconfigSides ? 1 : 0;
