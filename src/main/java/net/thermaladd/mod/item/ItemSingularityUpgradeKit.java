@@ -22,8 +22,8 @@ import net.thermaladd.mod.util.MachineUpgrade;
  * portable tank or a strongbox to turn it into its singularity counterpart in place, keeping what
  * it held and how it was set up - see MachineUpgrade.
  *
- * Works through onItemUseFirst, which runs before the block's own right-click: a TE machine would
- * otherwise open its GUI and the kit would never be used.
+ * Works through onItemUseFirst, which the server runs before the block's own right-click: a TE
+ * machine would otherwise open its GUI and the kit would never be used.
  */
 public class ItemSingularityUpgradeKit extends Item {
 
@@ -52,8 +52,10 @@ public class ItemSingularityUpgradeKit extends Item {
             return false;
         }
         if (world.isRemote) {
-            // Claim the click on the client too, so the TE block's own GUI does not open.
-            return true;
+            // Must be false: in 1.7.10 PlayerControllerMP#onPlayerRightClick returns before sending
+            // the click to the server when this is true client-side. The server then runs this
+            // method first and returns true, so TE's block never opens its GUI there.
+            return false;
         }
         String result = MachineUpgrade.upgrade(world, x, y, z, player);
         if (result == null) {
