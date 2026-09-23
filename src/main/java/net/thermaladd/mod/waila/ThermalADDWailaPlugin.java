@@ -28,6 +28,8 @@ import net.thermaladd.mod.block.BlockSingularityCell;
 import net.thermaladd.mod.block.BlockSingularCrucible;
 import net.thermaladd.mod.block.BlockSingularSmelter;
 import net.thermaladd.mod.block.BlockSingularTransposer;
+import net.thermaladd.mod.block.BlockSingularityTank;
+import net.thermaladd.mod.tileentity.TileSingularityTank;
 import net.thermaladd.mod.tileentity.TileSingularityMachine;
 import net.thermaladd.mod.tileentity.TileAdvancedCharger;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
@@ -90,6 +92,7 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
         register(registrar, provider, BlockSingularSmelter.class);
         register(registrar, provider, BlockSingularCrucible.class);
         register(registrar, provider, BlockSingularTransposer.class);
+        register(registrar, provider, BlockSingularityTank.class);
     }
 
     /** Both halves are needed: the NBT provider produces the numbers server-side, the body provider draws them. */
@@ -112,7 +115,12 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
     @Override
     public List<String> getWailaBody(ItemStack itemStack, List<String> currenttip, IWailaDataAccessor accessor, IWailaConfigHandler config) {
         NBTTagCompound data = accessor.getNBTData();
-        if (data == null || !data.hasKey(KEY_ENERGY)) {
+        if (data == null) {
+            return currenttip;
+        }
+        if (!data.hasKey(KEY_ENERGY)) {
+            // The Singularity Tank has a fluid line only.
+            addFluidLine(data, currenttip);
             return currenttip;
         }
 
@@ -138,16 +146,29 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
             currenttip.add(StatCollector.translateToLocalFormatted("waila.thermaladd.lines",
                     String.valueOf(data.getInteger(KEY_BUSY_LINES)), String.valueOf(data.getInteger(KEY_TOTAL_LINES))));
         }
-        if (data.hasKey(KEY_FLUID_CAPACITY)) {
-            // Fluid names are looked up client-side so they come out in the player's own language.
-            Fluid fluid = data.hasKey(KEY_FLUID_NAME) ? FluidRegistry.getFluid(data.getString(KEY_FLUID_NAME)) : null;
-            String name = fluid != null
-                    ? fluid.getLocalizedName(new FluidStack(fluid, data.getInteger(KEY_FLUID_AMOUNT)))
-                    : StatCollector.translateToLocal("waila.thermaladd.fluidEmpty");
-            currenttip.add(StatCollector.translateToLocalFormatted("waila.thermaladd.fluid", name,
-                    format(data.getInteger(KEY_FLUID_AMOUNT)), format(data.getInteger(KEY_FLUID_CAPACITY))));
-        }
+        addFluidLine(data, currenttip);
         return currenttip;
+    }
+
+    /** Fluid names are looked up client-side so they come out in the player's own language. */
+    private static void addFluidLine(NBTTagCompound data, List<String> currenttip) {
+        if (!data.hasKey(KEY_FLUID_CAPACITY)) {
+            return;
+        }
+        Fluid fluid = data.hasKey(KEY_FLUID_NAME) ? FluidRegistry.getFluid(data.getString(KEY_FLUID_NAME)) : null;
+        String name = fluid != null
+                ? fluid.getLocalizedName(new FluidStack(fluid, data.getInteger(KEY_FLUID_AMOUNT)))
+                : StatCollector.translateToLocal("waila.thermaladd.fluidEmpty");
+        currenttip.add(StatCollector.translateToLocalFormatted("waila.thermaladd.fluid", name,
+                format(data.getInteger(KEY_FLUID_AMOUNT)), format(data.getInteger(KEY_FLUID_CAPACITY))));
+    }
+
+    private static void writeFluid(NBTTagCompound tag, FluidStack fluid, int capacity) {
+        tag.setInteger(KEY_FLUID_AMOUNT, fluid != null ? fluid.amount : 0);
+        tag.setInteger(KEY_FLUID_CAPACITY, capacity);
+        if (fluid != null && fluid.amount > 0) {
+            tag.setString(KEY_FLUID_NAME, fluid.getFluid().getName());
+        }
     }
 
     @Override
@@ -211,14 +232,12 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
             }
             writeMachine(tag, tile.getEnergy(), tile.getMaxEnergy(), tile.getEnergyPerTick(),
                     tile.getMaxEnergyPerTick(), busy, tile.getLineCount());
-            FluidStack fluid = tile.getTankFluid();
             if (tile.hasTank()) {
-                tag.setInteger(KEY_FLUID_AMOUNT, fluid != null ? fluid.amount : 0);
-                tag.setInteger(KEY_FLUID_CAPACITY, tile.getTankCapacity());
-                if (fluid != null && fluid.amount > 0) {
-                    tag.setString(KEY_FLUID_NAME, fluid.getFluid().getName());
-                }
+                writeFluid(tag, tile.getTankFluid(), tile.getTankCapacity());
             }
+        } else if (te instanceof TileSingularityTank) {
+            TileSingularityTank tank = (TileSingularityTank) te;
+            writeFluid(tag, tank.getTankFluid(), tank.getTankCapacity());
         } else if (te instanceof TileImprovedAssembler) {
             // No per-line progress to report: the Assembler's schematic slots are configuration,
             // and its crafts complete within a tick rather than accumulating visible progress.

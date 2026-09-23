@@ -32,6 +32,9 @@ import net.thermaladd.mod.client.gui.GuiSingularTransposer;
 import net.thermaladd.mod.inventory.ContainerSingularCrucible;
 import net.thermaladd.mod.inventory.ContainerSingularSmelter;
 import net.thermaladd.mod.inventory.ContainerSingularTransposer;
+import net.thermaladd.mod.inventory.ContainerSingularityStrongbox;
+import net.thermaladd.mod.client.gui.GuiSingularityStrongbox;
+import net.thermaladd.mod.tileentity.TileSingularityStrongbox;
 
 public class GuiHandler implements IGuiHandler {
 
@@ -65,6 +68,9 @@ public class GuiHandler implements IGuiHandler {
         if (id == ThermalADD.GUI_ID_SINGULAR_TRANSPOSER && te instanceof TileSingularTransposer) {
             return new ContainerSingularTransposer(player.inventory, (TileSingularTransposer) te);
         }
+        if (id == ThermalADD.GUI_ID_SINGULARITY_STRONGBOX && te instanceof TileSingularityStrongbox) {
+            return new ContainerSingularityStrongbox(player.inventory, (TileSingularityStrongbox) te);
+        }
         return null;
     }
 
@@ -97,6 +103,9 @@ public class GuiHandler implements IGuiHandler {
         }
         if (id == ThermalADD.GUI_ID_SINGULAR_TRANSPOSER && te instanceof TileSingularTransposer) {
             return new GuiSingularTransposer(player.inventory, (TileSingularTransposer) te);
+        }
+        if (id == ThermalADD.GUI_ID_SINGULARITY_STRONGBOX && te instanceof TileSingularityStrongbox) {
+            return new GuiSingularityStrongbox(player.inventory, (TileSingularityStrongbox) te);
         }
         return null;
     }

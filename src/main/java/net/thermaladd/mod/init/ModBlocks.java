@@ -11,7 +11,11 @@ import net.thermaladd.mod.block.BlockSingularityFrame;
 import net.thermaladd.mod.block.BlockSingularCrucible;
 import net.thermaladd.mod.block.BlockSingularSmelter;
 import net.thermaladd.mod.block.BlockSingularTransposer;
+import net.thermaladd.mod.block.BlockSingularityStrongbox;
+import net.thermaladd.mod.block.BlockSingularityTank;
 import net.thermaladd.mod.item.ItemBlockSingularityMachine;
+import net.thermaladd.mod.item.ItemBlockSingularityStrongbox;
+import net.thermaladd.mod.item.ItemBlockSingularityTank;
 import net.thermaladd.mod.item.ItemBlockAdvancedCharger;
 import net.thermaladd.mod.item.ItemBlockAdvancedFurnace;
 import net.thermaladd.mod.item.ItemBlockAdvancedPulverizer;
@@ -31,8 +35,12 @@ public class ModBlocks {
     public static BlockSingularSmelter singularSmelter;
     public static BlockSingularCrucible singularCrucible;
     public static BlockSingularTransposer singularTransposer;
+    public static BlockSingularityTank singularityTank;
+    public static BlockSingularityStrongbox singularityStrongbox;
 
     public static void init() {
+        singularityTank = new BlockSingularityTank();
+        singularityStrongbox = new BlockSingularityStrongbox();
         singularSmelter = new BlockSingularSmelter();
         singularCrucible = new BlockSingularCrucible();
         singularTransposer = new BlockSingularTransposer();
@@ -55,6 +63,8 @@ public class ModBlocks {
         GameRegistry.registerBlock(singularSmelter, ItemBlockSingularityMachine.class, "singularSmelter");
         GameRegistry.registerBlock(singularCrucible, ItemBlockSingularityMachine.class, "singularCrucible");
         GameRegistry.registerBlock(singularTransposer, ItemBlockSingularityMachine.class, "singularTransposer");
+        GameRegistry.registerBlock(singularityTank, ItemBlockSingularityTank.class, "singularityTank");
+        GameRegistry.registerBlock(singularityStrongbox, ItemBlockSingularityStrongbox.class, "singularityStrongbox");
         // Plain crafting material, no custom tooltip/behavior needed - default ItemBlock is fine.
         GameRegistry.registerBlock(singularityFrame, "singularityFrame");
     }

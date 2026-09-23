@@ -1,12 +1,15 @@
 package net.thermaladd.mod.init;
 
+import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
+import net.minecraft.world.World;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 
 import cofh.thermalexpansion.block.TEBlocks;
 import cofh.thermalexpansion.block.cell.BlockCell;
 import cofh.thermalexpansion.block.machine.BlockMachine;
 import cofh.thermalexpansion.block.simple.BlockFrame;
+import cofh.thermalexpansion.block.strongbox.BlockStrongbox;
 import cofh.thermalexpansion.block.tank.BlockTank;
 import cofh.thermalexpansion.item.TEAugments;
 import cofh.thermalexpansion.item.TEItems;
@@ -79,6 +82,16 @@ public class ModRecipes {
         registerSafely("Singular Fluid Transposer", ModConfig.recipeSingularTransposer, new RecipeRegistration() {
             public void register() {
                 registerSingularTransposerRecipe();
+            }
+        });
+        registerSafely("Singularity Tank", ModConfig.recipeSingularityTank, new RecipeRegistration() {
+            public void register() {
+                registerSingularityTankRecipe();
+            }
+        });
+        registerSafely("Singularity Strongbox", ModConfig.recipeSingularityStrongbox, new RecipeRegistration() {
+            public void register() {
+                registerSingularityStrongboxRecipe();
             }
         });
         registerSafely("Speed Level 4 augment", ModConfig.recipeSpeedLevel4Augment, new RecipeRegistration() {
@@ -319,7 +332,7 @@ public class ModRecipes {
         // L G L      L = Lumium ingot, G = Singularity Gear
         // K T K      K = Reinforced Portable Tank (crafted), T = real Fluid Transposer
         // L F L      F = Singularity Frame
-        GameRegistry.addRecipe(new ShapedOreRecipe(
+        GameRegistry.addRecipe(new NoContentsRecipe(
                 new ItemStack(ModBlocks.singularTransposer),
                 "LGL",
                 "KTK",
@@ -329,6 +342,62 @@ public class ModRecipes {
                 'K', BlockTank.tankReinforced,
                 'T', transposer,
                 'F', ModBlocks.singularityFrame));
+    }
+
+    /**
+     * Two Resonant Portable Tanks fused around a Singularity Gear, with Hardened Glass and Enderium
+     * - all crafted. Ore recipes ignore NBT, so a tank still holding fluid is refused rather than
+     * having its contents silently destroyed by the craft.
+     */
+    private static void registerSingularityTankRecipe() {
+        // H T H      H = Hardened Glass, T = Resonant Portable Tank (empty)
+        // E G E      E = Enderium ingot, G = Singularity Gear
+        // H T H
+        GameRegistry.addRecipe(new NoContentsRecipe(
+                new ItemStack(ModBlocks.singularityTank),
+                "HTH",
+                "EGE",
+                "HTH",
+                'H', "blockGlassHardened",
+                'T', BlockTank.tankResonant,
+                'E', "ingotEnderium",
+                'G', ModItems.singularityGear));
+    }
+
+    /** Two Resonant Strongboxes around a Singularity Gear; a box that still holds items is refused, as above. */
+    private static void registerSingularityStrongboxRecipe() {
+        // E S E      E = Enderium ingot, S = Resonant Strongbox (empty)
+        // I G I      I = Signalum ingot, G = Singularity Gear
+        // E S E
+        GameRegistry.addRecipe(new NoContentsRecipe(
+                new ItemStack(ModBlocks.singularityStrongbox),
+                "ESE",
+                "IGI",
+                "ESE",
+                'E', "ingotEnderium",
+                'S', BlockStrongbox.strongboxResonant,
+                'I', "ingotSignalum",
+                'G', ModItems.singularityGear));
+    }
+
+    /** A shaped ore recipe that will not consume an ingredient still carrying fluid or items. */
+    private static final class NoContentsRecipe extends ShapedOreRecipe {
+
+        NoContentsRecipe(ItemStack result, Object... recipe) {
+            super(result, recipe);
+        }
+
+        @Override
+        public boolean matches(InventoryCrafting grid, World world) {
+            for (int i = 0; i < grid.getSizeInventory(); i++) {
+                ItemStack stack = grid.getStackInSlot(i);
+                if (stack != null && stack.hasTagCompound()
+                        && (stack.getTagCompound().hasKey("Fluid") || stack.getTagCompound().hasKey("Inventory"))) {
+                    return false;
+                }
+            }
+            return super.matches(grid, world);
+        }
     }
 
     /**

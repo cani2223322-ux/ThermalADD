@@ -13,6 +13,7 @@ import net.thermaladd.mod.tileentity.TileSingularityCell;
 import net.thermaladd.mod.tileentity.TileSingularCrucible;
 import net.thermaladd.mod.tileentity.TileSingularSmelter;
 import net.thermaladd.mod.tileentity.TileSingularTransposer;
+import net.thermaladd.mod.tileentity.TileSingularityTank;
 
 /**
  * Loads config/ThermalADD.cfg and writes the tunable values straight into the tiles' own
@@ -43,6 +44,7 @@ public final class ModConfig {
     private static final String CAT_SMELTER = "machines.smelter";
     private static final String CAT_CRUCIBLE = "machines.crucible";
     private static final String CAT_TRANSPOSER = "machines.transposer";
+    private static final String CAT_TANK = "storage.tank";
     private static final String CAT_RECIPES = "recipes";
     private static final String CAT_GUI = "gui";
 
@@ -94,6 +96,8 @@ public final class ModConfig {
     public static boolean recipeSingularSmelter = true;
     public static boolean recipeSingularCrucible = true;
     public static boolean recipeSingularTransposer = true;
+    public static boolean recipeSingularityTank = true;
+    public static boolean recipeSingularityStrongbox = true;
     public static boolean recipeSingularityCell = true;
     public static boolean recipeSingularityGear = true;
     public static boolean recipeSingularityFrame = true;
@@ -180,6 +184,8 @@ public final class ModConfig {
                 TileSingularTransposer.BASE_ENERGY_PER_TICK, MAX_PROCESS_ENERGY_SINGULAR);
 
         TileSingularityCell.CAPACITY = cellCapacity(cfg, TileSingularityCell.CAPACITY);
+        TileSingularityTank.CAPACITY = clampedInt(cfg, CAT_TANK, "capacity", TileSingularityTank.CAPACITY, 512000, 1000000000,
+                "Fluid the Singularity Tank holds, in mB. Range 512000-1000000000.");
 
         // Cross-checks between values that are each individually in range. A machine only starts a
         // tick of work when its buffer holds that tick's whole cost, and the worst case is the
@@ -230,7 +236,7 @@ public final class ModConfig {
      * the server sends its values on login (MessageConfigSync) and the client puts its own back on
      * disconnect. Order is fixed and shared by snapshotMachineValues/applyMachineValues.
      */
-    public static final int SYNCED_VALUE_COUNT = 24;
+    public static final int SYNCED_VALUE_COUNT = 25;
 
     private static int[] localMachineValues;
     private static long localCellCapacity;
@@ -244,7 +250,8 @@ public final class ModConfig {
                 TileImprovedAssembler.ENERGY_CAPACITY, TileImprovedAssembler.ENERGY_RECEIVE_PER_TICK, TileImprovedAssembler.PROCESS_ENERGY,
                 TileSingularSmelter.BASE_ENERGY_CAPACITY, TileSingularSmelter.ENERGY_RECEIVE_PER_TICK, TileSingularSmelter.BASE_ENERGY_PER_TICK,
                 TileSingularCrucible.BASE_ENERGY_CAPACITY, TileSingularCrucible.ENERGY_RECEIVE_PER_TICK, TileSingularCrucible.BASE_ENERGY_PER_TICK,
-                TileSingularTransposer.BASE_ENERGY_CAPACITY, TileSingularTransposer.ENERGY_RECEIVE_PER_TICK, TileSingularTransposer.BASE_ENERGY_PER_TICK
+                TileSingularTransposer.BASE_ENERGY_CAPACITY, TileSingularTransposer.ENERGY_RECEIVE_PER_TICK, TileSingularTransposer.BASE_ENERGY_PER_TICK,
+                TileSingularityTank.CAPACITY
         };
     }
 
@@ -277,6 +284,7 @@ public final class ModConfig {
         TileSingularTransposer.BASE_ENERGY_CAPACITY = v[21];
         TileSingularTransposer.ENERGY_RECEIVE_PER_TICK = v[22];
         TileSingularTransposer.BASE_ENERGY_PER_TICK = v[23];
+        TileSingularityTank.CAPACITY = v[24];
         if (cellCapacity > 0L) {
             TileSingularityCell.CAPACITY = cellCapacity;
         }
@@ -370,6 +378,8 @@ public final class ModConfig {
         recipeSingularSmelter = recipe(cfg, "singularSmelter");
         recipeSingularCrucible = recipe(cfg, "singularCrucible");
         recipeSingularTransposer = recipe(cfg, "singularTransposer");
+        recipeSingularityTank = recipe(cfg, "singularityTank");
+        recipeSingularityStrongbox = recipe(cfg, "singularityStrongbox");
         recipeSingularityCell = recipe(cfg, "singularityCell");
         recipeSingularityGear = recipe(cfg, "singularityGear");
         recipeSingularityFrame = recipe(cfg, "singularityFrame");

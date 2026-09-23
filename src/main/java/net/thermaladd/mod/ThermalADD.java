@@ -29,6 +29,8 @@ import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularCrucible;
 import net.thermaladd.mod.tileentity.TileSingularSmelter;
 import net.thermaladd.mod.tileentity.TileSingularTransposer;
+import net.thermaladd.mod.tileentity.TileSingularityStrongbox;
+import net.thermaladd.mod.tileentity.TileSingularityTank;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
 
 /**
@@ -64,6 +66,7 @@ public class ThermalADD {
     public static final int GUI_ID_SINGULAR_SMELTER = 6;
     public static final int GUI_ID_SINGULAR_CRUCIBLE = 7;
     public static final int GUI_ID_SINGULAR_TRANSPOSER = 8;
+    public static final int GUI_ID_SINGULARITY_STRONGBOX = 9;
 
     @Instance(MODID)
     public static ThermalADD instance;
@@ -92,6 +95,8 @@ public class ThermalADD {
         GameRegistry.registerTileEntity(TileSingularSmelter.class, MODID + "_singular_smelter_tile");
         GameRegistry.registerTileEntity(TileSingularCrucible.class, MODID + "_singular_crucible_tile");
         GameRegistry.registerTileEntity(TileSingularTransposer.class, MODID + "_singular_transposer_tile");
+        GameRegistry.registerTileEntity(TileSingularityTank.class, MODID + "_singularity_tank_tile");
+        GameRegistry.registerTileEntity(TileSingularityStrongbox.class, MODID + "_singularity_strongbox_tile");
         proxy.registerRenderers();
         PacketHandler.init();
     }
