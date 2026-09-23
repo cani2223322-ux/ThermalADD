@@ -109,3 +109,16 @@ gui.thermaladd.cell.capacity=capacity
 
 item.singularityGear.name=Singularity Gear
 tile.singularityFrame.name=Machine Frame (Singularity)
+
+tile.singularSmelter.name=Singularity Induction Smelter
+info.thermaladd.singularSmelter=Alloys on the TE Induction Smelter's recipes, three lines at once with two inputs each. The secondary output chance rises with the Secondary Sieve augment.
+info.thermaladd.tip.smelterPairs=A line's second input only takes what forms a recipe with its first, so pipes and auto input build valid pairs on their own.
+info.thermaladd.tip.lockSlot=Shift + right-click a filled input slot to lock it to its item.
+gui.thermaladd.slot.smelterInputA=Input A: first ingredient
+gui.thermaladd.slot.smelterInputB=Input B: second ingredient, paired with A
+gui.thermaladd.mode.inputPrimary=Input (Primary)
+gui.thermaladd.mode.inputSecondary=Input (Secondary)
+gui.thermaladd.mode.outputItems=Output (Items)
+gui.thermaladd.mode.outputFluid=Output (Fluid)
+waila.thermaladd.fluid=§7Tank: §e%s %s / %s mB
+waila.thermaladd.fluidEmpty=empty

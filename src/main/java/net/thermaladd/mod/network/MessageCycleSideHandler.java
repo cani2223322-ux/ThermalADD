@@ -11,6 +11,7 @@ import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
+import net.thermaladd.mod.tileentity.TileSingularityMachine;
 
 /**
  * One shared "cycle this side's mode" message for every machine in the mod that has a
@@ -108,6 +109,24 @@ public class MessageCycleSideHandler implements IMessageHandler<MessageCycleSide
             }
         } else if (te instanceof TileAdvancedSawmill) {
             TileAdvancedSawmill tile = (TileAdvancedSawmill) te;
+            switch (message.getAction()) {
+                case MessageCycleSide.ACTION_FORWARD:
+                    tile.cycleSideMode(message.getSide(), 1);
+                    break;
+                case MessageCycleSide.ACTION_BACKWARD:
+                    tile.cycleSideMode(message.getSide(), -1);
+                    break;
+                case MessageCycleSide.ACTION_RESET_ONE:
+                    tile.resetSideMode(message.getSide());
+                    break;
+                case MessageCycleSide.ACTION_RESET_ALL:
+                    tile.resetAllSideModes();
+                    break;
+                default:
+                    break;
+            }
+        } else if (te instanceof TileSingularityMachine) {
+            TileSingularityMachine tile = (TileSingularityMachine) te;
             switch (message.getAction()) {
                 case MessageCycleSide.ACTION_FORWARD:
                     tile.cycleSideMode(message.getSide(), 1);

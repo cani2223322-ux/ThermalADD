@@ -13,6 +13,7 @@ import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
+import net.thermaladd.mod.tileentity.TileSingularityMachine;
 
 import cofh.lib.audio.ISoundSource;
 import cofh.lib.audio.SoundTile;
@@ -104,6 +105,16 @@ public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTile
             // No sound for the Charger - real TE has none either, see TileAdvancedCharger's own
             // field comment - just keep its idle/active face icon in sync.
             tile.setActiveClient(active);
+        } else if (te instanceof TileSingularityMachine) {
+            TileSingularityMachine tile = (TileSingularityMachine) te;
+            tile.setFacingClient(message.getFacing());
+            for (int i = 0; i < sides.length; i++) {
+                tile.setSideModeClient(i, sides[i]);
+            }
+            if (tile.getSoundName() != null) {
+                playMachineSoundOnStart(tile.isActive(), active, message.getX(), message.getY(), message.getZ(), tile.getSoundName());
+            }
+            tile.setActiveClient(active);
         } else {
             return;
         }
@@ -140,6 +151,9 @@ public class MessageTileRenderSyncHandler implements IMessageHandler<MessageTile
                 }
                 if (te instanceof TileAdvancedSawmill) {
                     return ((TileAdvancedSawmill) te).isActive();
+                }
+                if (te instanceof TileSingularityMachine) {
+                    return ((TileSingularityMachine) te).isActive();
                 }
                 return false;
             }

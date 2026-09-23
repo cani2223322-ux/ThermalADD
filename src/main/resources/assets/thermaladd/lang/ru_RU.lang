@@ -109,3 +109,16 @@ gui.thermaladd.cell.capacity=вместимость
 
 item.singularityGear.name=Сингулярная шестерня
 tile.singularityFrame.name=Рамка механизма (сингулярная)
+
+tile.singularSmelter.name=Сингулярная индукционная печь
+info.thermaladd.singularSmelter=Сплавляет по рецептам Индукционного плавильщика TE сразу на трёх линиях, по два входа на линию. Шанс вторичного выхода растёт с расширением «Вторичное сито».
+info.thermaladd.tip.smelterPairs=Второй вход линии принимает только то, что образует рецепт с первым, — трубы и автовход сами собирают правильные пары.
+info.thermaladd.tip.lockSlot=Shift+ПКМ по занятому входному слоту закрепляет его за этим предметом.
+gui.thermaladd.slot.smelterInputA=Вход A: первый ингредиент
+gui.thermaladd.slot.smelterInputB=Вход B: второй ингредиент, пара к A
+gui.thermaladd.mode.inputPrimary=Вход (первичный)
+gui.thermaladd.mode.inputSecondary=Вход (вторичный)
+gui.thermaladd.mode.outputItems=Выход (предметы)
+gui.thermaladd.mode.outputFluid=Выход (жидкость)
+waila.thermaladd.fluid=§7Бак: §e%s %s / %s mB
+waila.thermaladd.fluidEmpty=пусто

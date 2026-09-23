@@ -8,6 +8,8 @@ import net.thermaladd.mod.block.BlockAdvancedSawmill;
 import net.thermaladd.mod.block.BlockImprovedAssembler;
 import net.thermaladd.mod.block.BlockSingularityCell;
 import net.thermaladd.mod.block.BlockSingularityFrame;
+import net.thermaladd.mod.block.BlockSingularSmelter;
+import net.thermaladd.mod.item.ItemBlockSingularityMachine;
 import net.thermaladd.mod.item.ItemBlockAdvancedCharger;
 import net.thermaladd.mod.item.ItemBlockAdvancedFurnace;
 import net.thermaladd.mod.item.ItemBlockAdvancedPulverizer;
@@ -24,8 +26,10 @@ public class ModBlocks {
     public static BlockAdvancedCharger advancedCharger;
     public static BlockSingularityCell singularityCell;
     public static BlockSingularityFrame singularityFrame;
+    public static BlockSingularSmelter singularSmelter;
 
     public static void init() {
+        singularSmelter = new BlockSingularSmelter();
         advancedPulverizer = new BlockAdvancedPulverizer();
         improvedAssembler = new BlockImprovedAssembler();
         advancedFurnace = new BlockAdvancedFurnace();
@@ -42,6 +46,7 @@ public class ModBlocks {
         GameRegistry.registerBlock(advancedSawmill, ItemBlockAdvancedSawmill.class, "advancedSawmill");
         GameRegistry.registerBlock(advancedCharger, ItemBlockAdvancedCharger.class, "advancedCharger");
         GameRegistry.registerBlock(singularityCell, ItemBlockSingularityCell.class, "singularityCell");
+        GameRegistry.registerBlock(singularSmelter, ItemBlockSingularityMachine.class, "singularSmelter");
         // Plain crafting material, no custom tooltip/behavior needed - default ItemBlock is fine.
         GameRegistry.registerBlock(singularityFrame, "singularityFrame");
     }

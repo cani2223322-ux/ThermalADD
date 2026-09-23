@@ -9,6 +9,9 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidRegistry;
+import net.minecraftforge.fluids.FluidStack;
 
 import mcp.mobius.waila.api.IWailaConfigHandler;
 import mcp.mobius.waila.api.IWailaDataAccessor;
@@ -22,6 +25,8 @@ import net.thermaladd.mod.block.BlockAdvancedPulverizer;
 import net.thermaladd.mod.block.BlockAdvancedSawmill;
 import net.thermaladd.mod.block.BlockImprovedAssembler;
 import net.thermaladd.mod.block.BlockSingularityCell;
+import net.thermaladd.mod.block.BlockSingularSmelter;
+import net.thermaladd.mod.tileentity.TileSingularityMachine;
 import net.thermaladd.mod.tileentity.TileAdvancedCharger;
 import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
@@ -68,6 +73,9 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
     private static final String KEY_MAX_RATE = "taMaxRate";
     private static final String KEY_BUSY_LINES = "taBusyLines";
     private static final String KEY_TOTAL_LINES = "taTotalLines";
+    private static final String KEY_FLUID_AMOUNT = "taFluidAmount";
+    private static final String KEY_FLUID_CAPACITY = "taFluidCapacity";
+    private static final String KEY_FLUID_NAME = "taFluidName";
 
     public static void callbackRegister(IWailaRegistrar registrar) {
         ThermalADDWailaPlugin provider = new ThermalADDWailaPlugin();
@@ -77,6 +85,7 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
         register(registrar, provider, BlockAdvancedSawmill.class);
         register(registrar, provider, BlockAdvancedCharger.class);
         register(registrar, provider, BlockImprovedAssembler.class);
+        register(registrar, provider, BlockSingularSmelter.class);
     }
 
     /** Both halves are needed: the NBT provider produces the numbers server-side, the body provider draws them. */
@@ -124,6 +133,15 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
         if (data.hasKey(KEY_TOTAL_LINES)) {
             currenttip.add(StatCollector.translateToLocalFormatted("waila.thermaladd.lines",
                     String.valueOf(data.getInteger(KEY_BUSY_LINES)), String.valueOf(data.getInteger(KEY_TOTAL_LINES))));
+        }
+        if (data.hasKey(KEY_FLUID_CAPACITY)) {
+            // Fluid names are looked up client-side so they come out in the player's own language.
+            Fluid fluid = data.hasKey(KEY_FLUID_NAME) ? FluidRegistry.getFluid(data.getString(KEY_FLUID_NAME)) : null;
+            String name = fluid != null
+                    ? fluid.getLocalizedName(new FluidStack(fluid, data.getInteger(KEY_FLUID_AMOUNT)))
+                    : StatCollector.translateToLocal("waila.thermaladd.fluidEmpty");
+            currenttip.add(StatCollector.translateToLocalFormatted("waila.thermaladd.fluid", name,
+                    format(data.getInteger(KEY_FLUID_AMOUNT)), format(data.getInteger(KEY_FLUID_CAPACITY))));
         }
         return currenttip;
     }
@@ -179,6 +197,24 @@ public class ThermalADDWailaPlugin implements IWailaDataProvider {
             }
             writeMachine(tag, tile.getEnergy(), tile.getMaxEnergy(), tile.getEnergyPerTick(),
                     tile.getMaxEnergyPerTick(), busy, TileAdvancedCharger.LINE_SLOTS);
+        } else if (te instanceof TileSingularityMachine) {
+            TileSingularityMachine tile = (TileSingularityMachine) te;
+            int busy = 0;
+            for (int i = 0; i < tile.getLineCount(); i++) {
+                if (tile.getProgressMax(i) > 0) {
+                    busy++;
+                }
+            }
+            writeMachine(tag, tile.getEnergy(), tile.getMaxEnergy(), tile.getEnergyPerTick(),
+                    tile.getMaxEnergyPerTick(), busy, tile.getLineCount());
+            FluidStack fluid = tile.getTankFluid();
+            if (tile.hasTank()) {
+                tag.setInteger(KEY_FLUID_AMOUNT, fluid != null ? fluid.amount : 0);
+                tag.setInteger(KEY_FLUID_CAPACITY, tile.getTankCapacity());
+                if (fluid != null && fluid.amount > 0) {
+                    tag.setString(KEY_FLUID_NAME, fluid.getFluid().getName());
+                }
+            }
         } else if (te instanceof TileImprovedAssembler) {
             // No per-line progress to report: the Assembler's schematic slots are configuration,
             // and its crafts complete within a tick rather than accumulating visible progress.

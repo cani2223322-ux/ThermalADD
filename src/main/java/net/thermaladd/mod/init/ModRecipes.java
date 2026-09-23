@@ -65,6 +65,11 @@ public class ModRecipes {
                 registerAdvancedChargerRecipe();
             }
         });
+        registerSafely("Singular Induction Smelter", ModConfig.recipeSingularSmelter, new RecipeRegistration() {
+            public void register() {
+                registerSingularSmelterRecipe();
+            }
+        });
         registerSafely("Speed Level 4 augment", ModConfig.recipeSpeedLevel4Augment, new RecipeRegistration() {
             public void register() {
                 registerSpeedLevel4AugmentRecipe();
@@ -245,6 +250,29 @@ public class ModRecipes {
                 'G', ModItems.singularityGear,
                 'C', charger,
                 'K', TEItems.capacitorReinforced,
+                'F', ModBlocks.singularityFrame));
+    }
+
+    /**
+     * Same Singularity Frame + Singularity Gear base as the other machines: Bronze ingots (the one
+     * TE alloy no other recipe here uses yet) and Pyrotheum dust (crafted from Blaze Powder,
+     * Redstone and Sulfur - TE's own smelting catalyst) around a real Induction Smelter.
+     */
+    private static void registerSingularSmelterRecipe() {
+        ItemStack smelter = new ItemStack(TEBlocks.blockMachine, 1, BlockMachine.Types.SMELTER.ordinal());
+
+        // B G B      B = Bronze ingot, G = Singularity Gear
+        // P S P      P = Pyrotheum dust (crafted), S = real Induction Smelter
+        // B F B      F = Singularity Frame
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModBlocks.singularSmelter),
+                "BGB",
+                "PSP",
+                "BFB",
+                'B', "ingotBronze",
+                'G', ModItems.singularityGear,
+                'P', "dustPyrotheum",
+                'S', smelter,
                 'F', ModBlocks.singularityFrame));
     }
 

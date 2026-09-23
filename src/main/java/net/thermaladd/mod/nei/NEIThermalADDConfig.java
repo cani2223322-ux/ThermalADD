@@ -15,6 +15,7 @@ import net.thermaladd.mod.client.gui.GuiAdvancedFurnace;
 import net.thermaladd.mod.client.gui.GuiAdvancedPulverizer;
 import net.thermaladd.mod.client.gui.GuiAdvancedSawmill;
 import net.thermaladd.mod.client.gui.GuiImprovedAssembler;
+import net.thermaladd.mod.client.gui.GuiSingularSmelter;
 
 /**
  * NEI integration: clicking a machine's progress arrow opens that machine's recipes, exactly like
@@ -39,6 +40,7 @@ public class NEIThermalADDConfig implements IConfigureNEI {
         register(GuiAdvancedFurnace.class, "thermalexpansion.furnace", GuiAdvancedFurnace.recipeAreas());
         register(GuiAdvancedSawmill.class, "thermalexpansion.sawmill", GuiAdvancedSawmill.recipeAreas());
         register(GuiImprovedAssembler.class, "crafting", GuiImprovedAssembler.recipeAreas());
+        register(GuiSingularSmelter.class, "thermalexpansion.smelter", GuiSingularSmelter.recipeAreas());
     }
 
     private static void register(Class<? extends GuiContainer> gui, String outputId, Rectangle[] areas) {

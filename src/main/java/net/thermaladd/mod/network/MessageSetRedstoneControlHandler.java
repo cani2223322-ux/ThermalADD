@@ -11,6 +11,7 @@ import net.thermaladd.mod.tileentity.TileAdvancedFurnace;
 import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
+import net.thermaladd.mod.tileentity.TileSingularityMachine;
 
 /** All machines implement the real cofh.api.tileentity.IRedstoneControl, so one handler covers them all. */
 public class MessageSetRedstoneControlHandler implements IMessageHandler<MessageSetRedstoneControl, IMessage> {
@@ -27,7 +28,8 @@ public class MessageSetRedstoneControlHandler implements IMessageHandler<Message
                 || (te instanceof TileAdvancedFurnace && ((TileAdvancedFurnace) te).augmentRedstoneControl)
                 || (te instanceof TileImprovedAssembler && ((TileImprovedAssembler) te).augmentRedstoneControl)
                 || (te instanceof TileAdvancedSawmill && ((TileAdvancedSawmill) te).augmentRedstoneControl)
-                || (te instanceof TileAdvancedCharger && ((TileAdvancedCharger) te).augmentRedstoneControl);
+                || (te instanceof TileAdvancedCharger && ((TileAdvancedCharger) te).augmentRedstoneControl)
+                || (te instanceof TileSingularityMachine && ((TileSingularityMachine) te).augmentRedstoneControl);
         if (!augmentInstalled || !(te instanceof IRedstoneControl)) {
             return null;
         }

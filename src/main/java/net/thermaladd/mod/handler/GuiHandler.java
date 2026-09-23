@@ -23,6 +23,9 @@ import net.thermaladd.mod.tileentity.TileAdvancedPulverizer;
 import net.thermaladd.mod.tileentity.TileAdvancedSawmill;
 import net.thermaladd.mod.tileentity.TileImprovedAssembler;
 import net.thermaladd.mod.tileentity.TileSingularityCell;
+import net.thermaladd.mod.tileentity.TileSingularSmelter;
+import net.thermaladd.mod.client.gui.GuiSingularSmelter;
+import net.thermaladd.mod.inventory.ContainerSingularSmelter;
 
 public class GuiHandler implements IGuiHandler {
 
@@ -47,6 +50,9 @@ public class GuiHandler implements IGuiHandler {
         if (id == ThermalADD.GUI_ID_ADVANCED_CHARGER && te instanceof TileAdvancedCharger) {
             return new ContainerAdvancedCharger(player.inventory, (TileAdvancedCharger) te);
         }
+        if (id == ThermalADD.GUI_ID_SINGULAR_SMELTER && te instanceof TileSingularSmelter) {
+            return new ContainerSingularSmelter(player.inventory, (TileSingularSmelter) te);
+        }
         return null;
     }
 
@@ -70,6 +76,9 @@ public class GuiHandler implements IGuiHandler {
         }
         if (id == ThermalADD.GUI_ID_ADVANCED_CHARGER && te instanceof TileAdvancedCharger) {
             return new GuiAdvancedCharger(player.inventory, (TileAdvancedCharger) te);
+        }
+        if (id == ThermalADD.GUI_ID_SINGULAR_SMELTER && te instanceof TileSingularSmelter) {
+            return new GuiSingularSmelter(player.inventory, (TileSingularSmelter) te);
         }
         return null;
     }
