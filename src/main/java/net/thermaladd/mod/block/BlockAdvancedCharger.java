@@ -77,7 +77,8 @@ public class BlockAdvancedCharger extends BlockContainer implements IDismantleab
         if (side == 1) {
             return iconsTop[TileAdvancedCharger.SIDE_MODE_DISABLED];
         }
-        return side == meta ? iconFaceIdle : iconsSide[TileAdvancedCharger.SIDE_MODE_DISABLED];
+        // meta 0 is the item form (inventory, hand, dropped): show the front on side 3, as vanilla furnaces do.
+        return side == meta || (meta == 0 && side == 3) ? iconFaceIdle : iconsSide[TileAdvancedCharger.SIDE_MODE_DISABLED];
     }
 
     @Override

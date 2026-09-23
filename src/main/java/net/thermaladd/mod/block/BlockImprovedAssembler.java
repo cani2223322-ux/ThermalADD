@@ -89,7 +89,8 @@ public class BlockImprovedAssembler extends BlockContainer implements IDismantle
         if (side == 1) {
             return iconsTop[TileImprovedAssembler.SIDE_MODE_DISABLED];
         }
-        return side == meta ? iconFace : iconsSide[TileImprovedAssembler.SIDE_MODE_DISABLED];
+        // meta 0 is the item form (inventory, hand, dropped): show the front on side 3, as vanilla furnaces do.
+        return side == meta || (meta == 0 && side == 3) ? iconFace : iconsSide[TileImprovedAssembler.SIDE_MODE_DISABLED];
     }
 
     /**
