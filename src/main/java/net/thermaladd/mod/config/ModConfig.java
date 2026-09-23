@@ -25,10 +25,9 @@ import net.thermaladd.mod.tileentity.TileSingularityTank;
  *
  * WHY EVERY VALUE IS CLAMPED: the machine GUIs sync their readouts through vanilla's
  * Container#sendProgressBarUpdate, which serializes as a SIGNED 16-BIT SHORT (max 32767). Energy
- * and RF/t are sent as exact low/high halves and so are effectively unbounded, but the per-line
- * progress values are still sent whole, and a config value past what those can carry would
- * silently wrap and show garbage (or negative) numbers. The maxima below are derived from those
- * limits rather than picked for flavor, and each is noted with the reasoning behind it.
+ * RF/t and per-line progress are all sent as exact low/high halves now, so none of them wraps; the
+ * maxima below keep the costs in a sensible range (and every product inside an int), and each is
+ * noted with the reasoning behind it.
  */
 public final class ModConfig {
 
@@ -57,11 +56,9 @@ public final class ModConfig {
     private static final int MAX_CAPACITY = 100000000;
 
     /**
-     * RF/t ceiling for the three "3 parallel lines" machines. The RF/t readouts are exact halves
-     * too now, so what actually bounds this is the per-line PROGRESS sync, which is still a raw
-     * short: one tick adds {@code cost * 10} (the maximum Machine Speed process multiplier) on top
-     * of a recipe's own RF cost, and 1000 * 10 = 10,000 leaves plenty of room under 32767 for even
-     * an unusually expensive third-party recipe.
+     * RF/t ceiling for the three "3 parallel lines" machines, well above their defaults. Progress used
+     * to be synced as one signed short, which is where this number came from; it is sent in halves
+     * now, and the ceiling stays so existing configs keep their meaning.
      */
     private static final int MAX_PROCESS_ENERGY_3LINE = 1000;
     /**

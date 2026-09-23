@@ -34,6 +34,7 @@ import cofh.api.tileentity.IEnergyInfo;
 import cofh.api.tileentity.IPortableData;
 import cofh.api.tileentity.IRedstoneControl;
 import cofh.thermalexpansion.item.TEAugments;
+import cofh.thermalexpansion.item.TEItems;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import net.thermaladd.mod.network.MessageTileRenderSync;
 import net.thermaladd.mod.network.PacketHandler;
@@ -177,7 +178,7 @@ public class TileImprovedAssembler extends TileEntity
 
     @Override
     public int receiveEnergy(ForgeDirection from, int maxReceive, boolean simulate) {
-        int energyReceived = Math.min(ENERGY_CAPACITY - energyStored, Math.min(ENERGY_RECEIVE_PER_TICK, maxReceive));
+        int energyReceived = Math.max(0, Math.min(ENERGY_CAPACITY - energyStored, Math.min(ENERGY_RECEIVE_PER_TICK, maxReceive)));
         if (!simulate && energyReceived > 0) {
             energyStored += energyReceived;
             markDirty();
@@ -549,11 +550,14 @@ public class TileImprovedAssembler extends TileEntity
             return false;
         }
         IEnergyContainerItem energyItem = (IEnergyContainerItem) stack.getItem();
-        int extracted = energyItem.extractEnergy(stack, receive, false);
+        // A stack of N identical batteries shares one NBT: every item gives up the same RF, so
+        // draw a per-item share and credit it N times - otherwise all N lose it for one's worth.
+        int count = Math.max(1, stack.stackSize);
+        int extracted = energyItem.extractEnergy(stack, receive / count, false);
         if (extracted <= 0) {
             return false;
         }
-        energyStored += extracted;
+        energyStored += extracted * count;
         if (stack.stackSize <= 0) {
             inventory[CHARGE_SLOT] = null;
         }
@@ -1444,7 +1448,17 @@ public class TileImprovedAssembler extends TileEntity
         if (isAugmentSlot(slot)) {
             return isValidAugment(stack) && !hasDuplicateAugmentType(stack, slot);
         }
+        if (slot < INPUT_START) {
+            return isSchematic(stack);
+        }
         return slot < OUTPUT_START;
+    }
+
+    /** Real TE's Schematic (written or blank) - the only thing a schematic slot holds. */
+    public static boolean isSchematic(ItemStack stack) {
+        return stack != null && TEItems.diagramSchematic != null
+                && stack.getItem() == TEItems.diagramSchematic.getItem()
+                && stack.getItemDamage() == TEItems.diagramSchematic.getItemDamage();
     }
 
     @Override
@@ -1542,7 +1556,10 @@ public class TileImprovedAssembler extends TileEntity
     @Override
     public void readFromNBT(NBTTagCompound tag) {
         super.readFromNBT(tag);
-        energyStored = tag.getInteger("Energy");
+        // Clamped: a lowered energyCapacity in the config would otherwise leave more stored than
+        // fits, and receiveEnergy's "capacity - stored" would go negative - which TE dynamos and
+        // cells treat as energy handed BACK to them, every tick.
+        energyStored = Math.max(0, Math.min(tag.getInteger("Energy"), ENERGY_CAPACITY));
         if (tag.hasKey("CustomName")) {
             customName = tag.getString("CustomName");
         }

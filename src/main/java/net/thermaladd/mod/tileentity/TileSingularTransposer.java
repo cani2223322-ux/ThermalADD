@@ -14,6 +14,7 @@ import net.minecraftforge.fluids.IFluidContainerItem;
 import net.minecraftforge.fluids.IFluidHandler;
 
 import cofh.thermalexpansion.util.crafting.TransposerManager;
+import net.thermaladd.mod.util.EnergyMath;
 import cofh.thermalexpansion.util.crafting.TransposerManager.RecipeTransposer;
 
 /**
@@ -370,8 +371,10 @@ public class TileSingularTransposer extends TileSingularityMachine implements IF
         if (moved <= 0) {
             return false;
         }
-        energyStorage.modifyEnergyStored(-cost);
-        energyPerTick += cost;
+        // A partial tick (the container's last few mB, or a nearly empty tank) pays only its share.
+        int spent = EnergyMath.tickCost(cost, rate, moved);
+        energyStorage.modifyEnergyStored(-spent);
+        energyPerTick += spent;
         FluidStack now = item.getFluid(stack);
         int nowAmount = now == null ? 0 : now.amount;
         progressMax[line] = capacity;

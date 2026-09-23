@@ -789,7 +789,8 @@ public abstract class TileSingularityMachine extends TileEntity
         int budget = AUTO_FLUID_TRANSFER;
         boolean moved = false;
         for (int side = 0; side < 6 && budget > 0 && tank.getFluidAmount() > 0; side++) {
-            if (!sideDrainsFluid(sideCache[side])) {
+            // Like the item auto-output: pipes may drain an All side, the machine never pushes into one.
+            if (!sideDrainsFluid(sideCache[side]) || isAllMode(sideCache[side])) {
                 continue;
             }
             ForgeDirection dir = ForgeDirection.getOrientation(side);
@@ -905,11 +906,14 @@ public abstract class TileSingularityMachine extends TileEntity
         if (receive <= 0) {
             return false;
         }
-        int extracted = ((IEnergyContainerItem) stack.getItem()).extractEnergy(stack, receive, false);
+        // A stack of N identical batteries shares one NBT: every item gives up the same RF, so
+        // draw a per-item share and credit it N times - otherwise all N lose it for one's worth.
+        int count = Math.max(1, stack.stackSize);
+        int extracted = ((IEnergyContainerItem) stack.getItem()).extractEnergy(stack, receive / count, false);
         if (extracted <= 0) {
             return false;
         }
-        energyStorage.receiveEnergy(extracted, false);
+        energyStorage.receiveEnergy(extracted * count, false);
         if (stack.stackSize <= 0) {
             inventory[slot] = null;
         }

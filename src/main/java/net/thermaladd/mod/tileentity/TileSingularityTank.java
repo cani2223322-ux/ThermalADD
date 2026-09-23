@@ -242,6 +242,12 @@ public class TileSingularityTank extends TileEntity implements IFluidHandler {
         tank.setFluid(null);
         if (tag.hasKey("Tank")) {
             tank.readFromNBT(tag.getCompoundTag("Tank"));
+            // Capped to the (configurable) capacity: Forge's FluidTank#fill returns a negative
+            // amount while overfull, which pipes and the overflow into the tank above mishandle.
+            FluidStack fluid = tank.getFluid();
+            if (fluid != null && fluid.amount > tank.getCapacity()) {
+                fluid.amount = tank.getCapacity();
+            }
         }
         mode = tag.getByte(TAG_MODE) == 1 ? (byte) 1 : (byte) 0;
     }

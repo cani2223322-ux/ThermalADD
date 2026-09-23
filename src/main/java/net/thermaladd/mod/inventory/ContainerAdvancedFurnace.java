@@ -198,10 +198,13 @@ public class ContainerAdvancedFurnace extends Container {
                 int p = tile.getProgress(line);
                 int pMax = tile.getProgressMax(line);
                 if (lastProgress[line] != p) {
-                    crafter.sendProgressBarUpdate(this, 2 + line, p);
+                    // Exact 16-bit halves: a recipe over 32,767 RF (MineTweaker, IMC) overflowed the signed short.
+                    crafter.sendProgressBarUpdate(this, 2 + line, p & 0xFFFF);
+                    crafter.sendProgressBarUpdate(this, 25 + line, p >>> 16);
                 }
                 if (lastProgressMax[line] != pMax) {
-                    crafter.sendProgressBarUpdate(this, 5 + line, pMax);
+                    crafter.sendProgressBarUpdate(this, 5 + line, pMax & 0xFFFF);
+                    crafter.sendProgressBarUpdate(this, 28 + line, pMax >>> 16);
                 }
             }
             for (int side = 0; side < 6; side++) {
@@ -268,10 +271,14 @@ public class ContainerAdvancedFurnace extends Container {
             tile.setEnergyPerTickHighClient(value);
         } else if (id == 24) {
             tile.setMaxEnergyPerTickHighClient(value);
+        } else if (id >= 25 && id <= 27) {
+            tile.setProgressHalfClient(id - 25, true, value);
+        } else if (id >= 28 && id <= 30) {
+            tile.setProgressMaxHalfClient(id - 28, true, value);
         } else if (id >= 2 && id <= 4) {
-            tile.setProgressClient(id - 2, value);
+            tile.setProgressHalfClient(id - 2, false, value);
         } else if (id >= 5 && id <= 7) {
-            tile.setProgressMaxClient(id - 5, value);
+            tile.setProgressMaxHalfClient(id - 5, false, value);
         } else if (id >= 8 && id <= 13) {
             tile.setSideModeClient(id - 8, value);
         } else if (id == 14) {

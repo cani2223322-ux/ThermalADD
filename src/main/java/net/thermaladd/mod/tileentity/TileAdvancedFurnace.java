@@ -609,6 +609,15 @@ public class TileAdvancedFurnace extends TileEntity
         return progressMax[line];
     }
 
+    /** One 16-bit half of a line's progress, as the container sends it - see ContainerAdvancedFurnace. */
+    public void setProgressHalfClient(int line, boolean high, int value) {
+        progress[line] = high ? ((value & 0xFFFF) << 16) | (progress[line] & 0xFFFF) : (progress[line] & 0xFFFF0000) | (value & 0xFFFF);
+    }
+
+    public void setProgressMaxHalfClient(int line, boolean high, int value) {
+        progressMax[line] = high ? ((value & 0xFFFF) << 16) | (progressMax[line] & 0xFFFF) : (progressMax[line] & 0xFFFF0000) | (value & 0xFFFF);
+    }
+
     public void setProgressClient(int line, int value) {
         progress[line] = value;
     }
@@ -763,11 +772,14 @@ public class TileAdvancedFurnace extends TileEntity
             return false;
         }
         IEnergyContainerItem energyItem = (IEnergyContainerItem) stack.getItem();
-        int extracted = energyItem.extractEnergy(stack, receive, false);
+        // A stack of N identical batteries shares one NBT: every item gives up the same RF, so
+        // draw a per-item share and credit it N times - otherwise all N lose it for one's worth.
+        int count = Math.max(1, stack.stackSize);
+        int extracted = energyItem.extractEnergy(stack, receive / count, false);
         if (extracted <= 0) {
             return false;
         }
-        energyStorage.receiveEnergy(extracted, false);
+        energyStorage.receiveEnergy(extracted * count, false);
         if (stack.stackSize <= 0) {
             inventory[CHARGE_SLOT] = null;
         }

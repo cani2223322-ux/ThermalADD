@@ -9,6 +9,12 @@ public class SlotSchematic extends Slot {
         super(inv, index, x, y);
     }
 
+    /** Only a TE Schematic - see TileImprovedAssembler#isItemValidForSlot. */
+    @Override
+    public boolean isItemValid(net.minecraft.item.ItemStack stack) {
+        return inventory.isItemValidForSlot(getSlotIndex(), stack);
+    }
+
     @Override
     public int getSlotStackLimit() {
         return 1;
