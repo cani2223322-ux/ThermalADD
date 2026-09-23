@@ -1,7 +1,11 @@
 package net.thermaladd.mod.tileentity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
@@ -92,14 +96,55 @@ public class TileSingularTransposer extends TileSingularityMachine implements IF
         machineMode = mode == MODE_EXTRACT ? MODE_EXTRACT : MODE_FILL;
     }
 
+    /**
+     * The one fluid container each line is filling or emptying, split off its input stack - TE's
+     * own Transposer keeps it in a separate process slot too. Filling a whole stack at once would
+     * put the fluid on every item of it; stackable containers (IC2-style cells) need this.
+     */
+    private final ItemStack[] processing = new ItemStack[LINES];
+
     @Override
     protected void writeMachineToNBT(NBTTagCompound tag) {
         tag.setBoolean("Rev", machineMode == MODE_EXTRACT);
+        NBTTagList list = new NBTTagList();
+        for (int line = 0; line < LINES; line++) {
+            if (processing[line] != null) {
+                NBTTagCompound itemTag = new NBTTagCompound();
+                itemTag.setByte("Line", (byte) line);
+                processing[line].writeToNBT(itemTag);
+                list.appendTag(itemTag);
+            }
+        }
+        tag.setTag("Processing", list);
     }
 
     @Override
     protected void readMachineFromNBT(NBTTagCompound tag) {
         machineMode = tag.getBoolean("Rev") ? MODE_EXTRACT : MODE_FILL;
+        for (int line = 0; line < LINES; line++) {
+            processing[line] = null;
+        }
+        NBTTagList list = tag.getTagList("Processing", 10);
+        for (int i = 0; i < list.tagCount(); i++) {
+            NBTTagCompound itemTag = list.getCompoundTagAt(i);
+            int line = itemTag.getByte("Line") & 0xFF;
+            if (line < LINES) {
+                processing[line] = ItemStack.loadItemStackFromNBT(itemTag);
+            }
+        }
+    }
+
+    /** The containers in process, so breaking the machine spills them with everything else. */
+    @Override
+    public List<ItemStack> takeHiddenContents() {
+        List<ItemStack> items = new ArrayList<ItemStack>();
+        for (int line = 0; line < LINES; line++) {
+            if (processing[line] != null) {
+                items.add(processing[line]);
+                processing[line] = null;
+            }
+        }
+        return items;
     }
 
     // ---------------------------------------------------------------- description
@@ -201,7 +246,7 @@ public class TileSingularTransposer extends TileSingularityMachine implements IF
 
     @Override
     public boolean isLineOccupied(int line) {
-        return inventory[line] != null;
+        return inventory[line] != null || processing[line] != null;
     }
 
     // ---------------------------------------------------------------- processing
@@ -217,14 +262,23 @@ public class TileSingularTransposer extends TileSingularityMachine implements IF
 
     @Override
     protected boolean processLine(int line) {
+        if (processing[line] != null) {
+            return processContainer(line);
+        }
         ItemStack input = inventory[line];
         if (input == null) {
             return idleLine(line);
         }
         RecipeTransposer recipe = getLineRecipe(line);
         if (recipe == null) {
-            if (input.getItem() instanceof IFluidContainerItem && input.stackSize == 1) {
-                return processContainer(line, input);
+            if (input.getItem() instanceof IFluidContainerItem) {
+                // One container at a time, off the top of the stack.
+                processing[line] = input.splitStack(1);
+                if (input.stackSize <= 0) {
+                    inventory[line] = null;
+                }
+                resetLine(line);
+                return true;
             }
             // Filling with an empty tank: hold the progress until fluid arrives.
             return !isExtracting() && tank.getFluidAmount() <= 0 ? false : idleLine(line);
@@ -265,28 +319,20 @@ public class TileSingularTransposer extends TileSingularityMachine implements IF
     }
 
     /**
-     * A fluid container item: moves up to one tick's worth of fluid (the line's work rate, in mB -
-     * TE also trades RF for mB one to one) between it and the tank, and hands it to the output
-     * once it is full (filling) or empty (extracting). Progress shows how far along it is.
+     * The line's container in process: moves up to one tick's worth of fluid (the line's work rate,
+     * in mB - TE also trades RF for mB one to one) between it and the tank, and hands it to the
+     * output once it is full (filling), empty (extracting) or refuses the tank's fluid. It waits
+     * only while the tank is empty (filling) or cannot take more (extracting). Progress shows how
+     * far along it is.
      */
-    private boolean processContainer(int line, ItemStack stack) {
+    private boolean processContainer(int line) {
+        ItemStack stack = processing[line];
         IFluidContainerItem item = (IFluidContainerItem) stack.getItem();
         int capacity = item.getCapacity(stack);
         FluidStack contained = item.getFluid(stack);
         int amount = contained == null ? 0 : contained.amount;
-        if (capacity <= 0) {
-            return idleLine(line);
-        }
-
-        boolean done = isExtracting() ? amount <= 0 : amount >= capacity;
-        if (done) {
-            if (!canFitAny(OUTPUT_START, OUTPUT_SLOTS, stack)) {
-                return false;
-            }
-            addToFirstFitting(OUTPUT_START, OUTPUT_SLOTS, stack);
-            inventory[line] = null;
-            resetLine(line);
-            return true;
+        if (capacity <= 0 || (isExtracting() ? amount <= 0 : amount >= capacity)) {
+            return finishContainer(line);
         }
 
         int cost = getLineEnergyCost();
@@ -297,7 +343,10 @@ public class TileSingularTransposer extends TileSingularityMachine implements IF
         int moved;
         if (isExtracting()) {
             FluidStack simulated = item.drain(stack, rate, false);
-            int accepted = simulated == null ? 0 : tank.fill(simulated, false);
+            if (simulated == null || simulated.amount <= 0) {
+                return finishContainer(line);
+            }
+            int accepted = tank.fill(simulated, false);
             if (accepted <= 0) {
                 return false;
             }
@@ -309,13 +358,16 @@ public class TileSingularTransposer extends TileSingularityMachine implements IF
             }
             FluidStack offer = tank.getFluid().copy();
             offer.amount = Math.min(rate, offer.amount);
+            if (item.fill(stack, offer, false) <= 0) {
+                // This container does not take the tank's fluid.
+                return finishContainer(line);
+            }
             moved = item.fill(stack, offer, true);
             if (moved > 0) {
                 tank.drain(moved, true);
             }
         }
         if (moved <= 0) {
-            // The container refuses this fluid - leave it for the player to take out.
             return false;
         }
         energyStorage.modifyEnergyStored(-cost);
@@ -324,6 +376,16 @@ public class TileSingularTransposer extends TileSingularityMachine implements IF
         int nowAmount = now == null ? 0 : now.amount;
         progressMax[line] = capacity;
         progress[line] = isExtracting() ? capacity - nowAmount : nowAmount;
+        return true;
+    }
+
+    private boolean finishContainer(int line) {
+        if (!canFitAny(OUTPUT_START, OUTPUT_SLOTS, processing[line])) {
+            return false;
+        }
+        addToFirstFitting(OUTPUT_START, OUTPUT_SLOTS, processing[line]);
+        processing[line] = null;
+        resetLine(line);
         return true;
     }
 

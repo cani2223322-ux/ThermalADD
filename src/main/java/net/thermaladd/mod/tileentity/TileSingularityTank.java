@@ -75,15 +75,16 @@ public class TileSingularityTank extends TileEntity implements IFluidHandler {
             return 0;
         }
         int glow = fluid.getFluid().getLuminosity(fluid);
-        int capacity = tank.getCapacity();
-        int amount = fluid.amount;
+        // In long: the configurable capacity goes up to a billion, where capacity * 3 overflows.
+        long capacity = tank.getCapacity();
+        long amount = fluid.amount;
         if (amount <= capacity / 4) {
             return glow >> 1;
         }
         if (amount >= capacity * 3 / 4) {
             return glow;
         }
-        return (glow >> 1) + (glow - (glow >> 1)) * (amount - capacity / 4) / (capacity / 2);
+        return (int) ((glow >> 1) + (glow - (glow >> 1)) * (amount - capacity / 4) / (capacity / 2));
     }
 
     // ---------------------------------------------------------------- dismantling

@@ -260,6 +260,16 @@ public class BlockAdvancedFurnace extends BlockContainer implements IDismantleab
         return drops;
     }
 
+    /**
+     * Any tool (or a bare hand) harvests the block. Material.iron would otherwise demand a
+     * pickaxe, and without one removedByPlayer skips getDrops entirely - deleting everything
+     * that only travels inside the dropped item (augments, stored RF, fluid, a box's contents).
+     */
+    @Override
+    public boolean canHarvestBlock(EntityPlayer player, int meta) {
+        return true;
+    }
+
     /** See BlockAdvancedPulverizer#removedByPlayer - keeps the tile alive until getDrops has read it. */
     @Override
     public boolean removedByPlayer(World world, EntityPlayer player, int x, int y, int z, boolean willHarvest) {

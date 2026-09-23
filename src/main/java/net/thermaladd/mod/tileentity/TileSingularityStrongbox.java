@@ -238,6 +238,13 @@ public class TileSingularityStrongbox extends TileEntity implements ISidedInvent
         }
     }
 
+    /** Called by the block as it is removed - the contents already live in the dropped item. */
+    public void clearContents() {
+        for (int i = 0; i < SIZE; i++) {
+            inventory[i] = null;
+        }
+    }
+
     private NBTTagList writeItems() {
         NBTTagList list = new NBTTagList();
         for (int i = 0; i < SIZE; i++) {

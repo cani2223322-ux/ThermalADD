@@ -1,5 +1,7 @@
 package net.thermaladd.mod.tileentity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -289,6 +291,14 @@ public abstract class TileSingularityMachine extends TileEntity
         rotated[newFacing] = SIDE_MODE_DISABLED;
         sideCache = rotated;
         setFacing(newFacing);
+    }
+
+    /**
+     * Items a subclass holds outside the inventory (the Transposer's containers in process), handed
+     * over and forgotten so breakBlock can spill them with the rest.
+     */
+    public List<ItemStack> takeHiddenContents() {
+        return new ArrayList<ItemStack>();
     }
 
     public void clearContentsOnBreak() {

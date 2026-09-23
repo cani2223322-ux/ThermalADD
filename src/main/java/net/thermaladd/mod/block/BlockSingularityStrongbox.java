@@ -2,6 +2,7 @@ package net.thermaladd.mod.block;
 
 import java.util.ArrayList;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -136,6 +137,31 @@ public class BlockSingularityStrongbox extends BlockContainer implements IDisman
         }
         drops.add(drop);
         return drops;
+    }
+
+    /**
+     * Empties the tile once it is being removed. Every drop path has built the item by now, and a
+     * player who still had the box open could otherwise keep taking items out of the removed tile
+     * for the rest of the tick - a copy of each also riding in the dropped box. Real TE wipes its
+     * strongbox the same way after serialising it.
+     */
+    @Override
+    public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileSingularityStrongbox) {
+            ((TileSingularityStrongbox) te).clearContents();
+        }
+        super.breakBlock(world, x, y, z, block, meta);
+    }
+
+    /**
+     * Any tool (or a bare hand) harvests the block. Material.iron would otherwise demand a
+     * pickaxe, and without one removedByPlayer skips getDrops entirely - deleting everything
+     * that only travels inside the dropped item (augments, stored RF, fluid, a box's contents).
+     */
+    @Override
+    public boolean canHarvestBlock(EntityPlayer player, int meta) {
+        return true;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package net.thermaladd.mod.block;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockContainer;
@@ -214,17 +215,24 @@ public abstract class BlockSingularityMachine extends BlockContainer implements 
                 if (tile.isAugmentSlot(i)) {
                     continue;
                 }
-                ItemStack stack = tile.getStackInSlot(i);
-                if (stack != null) {
-                    float rx = world.rand.nextFloat() * 0.8F + 0.1F;
-                    float ry = world.rand.nextFloat() * 0.8F + 0.1F;
-                    float rz = world.rand.nextFloat() * 0.8F + 0.1F;
-                    world.spawnEntityInWorld(new EntityItem(world, x + rx, y + ry, z + rz, stack.copy()));
-                }
+                spill(world, x, y, z, tile.getStackInSlot(i));
+            }
+            List<ItemStack> hidden = tile.takeHiddenContents();
+            for (int i = 0; i < hidden.size(); i++) {
+                spill(world, x, y, z, hidden.get(i));
             }
             tile.clearContentsOnBreak();
         }
         super.breakBlock(world, x, y, z, block, meta);
+    }
+
+    private static void spill(World world, int x, int y, int z, ItemStack stack) {
+        if (stack != null) {
+            float rx = world.rand.nextFloat() * 0.8F + 0.1F;
+            float ry = world.rand.nextFloat() * 0.8F + 0.1F;
+            float rz = world.rand.nextFloat() * 0.8F + 0.1F;
+            world.spawnEntityInWorld(new EntityItem(world, x + rx, y + ry, z + rz, stack.copy()));
+        }
     }
 
     @Override
@@ -247,6 +255,16 @@ public abstract class BlockSingularityMachine extends BlockContainer implements 
             drops.add(new ItemStack(Item.getItemFromBlock(this), 1, damageDropped(metadata)));
         }
         return drops;
+    }
+
+    /**
+     * Any tool (or a bare hand) harvests the block. Material.iron would otherwise demand a
+     * pickaxe, and without one removedByPlayer skips getDrops entirely - deleting everything
+     * that only travels inside the dropped item (augments, stored RF, fluid, a box's contents).
+     */
+    @Override
+    public boolean canHarvestBlock(EntityPlayer player, int meta) {
+        return true;
     }
 
     /** Keeps the tile alive until getDrops has read it - see BlockAdvancedPulverizer#removedByPlayer. */

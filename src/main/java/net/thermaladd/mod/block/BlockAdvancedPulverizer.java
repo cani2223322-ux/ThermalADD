@@ -301,6 +301,16 @@ public class BlockAdvancedPulverizer extends BlockContainer implements IDismantl
     }
 
     /**
+     * Any tool (or a bare hand) harvests the block. Material.iron would otherwise demand a
+     * pickaxe, and without one removedByPlayer skips getDrops entirely - deleting everything
+     * that only travels inside the dropped item (augments, stored RF, fluid, a box's contents).
+     */
+    @Override
+    public boolean canHarvestBlock(EntityPlayer player, int meta) {
+        return true;
+    }
+
+    /**
      * On a player harvest vanilla calls removedByPlayer (which normally clears the block, taking
      * the tile with it) BEFORE harvestBlock/getDrops, so getDrops would find no tile to read.
      * Reporting the removal here without actually performing it, and doing the real clear after
