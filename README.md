@@ -11,7 +11,7 @@
 
 - **Сингулярный измельчитель** — 3 параллельные линии обработки вместо одной, 9 слотов
   расширений, собственный энергетический тир.
-- **Циклическая красная печь** — 3 параллельные линии вместо одной, 9 слотов расширений.
+- **Сингулярная красная печь** — 3 параллельные линии вместо одной, 9 слотов расширений.
 - **Сингулярная лесопилка** — 3 параллельные линии, первичный и вторичный выход, 9 слотов
   расширений.
 - **Сингулярный зарядник** — 9 линий одновременной зарядки вместо одного слота настоящего
@@ -134,7 +134,7 @@ mod-original "beyond spec" augments and an ultra-capacity energy cell.
 
 - **Singularity Pulverizer** — 3 parallel processing lines instead of one, 9 augment slots, its
   own RF tier.
-- **Cyclic Furnace** — 3 parallel lines instead of one, 9 augment slots.
+- **Singularity Redstone Furnace** — 3 parallel lines instead of one, 9 augment slots.
 - **Singularity Sawmill** — 3 parallel lines, primary and secondary output, 9 augment slots.
 - **Singularity Charger** — 9 simultaneous charging lines instead of the real Charger's single
   slot. Each line independently supports both of the original's modes: it either charges an
