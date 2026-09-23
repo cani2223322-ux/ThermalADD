@@ -98,6 +98,7 @@ public final class ModConfig {
     public static boolean recipeSingularTransposer = true;
     public static boolean recipeSingularityTank = true;
     public static boolean recipeSingularityStrongbox = true;
+    public static boolean recipeSingularityUpgradeKit = true;
     public static boolean recipeSingularityCell = true;
     public static boolean recipeSingularityGear = true;
     public static boolean recipeSingularityFrame = true;
@@ -380,6 +381,7 @@ public final class ModConfig {
         recipeSingularTransposer = recipe(cfg, "singularTransposer");
         recipeSingularityTank = recipe(cfg, "singularityTank");
         recipeSingularityStrongbox = recipe(cfg, "singularityStrongbox");
+        recipeSingularityUpgradeKit = recipe(cfg, "singularityUpgradeKit");
         recipeSingularityCell = recipe(cfg, "singularityCell");
         recipeSingularityGear = recipe(cfg, "singularityGear");
         recipeSingularityFrame = recipe(cfg, "singularityFrame");

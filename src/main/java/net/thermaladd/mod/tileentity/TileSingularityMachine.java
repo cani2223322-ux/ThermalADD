@@ -723,6 +723,16 @@ public abstract class TileSingularityMachine extends TileEntity
         }
     }
 
+    /** The Singularity Upgrade Kit carries a TE machine's tank over (capped to this tank). */
+    public void setTankContents(FluidStack fluid) {
+        if (tank != null && fluid != null) {
+            FluidStack copy = fluid.copy();
+            copy.amount = Math.min(copy.amount, tank.getCapacity());
+            tank.setFluid(copy);
+            markDirty();
+        }
+    }
+
     public void readTankFromItem(NBTTagCompound tag) {
         if (tank != null && tag.hasKey(TAG_FLUID)) {
             FluidStack fluid = FluidStack.loadFluidStackFromNBT(tag.getCompoundTag(TAG_FLUID));

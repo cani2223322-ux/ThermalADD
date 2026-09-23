@@ -310,6 +310,24 @@ public class TileImprovedAssembler extends TileEntity
         return worldObj != null ? worldObj.getBlockMetadata(xCoord, yCoord, zCoord) : 3;
     }
 
+    /** This machine's facing is its block metadata. */
+    @Override
+    public void setFacing(int facing) {
+        if (worldObj != null && facing >= 2 && facing <= 5) {
+            worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, facing, 3);
+        }
+    }
+
+    /** The Singularity Upgrade Kit carries a TE Assembler's tank over (capped to this tank). */
+    public void setTankContents(FluidStack fluid) {
+        if (fluid != null) {
+            FluidStack copy = fluid.copy();
+            copy.amount = Math.min(copy.amount, TANK_CAPACITY);
+            tank.setFluid(copy);
+            markDirty();
+        }
+    }
+
     /** Exact low/high 16-bit halves - see TileAdvancedPulverizer#applyClientEnergy. */
     public void setEnergyLowClient(int value) {
         energyStored = (energyStored & 0xFFFF0000) | (value & 0xFFFF);

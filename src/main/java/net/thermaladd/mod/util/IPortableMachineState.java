@@ -30,6 +30,11 @@ public interface IPortableMachineState {
 
     int getFacing();
 
+    /** Used by the Singularity Upgrade Kit, which replaces a TE machine in place with this one. */
+    void setFacing(int facing);
+
+    void setCustomName(String name);
+
     int getEnergy();
 
     void setStoredEnergy(int energy);

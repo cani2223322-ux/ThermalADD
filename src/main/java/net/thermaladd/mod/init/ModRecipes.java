@@ -94,6 +94,11 @@ public class ModRecipes {
                 registerSingularityStrongboxRecipe();
             }
         });
+        registerSafely("Singularity Upgrade Kit", ModConfig.recipeSingularityUpgradeKit, new RecipeRegistration() {
+            public void register() {
+                registerSingularityUpgradeKitRecipe();
+            }
+        });
         registerSafely("Speed Level 4 augment", ModConfig.recipeSpeedLevel4Augment, new RecipeRegistration() {
             public void register() {
                 registerSpeedLevel4AugmentRecipe();
@@ -378,6 +383,26 @@ public class ModRecipes {
                 'S', BlockStrongbox.strongboxResonant,
                 'I', "ingotSignalum",
                 'G', ModItems.singularityGear));
+    }
+
+    /**
+     * Upgrades any supported TE block in place, so it stands in for the machine recipes' Frame and
+     * Gear plus their alloy trim - and costs a little more than any of them: a Frame, two Gears,
+     * Enderium and Signalum.
+     */
+    private static void registerSingularityUpgradeKitRecipe() {
+        // E G E      E = Enderium ingot, G = Singularity Gear
+        // S F S      S = Signalum ingot, F = Singularity Frame
+        // E G E
+        GameRegistry.addRecipe(new ShapedOreRecipe(
+                new ItemStack(ModItems.singularityUpgradeKit),
+                "EGE",
+                "SFS",
+                "EGE",
+                'E', "ingotEnderium",
+                'G', ModItems.singularityGear,
+                'S', "ingotSignalum",
+                'F', ModBlocks.singularityFrame));
     }
 
     /** A shaped ore recipe that will not consume an ingredient still carrying fluid or items. */
